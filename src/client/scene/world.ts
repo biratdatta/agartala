@@ -82,6 +82,7 @@ export function buildTrees(scene: THREE.Scene, map: CityMap): void {
   while (tries++ < 60000 && count < 9000) {
     const x = X0 + rng() * (X1 - X0), z = Z0 + rng() * (Z1 - Z0);
     if (map.inBuilding(x, z) || map.inWaterPoly(x, z) || farmClear(x, z)) continue;
+    if (((x - 1462) / 104) ** 2 + ((z - 962) / 98) ** 2 < 1) continue; // the cricket ground and its galleries
     const rn = map.roadNear(x, z); if (rn && rn.d < ROAD_W[rn.r.t] / 2 + 1.5) continue;
     if (special.some((s) => Math.hypot(x - s[0], z - s[1]) < 10)) continue;
     const near = map.nearBuilding(x, z, 2.5);

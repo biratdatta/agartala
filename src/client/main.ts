@@ -15,6 +15,7 @@ import type { ItemKey } from '../shared/constants.js';
 import { Ambience, play, toggleSound, unlockAudio } from './audio.js';
 import { OtherPlayers } from './social.js';
 import { RealPlaces } from './scene/realplaces.js';
+import { buildRealism } from './scene/realism.js';
 import { REAL_PLACES } from '../shared/places.js';
 import { Vehicles } from './vehicles.js';
 import { PhotoMode } from './photo.js';
@@ -75,7 +76,7 @@ async function boot(): Promise<void> {
   addEventListener('resize', resize);
 
   buildGround(scene, map); buildRoads(scene, map); buildHills(scene);
-  const plans = planBuildings(map); const city = new City(scene, kit, plans); new RealPlaces(scene, map, kit, plans);
+  const plans = planBuildings(map); const city = new City(scene, kit, plans); const real = new RealPlaces(scene, map, kit, plans); buildRealism(scene, map, kit, plans);
   const palaceLights = buildStadiumLights(scene); const pandal = buildPandal(scene, map); buildStall(scene, map);
   const standFleet = new KitFleet(scene, kit, 'tomtom', 10, TOMTOM_COLOURS);
   const standsView = new StandsView(scene, map, standFleet, 10); buildBus(scene, map);
@@ -469,7 +470,7 @@ async function boot(): Promise<void> {
     crowd.forEach((g, i) => { g.visible = durgaOn; if (durgaOn) g.position.y = Math.max(0, Math.sin(time * 6 + i)) * 0.06; });
     lighting.update(S, player.body.position, dt);
     kit.material.emissiveIntensity = lighting.nightFactor * 0.85;
-    lamps.update(lighting.nightFactor); diyas.visible = isFestival(S.day, 'diwali') && lighting.nightFactor > 0.4;
+    lamps.update(lighting.nightFactor); real.setNight(lighting.nightFactor); diyas.visible = isFestival(S.day, 'diwali') && lighting.nightFactor > 0.4;
     renderer.render(scene, camera);
   });
   addEventListener('beforeunload', () => { void net.flush(); });

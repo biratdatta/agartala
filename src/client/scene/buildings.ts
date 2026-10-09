@@ -75,8 +75,10 @@ export function planBuildings(map: CityMap): Plan[] {
 function realBuildings(map: CityMap, plans: Plan[]): Plan[] {
   const osm = map.raw.bs ?? plans.length;
   for (let i = 0; i < osm; i++) {
-    const p = plans[i]; if (!inCampus(p.cx, p.cz)) continue;
-    const A = p.w * p.d; p.arch = A > 600 ? 'block' : A > 160 ? 'rcc3' : A > 60 ? 'rcc2' : 'rcc1'; p.tint = i % 3 ? '#e8c25a' : '#d9a441'; p.place = 'mbbcollege';
+    const p = plans[i];
+    if (inCampus(p.cx, p.cz)) { p.tint = i % 3 ? '#e8c25a' : '#d9a441'; p.place = 'mbbcollege'; p.arch = ''; }
+    // the stadium's own buildings: pavilion, galleries and offices round the ground
+    else if (((p.cx - 1459) / 120) ** 2 + ((p.cz - 962) / 110) ** 2 < 1) { p.tint = '#cfc9bd'; p.place = 'stadium'; p.arch = ''; }
   }
   for (const pl of REAL_PLACES) {
     if (!pl.paint) continue;
@@ -86,11 +88,8 @@ function realBuildings(map: CityMap, plans: Plan[]): Plan[] {
       const d = pip(pl.x, pl.z, b) ? 0 : Math.hypot(plans[i].cx - pl.x, plans[i].cz - pl.z); if (d < bd) { bd = d; best = i; }
     }
     if (best < 0) continue;
-    const p = plans[best]; const A = p.w * p.d; p.tint = pl.paint; p.place = pl.id;
-    if (pl.kind === 'temple') p.arch = '';
-    else if (pl.kind === 'college' || pl.kind === 'school') p.arch = A > 700 ? 'block' : A > 200 ? 'rcc3' : 'rcc2';
-    else if (pl.kind === 'apartment') p.arch = 'rcc4';
-    else if (pl.kind === 'clinic') p.arch = A > 150 ? 'rcc3' : 'rcc2';
+    // drawn from its real footprint by RealPlaces, not from the kit
+    const p = plans[best]; p.tint = pl.paint; p.place = pl.id; p.arch = '';
   }
   return plans;
 }

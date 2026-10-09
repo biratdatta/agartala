@@ -1,6 +1,6 @@
 /**
  * Server configuration. On Vercel and in local dev it comes from process.env; on Cloudflare
- * Pages the router hands in the request's `env` (bindings such as the D1 database and secrets).
+ * the Worker hands in the request's `env` (bindings such as the D1 database and secrets).
  */
 export interface D1Like {
   prepare(sql: string): { bind(...v: unknown[]): { first<T = unknown>(): Promise<T | null>; run(): Promise<{ meta: { changes?: number } }>; all<T = unknown>(): Promise<{ results: T[] }> } };

@@ -4,7 +4,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 /**
  * Runs the server functions in api/*.ts inside the Vite dev server, so `npm run dev`
  * is the whole game, server included. Each function exports GET and/or POST handlers
- * that take a Web Request and return a Web Response, which is also what Vercel and Cloudflare Pages (functions/api/[[path]].ts) run.
+ * that take a Web Request and return a Web Response, which is also what Vercel and the Cloudflare Worker (worker/index.ts) run.
  */
 function apiPlugin(): Plugin {
   return {
