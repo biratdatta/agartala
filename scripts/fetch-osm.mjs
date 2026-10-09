@@ -5,7 +5,7 @@
  * Ujjayanta Palace (x east, z south) and rounded to 0.5 m.
  *
  *   npm run map:fetch            # default box
- *   node scripts/fetch-osm.mjs --bbox 23.810,91.282,23.840,91.314
+ *   node scripts/fetch-osm.mjs --bbox 23.810,91.274,23.842,91.314
  *
  * Map data © OpenStreetMap contributors, ODbL.
  */
@@ -14,7 +14,7 @@ import path from 'node:path';
 
 const args = process.argv.slice(2);
 const bboxArg = args[args.indexOf('--bbox') + 1];
-const BBOX = (args.includes('--bbox') && bboxArg ? bboxArg : '23.810,91.282,23.840,91.314').split(',').map(Number);
+const BBOX = (args.includes('--bbox') && bboxArg ? bboxArg : '23.810,91.274,23.842,91.314').split(',').map(Number);
 const ENDPOINTS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
 const LAT0 = 23.8368, LON0 = 91.2826;
 const KX = Math.cos((LAT0 * Math.PI) / 180) * 111320, KZ = 110574;

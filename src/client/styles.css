@@ -72,6 +72,12 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
 
 #title{background:linear-gradient(180deg,rgba(10,7,14,.15) 0%,rgba(10,7,14,.2) 40%,rgba(10,7,14,.88) 100%);place-items:end start;padding:clamp(16px,5vw,56px)}
+#tourFade{position:absolute;inset:0;background:#05040a;opacity:0;pointer-events:none;transition:opacity .7s}
+#tourFade.on{opacity:1}
+#tourCap{position:absolute;top:clamp(16px,4vw,40px);right:clamp(16px,4vw,48px);text-align:right;max-width:min(320px,60vw);transition:opacity .7s;text-shadow:0 1px 8px rgba(0,0,0,.7)}
+#tourCap.out{opacity:0}
+#tourName{font-family:var(--font-display);font-size:clamp(18px,2.4vw,26px);line-height:1.15;margin-top:4px}
+#tourBn{color:var(--gold);font-size:14px;margin-top:2px}
 #title .wrap{max-width:620px;display:grid;gap:14px}
 #title h1{margin:0;font-family:var(--font-display);font-weight:400;font-size:clamp(48px,9vw,96px);line-height:.95;letter-spacing:-.01em}
 #title h1 span{display:block;font-size:.42em;color:var(--gold);margin-top:8px;letter-spacing:0}

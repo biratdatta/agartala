@@ -34,6 +34,7 @@ import { RideView } from './ride.js';
 import { RoadGraph } from './route.js';
 import { City, KitFleet, loadKit, planBuildings } from './scene/buildings.js';
 import { FarmView } from './scene/farm.js';
+import { shuffledTour } from './scene/tour.js';
 import { STADIUM, StandsView, buildBus, buildCrowds, buildNPCs, buildPandal, buildStadiumLights, buildStall } from './scene/landmarks.js';
 import { PARAS } from '../shared/area.js';
 import { Crowd, animPerson, sit, Traffic } from './scene/people.js';
@@ -396,7 +397,7 @@ async function boot(): Promise<void> {
     applyFrom();
     if (pendingSite !== undefined) setHome(pendingSite);
     else if (!homeFromInput($('#homeIn') as HTMLInputElement)) return;
-    playing = true; unlockAudio(); $('#title').hidden = true; $('#hud').hidden = false;
+    playing = true; unlockAudio(); $('#title').hidden = true; $('#hud').hidden = false; $('#tourFade').classList.remove('on');
     if (isTouch) { $('#touch').hidden = false; $('#game').classList.add('touch'); }
     if (game.S.ride) game.dispatch({ t: 'arrive' }); // a ride left running from last time
     const p = game.S.pos; player.teleport(p.x, p.z, p.face); player.resetView();
@@ -441,6 +442,14 @@ async function boot(): Promise<void> {
     };
   }
 
+  /* ---------- title fly-round: a random tour of real places, one every 12 s ---------- */
+  const tour = shuffledTour(); const STOP_S = 12; let ti = 0, tourT = 0, tourA = Math.random() * Math.PI * 2;
+  const showStop = () => {
+    const s = tour[ti]; $('#tourName').textContent = s.name; $('#tourBn').textContent = s.bn; $('#tourCap').classList.remove('out');
+    city.update(s.x, s.z); labels.update(s.x, s.z);
+  };
+  showStop();
+
   /* ---------- loop ---------- */
   const clock = new THREE.Clock(); let hudT = 0, slowT = 0, posT = 0;
   renderer.setAnimationLoop(() => {
@@ -481,8 +490,12 @@ async function boot(): Promise<void> {
       posT += dt; if (posT > 10 && !rideView.active) { posT = 0; game.dispatch({ t: 'pos', x: player.x, z: player.z, face: player.face }); }
       player.updateCamera(dt);
     } else {
-      const a = time * 0.04; camera.position.set(STADIUM.x + Math.cos(a) * 300, 140, STADIUM.z + Math.sin(a) * 300); camera.lookAt(STADIUM.x, 0, STADIUM.z + 40);
-      slowT += dt; if (slowT > 0.5) { slowT = 0; city.update(STADIUM.x, STADIUM.z); }
+      const s = tour[ti]; tourT += dt;
+      const a = tourA + tourT * 0.045; camera.position.set(s.x + Math.cos(a) * s.r, s.h, s.z + Math.sin(a) * s.r); camera.lookAt(s.x, 0, s.z);
+      const fade = $('#tourFade');
+      if (tourT > STOP_S - 0.8 && !fade.classList.contains('on')) { fade.classList.add('on'); $('#tourCap').classList.add('out'); }
+      if (tourT > STOP_S) { ti = (ti + 1) % tour.length; tourT = 0; tourA = Math.random() * Math.PI * 2; showStop(); fade.classList.remove('on'); }
+      slowT += dt; if (slowT > 0.5) { slowT = 0; city.update(s.x, s.z); }
     }
     const S = game.S;
     traffic.update(dt, player.x, player.z);
