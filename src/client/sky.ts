@@ -14,6 +14,8 @@ export class Lighting {
   readonly lantern = new THREE.PointLight(0xffc670, 0, 34, 1.25);
   private sky = new THREE.Color(); private tmp = new THREE.Color();
   nightFactor = 0;
+  /** How far you can see by day (Settings); night and rain bring the fog closer. */
+  viewFar = 1100;
 
   constructor(private scene: THREE.Scene, private skyFx: Sky, private palaceLights: THREE.Object3D, private pandal: THREE.Object3D) {
     scene.fog = new THREE.Fog(0x8ec5e6, 180, 1100);
@@ -28,7 +30,7 @@ export class Lighting {
     const warm = df * (1 - smooth(0.08, 0.5, sy)) + (1 - df) * smooth(-0.25, -0.05, sy) * 0.6;
     this.sky.copy(cNight).lerp(cDay, df).lerp(cDawn, clamp(warm, 0, 0.75)); if (S.rain) this.sky.lerp(cRain, 0.55 * df + 0.2);
     this.scene.background = this.sky; const fog = this.scene.fog as THREE.Fog; fog.color.copy(this.sky);
-    fog.far = lerp(550, 1100, df) * (S.rain ? 0.6 : 1); fog.near = fog.far * 0.18;
+    fog.far = lerp(this.viewFar * 0.5, this.viewFar, df) * (S.rain ? 0.6 : 1); fog.near = fog.far * 0.18;
     // the sun crosses the southern sky (Agartala is at 23.8° N)
     if (sy > -0.05) { this.sun.position.set(p.x + sx * 120, p.y + Math.max(sy, 0.12) * 160, p.z + 70); this.sun.color.set('#fff1dc').lerp(this.tmp.set('#ffb070'), clamp(warm, 0, 1)); this.sun.intensity = (0.25 + 0.75 * df) * (S.rain ? 0.45 : 1) * Math.PI; }
     else { this.sun.position.set(p.x - 70, p.y + 140, p.z + 60); this.sun.color.set('#8fa8e0'); this.sun.intensity = 0.3 * Math.PI; } // moonlight

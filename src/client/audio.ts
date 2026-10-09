@@ -1,6 +1,10 @@
 /** Every sound is synthesized in WebAudio: no audio files. */
 let ctx: AudioContext | null = null;
 let on = true;
+let master: GainNode | null = null; let volume = 0.8;
+/** Everything plays through one master gain, so the volume setting covers every sound. */
+const out = (a: AudioContext): AudioNode => { if (!master) { master = a.createGain(); master.gain.value = volume; master.connect(out(a)); } return master; };
+export function setVolume(v: number): void { volume = Math.max(0, Math.min(1, v)); if (master && ctx) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.05); }
 
 function ac(): AudioContext | null {
   if (!on) return null;
@@ -13,14 +17,14 @@ function tone(f: number, dur: number, type: OscillatorType = 'sine', vol = 0.12,
   const o = a.createOscillator(), g = a.createGain(); o.type = type; o.frequency.setValueAtTime(f, t);
   if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f + slide), t + dur);
   g.gain.setValueAtTime(vol, t); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
-  o.connect(g).connect(a.destination); o.start(t); o.stop(t + dur + 0.02);
+  o.connect(g).connect(out(a)); o.start(t); o.stop(t + dur + 0.02);
 }
 function noise(dur: number, vol = 0.2, freq = 800, q = 1, delay = 0): void {
   const a = ac(); if (!a) return; const t = a.currentTime + delay;
   const n = a.createBuffer(1, Math.floor(a.sampleRate * dur), a.sampleRate); const d = n.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * (1 - i / d.length);
   const s = a.createBufferSource(); s.buffer = n; const f = a.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = q;
-  const g = a.createGain(); g.gain.value = vol; s.connect(f).connect(g).connect(a.destination); s.start(t);
+  const g = a.createGain(); g.gain.value = vol; s.connect(f).connect(g).connect(out(a)); s.start(t);
 }
 
 export const SFX: Record<string, () => void> = {
@@ -52,7 +56,7 @@ function rainLoop(level: number): void {
   if (!rainNode && level > 0) {
     const n = a.createBuffer(1, a.sampleRate * 2, a.sampleRate); const d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     const src = a.createBufferSource(); src.buffer = n; src.loop = true; const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1400;
-    const gain = a.createGain(); gain.gain.value = 0; src.connect(f).connect(gain).connect(a.destination); src.start(); rainNode = { src, gain };
+    const gain = a.createGain(); gain.gain.value = 0; src.connect(f).connect(gain).connect(out(a)); src.start(); rainNode = { src, gain };
   }
   if (rainNode) rainNode.gain.gain.setTargetAtTime(level, a.currentTime, 1.2);
 }

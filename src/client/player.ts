@@ -16,6 +16,8 @@ export class Player {
   yaw = 0; pitch = 0.28; dist = 5.5;
   readonly keys: Record<string, boolean> = {};
   readonly joy = { x: 0, y: 0, active: false };
+  /** Camera drag speed from Settings (1 = default). */
+  lookScale = 1;
   /** R toggles running on and off; Shift runs while held. */
   autoRun = false;
   /** On a scooter you go faster than a bicycle; when tired you cannot run. */
@@ -56,7 +58,7 @@ export class Player {
     addEventListener('blur', () => { for (const k in this.keys) this.keys[k] = false; });
     let drag: { x: number; y: number; id: number } | null = null;
     canvas.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.4) return; drag = { x: e.clientX, y: e.clientY, id: e.pointerId }; canvas.setPointerCapture(e.pointerId); canvas.focus(); });
-    canvas.addEventListener('pointermove', (e) => { if (!drag || drag.id !== e.pointerId) return; this.lastLook = performance.now(); this.yaw -= (e.clientX - drag.x) * 0.0055; this.pitch = clamp(this.pitch + (e.clientY - drag.y) * 0.004, 0.08, 1.35); drag.x = e.clientX; drag.y = e.clientY; });
+    canvas.addEventListener('pointermove', (e) => { if (!drag || drag.id !== e.pointerId) return; this.lastLook = performance.now(); this.yaw -= (e.clientX - drag.x) * 0.0055 * this.lookScale; this.pitch = clamp(this.pitch + (e.clientY - drag.y) * 0.004 * this.lookScale, 0.08, 1.35); drag.x = e.clientX; drag.y = e.clientY; });
     const end = (e: PointerEvent) => { if (drag && drag.id === e.pointerId) drag = null; };
     canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
     canvas.addEventListener('wheel', (e) => { this.dist = clamp(this.dist + e.deltaY * 0.01 * (this.dist > 22 ? 3 : 1), 2.8, this.maxDist); e.preventDefault(); }, { passive: false });

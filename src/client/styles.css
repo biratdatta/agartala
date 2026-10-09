@@ -251,3 +251,24 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
   #board .tab.cols{grid-template-columns:1fr}
   #energy span{font-size:9.5px}
 }
+
+/* Settings */
+#settings .in{display:grid;gap:10px}
+.set-row{display:flex;justify-content:space-between;align-items:baseline;font-weight:600;font-size:15px;margin-top:4px}
+.set-row output{color:var(--gold);font-variant-numeric:tabular-nums}
+#settings input[type=range]{width:100%;accent-color:var(--gold);height:22px}
+#settings select{width:100%;background:rgba(26,20,32,.85);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:10px;font:inherit;font-size:15px}
+.seg{border:1px solid var(--line);border-radius:8px;padding:10px 12px 12px;display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:4px 0 0}
+.seg legend{padding:0 6px;font-size:14px;color:var(--ink-dim)}
+.seg button{background:transparent;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:9px 6px;font-weight:700;font-size:14px}
+.seg button[aria-pressed="true"]{background:var(--gold);color:var(--panel-solid);border-color:var(--gold)}
+.set-check{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.4;cursor:pointer}
+.set-check input{width:18px;height:18px;margin-top:2px;accent-color:var(--gold);flex:none}
+.set-note{margin:0;color:var(--ink-dim)}
+.linkbtn{background:none;border:0;padding:0;color:var(--gold);font:inherit;font-size:13px;text-decoration:underline;cursor:pointer}
+/* bigger text and buttons */
+html[data-text="large"] :is(#hud,#touch,.overlay>.panel,#title .wrap,#tourCap){zoom:1.15}
+html[data-text="largest"] :is(#hud,#touch,.overlay>.panel,#title .wrap,#tourCap){zoom:1.32}
+/* reduce motion */
+html[data-motion="reduce"] .toast{animation:none}
+html[data-motion="reduce"] :is(#fade,#tourFade,#tourCap){transition:none}

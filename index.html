@@ -57,6 +57,7 @@
       <button class="hbtn" id="bHelp"><span class="key">H</span>Help</button>
       <button class="hbtn" id="bLantern"><span class="key">T</span>Lantern on</button>
       <button class="hbtn" id="bSound">Sound on</button>
+      <button class="hbtn" id="bSettings"><span class="key">O</span>Settings</button>
     </div>
     <div id="attrib">Map data © OpenStreetMap contributors</div>
   </div>
@@ -99,6 +100,7 @@
         <span><span class="key">Z</span> sleep at night</span>
         <span><span class="key">T</span> lantern</span>
         <span><span class="key">M</span> map</span>
+        <span><button class="linkbtn" id="titleSettings" type="button">Settings</button></span>
       </div>
     </div>
   </div>
@@ -198,6 +200,32 @@
     </div>
   </div>
 
+  <div id="settings" class="overlay" hidden>
+    <div class="panel card">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="row" style="justify-content:space-between"><h3>Settings</h3><button class="btn ghost" id="setClose" aria-label="Close settings">Close</button></div>
+        <div class="set-row"><label for="setLook">Look sensitivity</label><output id="setLookV"></output></div>
+        <input type="range" id="setLook" min="0.3" max="3" step="0.1">
+        <div class="set-row"><label for="setView">How far you can see</label><output id="setViewV"></output></div>
+        <input type="range" id="setView" min="300" max="1600" step="50">
+        <div class="set-row"><label for="setVol">Sound</label><output id="setVolV"></output></div>
+        <input type="range" id="setVol" min="0" max="100" step="5">
+        <fieldset class="seg"><legend>Text and buttons</legend>
+          <button type="button" data-text="normal">Normal</button><button type="button" data-text="large">Large</button><button type="button" data-text="largest">Largest</button>
+        </fieldset>
+        <label class="set-check"><input type="checkbox" id="setMotion"> <span>Reduce motion: no bobbing markers, pulsing rings or sliding pop-ups</span></label>
+        <div class="set-row"><label for="setGfx">Graphics</label><output id="setGfxV"></output></div>
+        <select id="setGfx">
+          <option value="auto">Auto</option><option value="low">Low: fastest, no shadows</option><option value="medium">Medium</option><option value="high">High: sharpest, soft shadows</option>
+        </select>
+        <p class="sm set-note">If the game stutters, choose Low. On Auto it also steps down by itself when your device can't keep up.</p>
+        <p class="sm set-note">Settings are kept on this device. Your farm itself is saved online.</p>
+        <div class="row" style="justify-content:center"><button class="btn" id="setDone">Done</button></div>
+      </div>
+    </div>
+  </div>
+
   <div id="help" class="overlay" hidden>
     <div class="panel card">
       <div class="stripe"></div>
@@ -208,6 +236,7 @@
           <dt><span class="key">E</span></dt><dd>Do the thing in front of you: till, sow, water, harvest, tap, cut, talk, trade, take a tomtom. The prompt at the bottom says what E will do.</dd>
           <dt><span class="key">Z</span></dt><dd>Sleep till 06:00. Only after 19:00 or before 05:00.</dd>
           <dt><span class="key">T</span></dt><dd>Put out or light your lantern. It comes out by itself after dark.</dd>
+          <dt><span class="key">O</span></dt><dd>Settings: look speed, how far you can see, sound, text size, motion and graphics.</dd>
           <dt><span class="key">M</span></dt><dd>Map of the city.</dd>
           <dt><span class="key">L</span></dt><dd>Your farm: farm code and sign-in, neighbours and phrasebook, Grandpa's album, festivals, and the boards.</dd>
           <dt><span class="key">E</span> near a vehicle</dt><dd>Get on. Then <b>W</b>/<b>S</b> to speed up, brake and reverse, <b>A</b>/<b>D</b> to steer, <b>Space</b> to brake, <b>E</b> to get off. You start with Grandpa's cycle-rickshaw; Gopal sells a bicycle, scooter, motorbike, tomtom and car. Stop a rickshaw or tomtom at any tomtom stand to pick up a passenger for a fare. Every tomtom stand also has a rental point: rent by the hour and return it at any of them.</dd>

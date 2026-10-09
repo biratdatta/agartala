@@ -12,7 +12,7 @@ import { festivalsOn, isFestival } from '../shared/festivals.js';
 import { HOME } from '../shared/farm.js';
 import { tripOpen, type Trip } from '../shared/trips.js';
 import type { ItemKey } from '../shared/constants.js';
-import { Ambience, play, toggleSound, unlockAudio } from './audio.js';
+import { Ambience, play, setVolume, toggleSound, unlockAudio } from './audio.js';
 import { OtherPlayers } from './social.js';
 import { RealPlaces } from './scene/realplaces.js';
 import { buildRealism } from './scene/realism.js';
@@ -30,6 +30,7 @@ import { fixName, getH, loadMap } from './map/data.js';
 import { Net } from './net.js';
 import { buildNeighbours, kaamFor } from './npcs.js';
 import { Player, isTouch } from './player.js';
+import { autoQuality, onSettings, settings, updateSettings, type Graphics, type TextSize } from './settings.js';
 import { RideView } from './ride.js';
 import { RoadGraph } from './route.js';
 import { City, KitFleet, loadKit, planBuildings } from './scene/buildings.js';
@@ -97,6 +98,53 @@ async function boot(): Promise<void> {
   const graph = new RoadGraph(map);
   const rideView = new RideView(scene, map, graph, new KitFleet(scene, kit, 'tomtom', 1, ['#2f8f4e']), 0);
   const lighting = new Lighting(scene, skyFx, palaceLights, pandal);
+
+  /* ---------- settings: applied now and whenever they change ---------- */
+  const QUALITY: Record<Exclude<Graphics, 'auto'>, { pr: number; shadow: number }> = {
+    low: { pr: Math.min(devicePixelRatio || 1, 1) * 0.75, shadow: 0 }, medium: { pr: Math.min(devicePixelRatio || 1, 1), shadow: 1024 }, high: { pr: Math.min(devicePixelRatio || 1, 1.5), shadow: 2048 },
+  };
+  let autoLevel = autoQuality(isTouch); let quality: Exclude<Graphics, 'auto'> = autoLevel;
+  const applyQuality = (q: Exclude<Graphics, 'auto'>) => {
+    quality = q; const Q = QUALITY[q]; renderer.setPixelRatio(Q.pr);
+    lighting.sun.castShadow = Q.shadow > 0;
+    if (Q.shadow && lighting.sun.shadow.mapSize.x !== Q.shadow) { lighting.sun.shadow.mapSize.set(Q.shadow, Q.shadow); lighting.sun.shadow.map?.dispose(); (lighting.sun.shadow as { map: unknown }).map = null; }
+    resize();
+    const label = $('#setGfxV'); label.textContent = `Running at ${q[0].toUpperCase()}${q.slice(1)}`;
+  };
+  onSettings((st) => {
+    player.lookScale = st.look; lighting.viewFar = st.view; camera.far = Math.max(1200, st.view * 1.6); camera.updateProjectionMatrix();
+    setVolume(st.volume / 100);
+    document.documentElement.dataset.text = st.text; document.documentElement.dataset.motion = st.reduceMotion ? 'reduce' : '';
+    applyQuality(st.graphics === 'auto' ? autoLevel : st.graphics);
+  });
+  // Auto quality: if the frame rate stays low for a few seconds, step down one level
+  let fpsT = 0, fpsN = 0;
+  const watchFps = (dt: number) => {
+    if (settings().graphics !== 'auto' || quality === 'low') return;
+    fpsT += dt; fpsN++;
+    if (fpsT >= 5) { const fps = fpsN / fpsT; fpsT = 0; fpsN = 0; if (fps < 28) { autoLevel = quality === 'high' ? 'medium' : 'low'; applyQuality(autoLevel); toast(`Graphics lowered to ${autoLevel === 'medium' ? 'Medium' : 'Low'} so the game runs smoothly.`); } }
+  };
+  const openSettings = () => {
+    const st = settings(); closePanels();
+    const look = $('#setLook') as HTMLInputElement, view = $('#setView') as HTMLInputElement, vol = $('#setVol') as HTMLInputElement;
+    look.value = String(st.look); view.value = String(st.view); vol.value = String(st.volume);
+    ($('#setMotion') as HTMLInputElement).checked = st.reduceMotion; ($('#setGfx') as HTMLSelectElement).value = st.graphics;
+    ($('#setGfx').querySelector('option[value="auto"]') as HTMLOptionElement).textContent = `Auto (best for this device: ${autoQuality(isTouch)})`;
+    showSettingValues(); $('#settings').hidden = false;
+  };
+  const showSettingValues = () => {
+    const st = settings(); $('#setLookV').textContent = st.look.toFixed(1); $('#setViewV').textContent = `${st.view} m`; $('#setVolV').textContent = `${st.volume}%`;
+    document.querySelectorAll<HTMLButtonElement>('#settings .seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.text === st.text)));
+  };
+  $('#setLook').oninput = (e) => { updateSettings({ look: Number((e.target as HTMLInputElement).value) }); showSettingValues(); };
+  $('#setView').oninput = (e) => { updateSettings({ view: Number((e.target as HTMLInputElement).value) }); showSettingValues(); };
+  $('#setVol').oninput = (e) => { updateSettings({ volume: Number((e.target as HTMLInputElement).value) }); showSettingValues(); };
+  $('#setVol').onchange = () => play('coin');
+  document.querySelectorAll<HTMLButtonElement>('#settings .seg button').forEach((b) => { b.onclick = () => { updateSettings({ text: b.dataset.text as TextSize }); showSettingValues(); }; });
+  ($('#setMotion') as HTMLInputElement).onchange = (e) => updateSettings({ reduceMotion: (e.target as HTMLInputElement).checked });
+  ($('#setGfx') as HTMLSelectElement).onchange = (e) => updateSettings({ graphics: (e.target as HTMLSelectElement).value as Graphics });
+  for (const id of ['#setClose', '#setDone']) $(id).onclick = () => { $('#settings').hidden = true; };
+  $('#bSettings').onclick = openSettings; $('#titleSettings').onclick = openSettings;
   const stalls = buildStalls(scene, map); const lamps = new StreetLamps(scene, map); const diyas = buildDiyas(scene, map); const kerShrine = buildKer(scene);
   const others = new OtherPlayers(scene, net); const ambience = new Ambience();
   const mapView = new MapView(map);
@@ -373,6 +421,7 @@ async function boot(): Promise<void> {
     if (k === 'p' && !e.repeat) return togglePhoto();
     if (k === 'm') return toggleMap();
     if (k === 't' && !e.repeat) return toggleLantern();
+    if (k === 'o' && !e.repeat) { if ($('#settings').hidden) openSettings(); else $('#settings').hidden = true; return; }
     if (k === 'h') { $('#help').hidden = !$('#help').hidden; return; }
     if (k === 'l') { if ($('#board').hidden) board(); else $('#board').hidden = true; return; }
     if (modalOpen()) return;
@@ -471,7 +520,8 @@ async function boot(): Promise<void> {
   /* ---------- loop ---------- */
   const clock = new THREE.Clock(); let hudT = 0, slowT = 0, posT = 0;
   renderer.setAnimationLoop(() => {
-    const dt = Math.min(clock.getDelta(), 0.05), time = clock.elapsedTime;
+    const dt = Math.min(clock.getDelta(), 0.05), time = clock.elapsedTime; const calm = settings().reduceMotion;
+    watchFps(dt);
     if (playing) {
       if (rideView.active) {
         const info = rideView.update(net.now(), player.body);
@@ -493,8 +543,8 @@ async function boot(): Promise<void> {
         rideTo = null;
         prompt = findTarget(ctx, spots); promptP = prompt ? prompt.get() : null;
       }
-      if (prompt) { ring.visible = true; ring.position.set(prompt.x, getH(prompt.x, prompt.z) + 0.35, prompt.z); const s = Math.min(3, prompt.r * 0.9) * (1 + Math.sin(time * 5) * 0.05); ring.scale.set(s, s, s); (ring.material as THREE.MeshBasicMaterial).color.set(promptP?.run ? '#f2c14a' : '#f6efe0'); } else ring.visible = false;
-      if (target) { marker.visible = true; const dd = Math.hypot(target.x - player.x, target.z - player.z); marker.position.set(target.x, getH(target.x, target.z) + 3 + Math.sin(time * 2.4) * 0.2, target.z); gem.rotation.y = time * 1.5; gem.scale.setScalar(Math.min(8, Math.max(1, dd / 60))); gem.scale.y *= 1.5; beam.visible = dd > 15; } else marker.visible = false;
+      if (prompt) { ring.visible = true; ring.position.set(prompt.x, getH(prompt.x, prompt.z) + 0.35, prompt.z); const s = Math.min(3, prompt.r * 0.9) * (1 + (calm ? 0 : Math.sin(time * 5) * 0.05)); ring.scale.set(s, s, s); (ring.material as THREE.MeshBasicMaterial).color.set(promptP?.run ? '#f2c14a' : '#f6efe0'); } else ring.visible = false;
+      if (target) { marker.visible = true; const dd = Math.hypot(target.x - player.x, target.z - player.z); marker.position.set(target.x, getH(target.x, target.z) + 3 + (calm ? 0 : Math.sin(time * 2.4) * 0.2), target.z); gem.rotation.y = calm ? 0 : time * 1.5; gem.scale.setScalar(Math.min(8, Math.max(1, dd / 60))); gem.scale.y *= 1.5; beam.visible = dd > 15; } else marker.visible = false;
       hudT += dt; if (hudT > 0.2) { hudT = 0; hudTick(); setPrompt(promptP, isTouch); }
       slowT += dt; if (slowT > 0.5) {
         slowT = 0; farm.growing(S); labels.update(player.x, player.z); city.update(player.x, player.z);
