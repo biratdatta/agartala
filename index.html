@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Amar Agartala</title>
-<meta name="description" content="A 3D farming game set in the real streets of Agartala, Tripura, built from OpenStreetMap.">
+<meta name="description" content="A 3D farming game set in the real streets of Agartala, Tripura.">
 <meta name="theme-color" content="#1c1624">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="apple-touch-icon" href="/icons/icon-192.png">
@@ -59,7 +59,6 @@
       <button class="hbtn" id="bSound">Sound on</button>
       <button class="hbtn" id="bSettings"><span class="key">O</span>Settings</button>
     </div>
-    <div id="attrib">Map data © OpenStreetMap contributors</div>
   </div>
 
   <div id="touch" hidden>
@@ -73,7 +72,7 @@
   <div id="title" class="overlay" hidden>
     <div id="tourCap" aria-live="polite"><div class="eyebrow">Over Agartala</div><div id="tourName"></div><div id="tourBn"></div></div>
     <div class="wrap">
-      <div class="eyebrow">Agartala · Tripura · real streets from OpenStreetMap</div>
+      <div class="eyebrow">Agartala · Tripura</div>
       <h1>Amar Agartala<span>আমার আগরতলা</span></h1>
       <p>You come home to Agartala, to your grandfather's bari on the bank of the Haora, behind Maharaja Bir Bikram Stadium. Shibnagar, Math Chowmuhani, Ramnagar and Joynagar are all around you, every road, lane and pond where it really is. Grow paddy and Queen pineapple, tap rubber at dawn, ride tomtoms round the paras, help the neighbours, and keep the festivals from Garia Puja to Durga Puja at Modern Club.</p>
       <label class="fromrow" for="fromIn"><span>Coming home from</span><input id="fromIn" list="cityList" maxlength="40" autocomplete="address-level2" placeholder="Bengaluru"></label>
@@ -182,7 +181,7 @@
   </div>
 
   <div id="bigmap" class="overlay" hidden>
-    <div class="panel card" style="width:min(760px,100%)">
+    <div class="panel card" style="width:min(1180px,100%,calc((100vh - 220px) * 1.54 + 40px))">
       <div class="stripe"></div>
       <div class="in">
         <div class="row" style="justify-content:space-between"><h3 id="mapTitle">Agartala</h3><button class="btn ghost" id="mapClose">Close · M</button></div>
@@ -191,11 +190,15 @@
           <button class="btn" id="jumpGo">Jump</button>
         </div>
         <datalist id="placeList"></datalist>
-        <canvas id="mapCv" width="900" height="900" aria-label="City map. Click a spot to jump there."></canvas>
-        <div class="row" style="justify-content:space-between">
-          <span class="sm" id="jumpHint">Click anywhere on the map to jump there.</span>
-          <span class="eyebrow" style="color:var(--ink-dim)">Map data © OpenStreetMap contributors (ODbL)</span>
+        <div class="mapwrap">
+          <canvas id="mapCv" width="1200" height="1200" aria-label="City map. Scroll or pinch to zoom, drag to move, click a spot to choose it."></canvas>
+          <div class="mapzoom">
+            <button type="button" id="mapIn" aria-label="Zoom in">+</button>
+            <button type="button" id="mapOut" aria-label="Zoom out">−</button>
+            <button type="button" id="mapReset" aria-label="Show the whole city">⤢</button>
+          </div>
         </div>
+        <span class="sm" id="jumpHint">Click anywhere on the map to jump there.</span>
       </div>
     </div>
   </div>
@@ -222,6 +225,7 @@
         <p class="sm set-note">If the game stutters, choose Low. On Auto it also steps down by itself when your device can't keep up.</p>
         <p class="sm set-note">Settings are kept on this device. Your farm itself is saved online.</p>
         <div class="row" style="justify-content:center"><button class="btn" id="setDone">Done</button></div>
+        <p class="sm set-note credits">Map data © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap contributors</a>, ODbL.</p>
       </div>
     </div>
   </div>
@@ -242,7 +246,7 @@
           <dt><span class="key">E</span> near a vehicle</dt><dd>Get on. Then <b>W</b>/<b>S</b> to speed up, brake and reverse, <b>A</b>/<b>D</b> to steer, <b>Space</b> to brake, <b>E</b> to get off. You start with Grandpa's cycle-rickshaw; Gopal sells a bicycle, scooter, motorbike, tomtom and car. Stop a rickshaw or tomtom at any tomtom stand to pick up a passenger for a fare. Every tomtom stand also has a rental point: rent by the hour and return it at any of them.</dd>
           <dt><span class="key">P</span></dt><dd>Photo mode: hide the HUD, frame a shot and save a postcard.</dd>
         </dl>
-        <p style="margin:0;color:var(--ink-dim);font-size:14px;line-height:1.55">The city is real: streets, ponds and buildings come from OpenStreetMap. Tomtom stands (the green e-rickshaws) take you across town for ₹20. Paddy grows in the low <b style="color:var(--ink)">lunga</b>, pineapple on the <b style="color:var(--ink)">tilla</b>. Crops grow only on days they are watered; rain waters everything. Rubber gives latex once a day between 05:00 and 11:00, and 3 cups roll into one sheet. Work uses energy: eat at the food stalls by the tomtom stands, rest, or sleep. The game saves on its own.</p>
+        <p style="margin:0;color:var(--ink-dim);font-size:14px;line-height:1.55">The city is real: its streets, ponds and buildings are where they really are. Tomtom stands (the green e-rickshaws) take you across town for ₹20. Paddy grows in the low <b style="color:var(--ink)">lunga</b>, pineapple on the <b style="color:var(--ink)">tilla</b>. Crops grow only on days they are watered; rain waters everything. Rubber gives latex once a day between 05:00 and 11:00, and 3 cups roll into one sheet. Work uses energy: eat at the food stalls by the tomtom stands, rest, or sleep. The game saves on its own.</p>
       </div>
     </div>
   </div>

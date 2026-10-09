@@ -272,3 +272,14 @@ html[data-text="largest"] :is(#hud,#touch,.overlay>.panel,#title .wrap,#tourCap)
 /* reduce motion */
 html[data-motion="reduce"] .toast{animation:none}
 html[data-motion="reduce"] :is(#fade,#tourFade,#tourCap){transition:none}
+
+/* the big map: zoom and pan */
+.mapwrap{position:relative}
+#mapCv{touch-action:none;cursor:grab}
+#mapCv.dragging{cursor:grabbing}
+.mapzoom{position:absolute;right:10px;top:10px;display:flex;flex-direction:column;gap:6px}
+.mapzoom button{width:38px;height:38px;border-radius:6px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:20px;font-weight:700;line-height:1}
+.mapzoom button:hover{border-color:var(--gold)}
+#bigmap .panel{max-height:calc(100% - 16px)}
+.credits{text-align:center;font-size:12px}
+.credits a{color:var(--ink-dim)}

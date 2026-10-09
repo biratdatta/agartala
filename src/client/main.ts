@@ -356,6 +356,29 @@ async function boot(): Promise<void> {
   $('#jumpGo').onclick = jumpByName;
   ($('#jumpIn') as HTMLInputElement).addEventListener('focus', fillJumps);
   ($('#jumpIn') as HTMLInputElement).addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); jumpByName(); } });
+  /* the big map: scroll or pinch to zoom, drag to move, buttons for zoom; a drag is never taken as a click */
+  {
+    const cv = $('#mapCv') as HTMLCanvasElement; const pts = new Map<number, { x: number; y: number }>(); let moved = 0, pinch = 0;
+    const frac = (x: number, y: number) => { const r = cv.getBoundingClientRect(); return { fx: (x - r.left) / r.width, fy: (y - r.top) / r.height, r }; };
+    cv.addEventListener('wheel', (e) => { e.preventDefault(); const { fx, fy } = frac(e.clientX, e.clientY); mapView.zoomBy(Math.exp(-e.deltaY * (e.ctrlKey ? 0.01 : 0.0018)), fx, fy); }, { passive: false });
+    cv.addEventListener('pointerdown', (e) => { cv.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); if (pts.size === 1) moved = 0; cv.classList.add('dragging'); pinch = 0; });
+    cv.addEventListener('pointermove', (e) => {
+      const p = pts.get(e.pointerId); if (!p) return;
+      if (pts.size === 1) {
+        const { r } = frac(e.clientX, e.clientY); const dx = e.clientX - p.x, dy = e.clientY - p.y; moved += Math.abs(dx) + Math.abs(dy);
+        if (moved > 6) mapView.panBy(dx / r.width, dy / r.height);
+      } else if (pts.size === 2) {
+        const [a, b] = [...pts.values()]; const before = Math.hypot(a.x - b.x, a.y - b.y);
+        p.x = e.clientX; p.y = e.clientY; const [a2, b2] = [...pts.values()]; const after = Math.hypot(a2.x - b2.x, a2.y - b2.y);
+        const { fx, fy } = frac((a2.x + b2.x) / 2, (a2.y + b2.y) / 2); if (before > 0) mapView.zoomBy(after / before, fx, fy); moved = 999; pinch = 1; return;
+      }
+      p.x = e.clientX; p.y = e.clientY;
+    });
+    const up = (e: PointerEvent) => { pts.delete(e.pointerId); if (!pts.size) cv.classList.remove('dragging'); };
+    cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
+    cv.addEventListener('click', (e) => { if (moved > 6 || pinch) { e.stopImmediatePropagation(); moved = 0; pinch = 0; } }, true);
+    $('#mapIn').onclick = () => mapView.zoomBy(1.6); $('#mapOut').onclick = () => mapView.zoomBy(1 / 1.6); $('#mapReset').onclick = () => mapView.resetView();
+  }
   $('#mapCv').addEventListener('click', (e) => {
     const w = mapView.worldAt(e.clientX, e.clientY);
     if (mapMode === 'home') {
