@@ -447,6 +447,8 @@ async function boot(): Promise<void> {
   const setInv = (open: boolean) => { invEl.classList.toggle('open', open); invBtn.setAttribute('aria-expanded', String(open)); };
   invBtn.onclick = (e) => { e.stopPropagation(); setInv(!invEl.classList.contains('open')); };
   document.addEventListener('pointerdown', (e) => { if (invEl.classList.contains('open') && !invEl.contains(e.target as Node) && e.target !== invBtn) setInv(false); });
+  // phones: the menu and messages sit just below the status card, however tall it is
+  try { new ResizeObserver(() => { const b = $('#status').getBoundingClientRect().bottom; if (b > 0) document.documentElement.style.setProperty('--below-status', `${Math.round(b + 8)}px`); }).observe($('#status')); } catch { /* old browsers: the CSS default is used */ }
   // phones: the mission card shows three lines; tap it for the rest
   $('#goal').addEventListener('click', () => $('#goal').classList.toggle('open'));
   function toggleLantern(): void {

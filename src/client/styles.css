@@ -353,9 +353,12 @@ html[data-motion="reduce"] :is(#fade,#tourFade,#tourCap){transition:none}
   #toasts{top:calc(150px + env(safe-area-inset-top,0px))}
   .toast{font-size:12.5px}
 }
-/* phones held for touch: the joystick sits bottom-left, so the bag and prompt move above it */
+/* phones held for touch: the joystick sits bottom-left, Act/Run/Sleep bottom-right */
 @media (max-width:600px){
-  #game.touch #invBtn{bottom:auto;top:calc(var(--hud-top,190px) + env(safe-area-inset-top,0px))}
-  #game.touch #inv{bottom:auto;top:calc(var(--hud-top,190px) + 44px + env(safe-area-inset-top,0px))}
-  #game.touch #prompt{bottom:calc(170px + env(safe-area-inset-bottom,0px))}
+  #prompt{box-sizing:border-box}
+  #game.touch #invBtn{bottom:calc(152px + env(safe-area-inset-bottom,0px))}                   /* just above the joystick */
+  #game.touch #inv{bottom:calc(198px + env(safe-area-inset-bottom,0px))}                      /* opens upward from the bag */
+  #game.touch #prompt{bottom:calc(166px + env(safe-area-inset-bottom,0px));left:calc(50% + 40px);max-width:calc(100vw - 104px)}
+  #game.touch #btns{top:var(--below-status,306px)}                                             /* under the status card */
+  #toasts{left:8px;transform:none;justify-items:start;width:calc(100vw - 70px);top:var(--below-status,306px)}
 }
