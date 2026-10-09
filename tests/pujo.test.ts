@@ -21,6 +21,12 @@ describe('Durga Puja chapter', () => {
     g.at(16); g.ok({ t: 'bisarjan' });
     expect(currentMission(g.s)?.id).toBe('sell'); expect(g.s.mission).toBe(missionIndex('sell'));
   });
+  it('a new player in the season is paid for coming home first, then the Puja begins', () => {
+    const g = game(newState(IN)); g.s.flags.arrived = true; g.s.mission = 1; const m0 = g.s.money;
+    g.ok({ t: 'meetGrandpa' });
+    expect(g.s.money).toBe(m0 + 150); expect(g.s.inv.paddySeed).toBe(4); expect(g.s.mission).toBe(2);
+    expect(currentMission(g.s)?.id).toBe('pujoPandals');
+  });
   it('waits until you are home, and is not there outside the season', () => {
     const g = game(newState(IN)); expect(currentMission(g.s)?.id).toBe('arrive');
     const out = game(newState(OUT)); out.s.flags.metGrandpa = true; out.s.mission = 2;

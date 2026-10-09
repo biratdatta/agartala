@@ -56,7 +56,8 @@ const PUJO_IDS = new Set(PUJO_MISSIONS.map((m) => m.id));
 export const isPujoMission = (m: Mission | null): boolean => !!m && PUJO_IDS.has(m.id);
 /** The Puja chapter's current step, if it's the season and you're home. */
 export function pujoMission(s: GameState): Mission | null {
-  if (!pujoSeason(s.ts) || !s.flags.metGrandpa) return null;
+  // only once 'arrive' and 'home' are finished and paid (index 2 on), so their rewards are never skipped
+  if (!pujoSeason(s.ts) || !s.flags.metGrandpa || s.mission < 2) return null;
   return PUJO_MISSIONS[Math.max(0, Math.floor(Number(s.flags.pujoDone) || 0))] || null;
 }
 
