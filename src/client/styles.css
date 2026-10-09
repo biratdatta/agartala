@@ -362,3 +362,56 @@ html[data-motion="reduce"] :is(#fade,#tourFade,#tourCap){transition:none}
   #game.touch #btns{top:var(--below-status,306px)}                                             /* under the status card */
   #toasts{left:8px;transform:none;justify-items:start;width:calc(100vw - 70px);top:var(--below-status,306px)}
 }
+
+/* phones held upright: the map panel takes the whole screen, the map as much of it as it can */
+@media (max-width:600px) and (orientation:portrait){
+  #bigmap{padding:0}
+  #bigmap .panel{width:100%!important;height:100dvh;max-height:100dvh;border-radius:0;display:flex;flex-direction:column}
+  #bigmap .panel .in{flex:1;display:flex;flex-direction:column;gap:8px;padding:10px 10px calc(10px + env(safe-area-inset-bottom,0px));min-height:0}
+  #bigmap h3{font-size:20px}
+  #bigmap .jumprow input{font-size:14px;padding:8px 10px;min-width:0}
+  .mapwrap.tall{flex:1;min-height:240px}
+  .mapwrap.tall #mapCv{width:100%;height:100%}
+  .mapkey{font-size:11px;max-height:55%;bottom:8px;left:8px}
+  .mapzoom button{width:42px;height:42px}
+  .reqbtns{font-size:12px}
+  .reqbtns .btn{padding:6px 8px;font-size:12px}
+  .reqform{max-height:45dvh;overflow:auto}
+}
+
+/* phones: every panel uses the screen's height, and its title row (with Close) stays pinned while you scroll */
+@media (max-width:600px){
+  .overlay:not(#title):not(#dialog){padding:8px 8px calc(8px + env(safe-area-inset-bottom,0px));align-items:start}
+  .overlay:not(#title):not(#dialog)>.panel{max-height:calc(100dvh - 16px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));margin-top:env(safe-area-inset-top,0px)}
+  .panel .in>.row:first-child{position:sticky;top:0;z-index:2;background:var(--panel-solid);margin:-14px -14px 0;padding:12px 14px 8px;border-bottom:1px solid var(--line)}
+  .panel h3{font-size:20px}
+  .panel .btn{padding:8px 12px}
+  #board .tabs{overflow-x:auto;flex-wrap:nowrap;white-space:nowrap;scrollbar-width:none}
+  #board .tabs button{flex:none}
+  #dialog .panel{width:100%}
+  #dialog .in{padding:12px 14px 14px}
+  #dlgText{font-size:14.5px;line-height:1.5}
+}
+
+/* phones turned sideways: very little height, so the cards get shorter and the inventory folds into the bag */
+@media (max-height:500px) and (orientation:landscape){
+  #goal{width:min(300px,40vw)}
+  #goal .in{padding:6px 10px 8px;gap:2px}
+  #goal h2{font-size:15px}
+  #goal p{font-size:11.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  #goal.open p{display:block}
+  #status{width:120px}
+  #status .in{padding:5px 8px 7px;gap:3px}
+  #clock{font-size:18px}
+  #date,#place,#fest,#others,#net{font-size:10.5px}
+  #mini{width:76px;height:76px}
+  #invBtn{display:flex;position:absolute;left:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:7px 11px;font-weight:600}
+  #inv{display:none;left:8px;transform:none;bottom:52px;max-height:60vh;overflow:auto;grid-template-columns:1fr 1fr 1fr;gap:6px;padding:8px;background:var(--panel-solid);border:1px solid var(--line);border-radius:8px}
+  #inv.open{display:grid}
+  #game.touch #invBtn{left:auto;right:150px;bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  #game.touch #inv{left:auto;right:150px}
+  #game.touch #btns{top:auto;bottom:calc(10px + env(safe-area-inset-bottom,0px));right:auto;left:150px}
+  #game.touch #prompt{bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+  .overlay:not(#title)>.panel{max-height:calc(100dvh - 12px)}
+  #title p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+}

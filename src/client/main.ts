@@ -281,15 +281,19 @@ async function boot(): Promise<void> {
     updateHud({ S: game.S, place: map.placeName(player.x, player.z), target, px: player.x, pz: player.z, yaw: player.yaw, online: net.online, lost: net.lost, others: others.count }, force);
     mapView.drawMini(marks());
   }
-  let mapMode: 'jump' | 'home' = 'jump';
+  let mapMode: 'jump' | 'home' = 'jump'; let mapOpenedOnce = false;
   const openMap = (mode: 'jump' | 'home') => {
-    mapMode = mode; const el = $('#bigmap'); el.hidden = false; mapView.drawBig(marks());
+    mapMode = mode; const el = $('#bigmap'); el.hidden = false;
+    // phones held upright: the map fills the screen and opens round you, about 1 km across
+    const phone = matchMedia('(max-width:600px) and (orientation:portrait)').matches; $('.mapwrap').classList.toggle('tall', phone);
+    if (phone && !mapOpenedOnce) { mapView.focusWidth(player.x, player.z, 1000); mapOpenedOnce = true; }
+    mapView.drawBig(marks());
     document.querySelectorAll<HTMLElement>('#mapKey .pujo-only').forEach((li) => { li.hidden = !pujoSeason(net.now()); });
     $('#mapTitle').textContent = mode === 'home' ? 'Where is home?' : 'Agartala';
     $('#jumpHint').textContent = mode === 'home' ? 'Click the spot in Agartala where your home is. Your house, Grandpa and a tomtom stand will move there.' : 'Click anywhere on the map to jump there.';
     ($('.jumprow') as HTMLElement).hidden = mode === 'home'; $('#reqBtns').hidden = mode === 'home' || !net.online || net.needsSignin; reqClose();
   };
-  addEventListener('resize', () => { if (!$('#bigmap').hidden) mapView.drawBig(marks()); });
+  addEventListener('resize', () => { if ($('#bigmap').hidden) return; $('.mapwrap').classList.toggle('tall', matchMedia('(max-width:600px) and (orientation:portrait)').matches); mapView.drawBig(marks()); });
   const toggleMap = () => { if ($('#bigmap').hidden) openMap('jump'); else $('#bigmap').hidden = true; };
   const board = () => openBoard({ game, net, auth, readChapter: (id) => readChapter(ctx, id), onState: (s) => game.replace(s) });
   wireBoard();

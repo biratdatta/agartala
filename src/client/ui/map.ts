@@ -87,16 +87,23 @@ export class MapView {
   setPin(p: { x: number; z: number } | null): void { this.pin = p; }
   private zoom = 1; private cx = (X0 + X1) / 2; private cz = (Z0 + Z1) / 2; private last: MapMarks | null = null; private queued = false;
   static readonly MAX_ZOOM = 10;
+  /** The canvas's height / width: the city's own shape on big screens, taller on phones held upright. */
+  private aspect = PXH / PXW;
+  /** The world size the canvas shows at a zoom: at zoom 1 the whole city fits, whatever the canvas shape. */
+  private size(zoom = this.zoom): { w: number; h: number } {
+    const w0 = Math.max(X1 - X0, (Z1 - Z0) / this.aspect); const w = w0 / zoom; return { w, h: w * this.aspect };
+  }
   private view(): View {
-    const w = (X1 - X0) / this.zoom, h = (Z1 - Z0) / this.zoom;
-    this.cx = clamp(this.cx, X0 + w / 2, X1 - w / 2); this.cz = clamp(this.cz, Z0 + h / 2, Z1 - h / 2);
+    const { w, h } = this.size();
+    this.cx = w >= X1 - X0 ? (X0 + X1) / 2 : clamp(this.cx, X0 + w / 2, X1 - w / 2);
+    this.cz = h >= Z1 - Z0 ? (Z0 + Z1) / 2 : clamp(this.cz, Z0 + h / 2, Z1 - h / 2);
     return { x0: this.cx - w / 2, z0: this.cz - h / 2, w, h };
   }
   /** Zooms by `f` keeping the world point under (fx, fy) — fractions of the canvas — where it is. */
   zoomBy(f: number, fx = 0.5, fy = 0.5): void {
     const v = this.view(); const wx = v.x0 + fx * v.w, wz = v.z0 + fy * v.h;
     this.zoom = clamp(this.zoom * f, 1, MapView.MAX_ZOOM);
-    const w = (X1 - X0) / this.zoom, h = (Z1 - Z0) / this.zoom; this.cx = wx - (fx - 0.5) * w; this.cz = wz - (fy - 0.5) * h;
+    const { w, h } = this.size(); this.cx = wx - (fx - 0.5) * w; this.cz = wz - (fy - 0.5) * h;
     this.redraw();
   }
   /** Pans by a drag of (dx, dy) canvas fractions. */
@@ -104,6 +111,8 @@ export class MapView {
   resetView(): void { this.zoom = 1; this.cx = (X0 + X1) / 2; this.cz = (Z0 + Z1) / 2; this.redraw(); }
   /** Centres on a point at a given zoom (used to open the map round the player). */
   focus(x: number, z: number, zoom: number): void { this.zoom = clamp(zoom, 1, MapView.MAX_ZOOM); this.cx = x; this.cz = z; this.redraw(); }
+  /** Opens round a point showing about `metres` across (phones start zoomed in on you). */
+  focusWidth(x: number, z: number, metres: number): void { this.cx = x; this.cz = z; this.zoom = clamp(this.size(1).w / metres, 1, MapView.MAX_ZOOM); }
   get zoomLevel(): number { return this.zoom; }
   private redraw(): void { if (this.queued || !this.last) return; this.queued = true; requestAnimationFrame(() => { this.queued = false; if (this.last) this.drawBig(this.last); }); }
 
@@ -117,10 +126,12 @@ export class MapView {
     this.last = m;
     // drawn at the size it shows on screen (times the screen's pixel density), so labels stay readable and sharp
     const cv = $('#mapCv') as HTMLCanvasElement; const dpr = Math.min(devicePixelRatio || 1, 2);
-    const W = cv.clientWidth || 900, H = (W * PXH) / PXW; const pw = Math.round(W * dpr), ph = Math.round(H * dpr);
+    const tall = cv.parentElement?.classList.contains('tall') && (cv.parentElement as HTMLElement).clientHeight > 0;
+    const W = cv.clientWidth || 900, H = tall ? (cv.parentElement as HTMLElement).clientHeight : (W * PXH) / PXW; this.aspect = H / W; const pw = Math.round(W * dpr), ph = Math.round(H * dpr);
     if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
     const c = cv.getContext('2d')!; c.setTransform(dpr, 0, 0, dpr, 0, 0); const v = this.view(); const k = W / v.w;
-    if (this.zoom <= 1.3) { const s0 = PXW / (X1 - X0); c.drawImage(this.img, (v.x0 - X0) * s0, (v.z0 - Z0) * s0, v.w * s0, v.h * s0, 0, 0, W, H); }
+    c.fillStyle = '#b7bf8c'; c.fillRect(0, 0, W, H);
+    if (this.zoom <= 1.3 && v.x0 >= X0 && v.z0 >= Z0 && v.x0 + v.w <= X1 + 1 && v.z0 + v.h <= Z1 + 1) { const s0 = PXW / (X1 - X0); c.drawImage(this.img, (v.x0 - X0) * s0, (v.z0 - Z0) * s0, v.w * s0, v.h * s0, 0, 0, W, H); }
     else this.paintView(c, v, W, H);
     const P = (x: number, z: number): [number, number] => [(x - v.x0) * k, (z - v.z0) * k];
     c.textAlign = 'center'; c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.9)';
