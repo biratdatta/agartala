@@ -1,5 +1,6 @@
 /** The city itself: ground, parks, ponds, roads, 17,000 buildings, trees, the farm tillas and the sky. */
 import * as THREE from 'three';
+import { inPalaceGarden } from '../../shared/places.js';
 import { HILLS, HOME, POND, RINA, inFarm } from '../../shared/farm.js';
 import { SPOTS } from '../../shared/spots.js';
 import { mulberry, rnd2, smooth } from '../../shared/rng.js';
@@ -79,9 +80,10 @@ export function buildTrees(scene: THREE.Scene, map: CityMap): void {
   const farmClear = (x: number, z: number) => Math.hypot(x - HOME.x, z - HOME.z) < 30 || inFarm(x, z) || Math.hypot(x - RINA.house.x, z - RINA.house.z) < 14 || Math.hypot(x - POND.x, z - POND.z) < 10;
   const special = [SPOTS.gopal, SPOTS.pandal, SPOTS.busTerminus, ...STANDS.map((s) => [s.x, s.z] as const)];
   let tries = 0, count = 0;
-  while (tries++ < 60000 && count < 9000) {
+  // more trees now the map runs west to the palace and Paradise Chowmuhani
+  while (tries++ < 100000 && count < 15000) {
     const x = X0 + rng() * (X1 - X0), z = Z0 + rng() * (Z1 - Z0);
-    if (map.inBuilding(x, z) || map.inWaterPoly(x, z) || farmClear(x, z)) continue;
+    if (map.inBuilding(x, z) || map.inWaterPoly(x, z) || farmClear(x, z) || inPalaceGarden(x, z)) continue;
     if (((x - 1462) / 104) ** 2 + ((z - 962) / 98) ** 2 < 1) continue; // the cricket ground and its galleries
     const rn = map.roadNear(x, z); if (rn && rn.d < ROAD_W[rn.r.t] / 2 + 1.5) continue;
     if (special.some((s) => Math.hypot(x - s[0], z - s[1]) < 10)) continue;

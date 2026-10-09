@@ -9,6 +9,8 @@ import { REAL_PLACES } from '../../shared/places.js';
 import { $ } from './dom.js';
 
 const PX = 1800, SIZE = Math.max(X1 - X0, Z1 - Z0);
+/** The painted map's size in pixels: as wide and tall as the area really is (it is wider than it is tall). */
+const PXW = Math.round((PX * (X1 - X0)) / SIZE), PXH = Math.round((PX * (Z1 - Z0)) / SIZE);
 const m2p = (v: number, o: number) => ((v - o) / SIZE) * PX;
 export interface MapMarks { player: { x: number; z: number; face: number }; target: { x: number; z: number } | null; others?: { x: number; z: number; name: string }[]; stalls?: { x: number; z: number }[]; rentals?: { x: number; z: number }[]; kaam?: { x: number; z: number }[]; errand?: { x: number; z: number }[]; sights?: { x: number; z: number }[]; home?: { x: number; z: number } }
 
@@ -17,8 +19,8 @@ export class MapView {
   constructor(private map: CityMap) { this.img = this.paint(); }
 
   private paint(): HTMLCanvasElement {
-    const cv = document.createElement('canvas'); cv.width = cv.height = PX; const c = cv.getContext('2d')!;
-    c.fillStyle = '#b7bf8c'; c.fillRect(0, 0, PX, PX);
+    const cv = document.createElement('canvas'); cv.width = PXW; cv.height = PXH; const c = cv.getContext('2d')!;
+    c.fillStyle = '#b7bf8c'; c.fillRect(0, 0, PXW, PXH);
     const path = (p: Poly) => { c.beginPath(); for (let i = 0; i < p.n; i++) { const x = m2p(p.xs[i], X0), y = m2p(p.zs[i], Z0); if (i) c.lineTo(x, y); else c.moveTo(x, y); } c.closePath(); };
     const LC = ['#9ccb73', '#cfd88e', '#6e9a55', '#a6c6a0', '#e2d3a6'];
     for (const p of this.map.land) { c.fillStyle = LC[p.code]; path(p); c.fill(); }
@@ -62,12 +64,13 @@ export class MapView {
   worldAt(clientX: number, clientY: number): { x: number; z: number } {
     const cv = $('#mapCv') as HTMLCanvasElement; const r = cv.getBoundingClientRect();
     const fx = (clientX - r.left) / r.width, fy = (clientY - r.top) / r.height;
-    return { x: X0 + fx * SIZE, z: Z0 + fy * SIZE };
+    return { x: X0 + fx * (X1 - X0), z: Z0 + fy * (Z1 - Z0) };
   }
 
   drawBig(m: MapMarks): void {
-    const cv = $('#mapCv') as HTMLCanvasElement, c = cv.getContext('2d')!, W = cv.width; c.drawImage(this.img, 0, 0, W, W);
-    const k = W / PX; const P = (x: number, z: number): [number, number] => [m2p(x, X0) * k, m2p(z, Z0) * k];
+    const cv = $('#mapCv') as HTMLCanvasElement, W = cv.width, H = Math.round((W * PXH) / PXW); if (cv.height !== H) cv.height = H;
+    const c = cv.getContext('2d')!; c.drawImage(this.img, 0, 0, W, H);
+    const k = W / PXW; const P = (x: number, z: number): [number, number] => [m2p(x, X0) * k, m2p(z, Z0) * k];
     c.textAlign = 'center'; c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.9)';
     const lb = (t: string, x: number, z: number, col = '#1c1624', dy = -8) => { const [a, b] = P(x, z); c.strokeText(t, a, b + dy); c.fillStyle = col; c.fillText(t, a, b + dy); };
     c.font = '600 12px "Hind Siliguri", sans-serif';

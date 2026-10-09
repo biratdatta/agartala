@@ -52,6 +52,9 @@ export const REAL_PLACES: RealPlace[] = [
   { id: 'masjid', name: 'Masjid', bn: 'মসজিদ', kind: 'mosque', x: 504, z: 747, paint: '#f2f2ec', source: 'OpenStreetMap',
     lore: 'A neighbourhood mosque. The azaan carries across the rooftops at dawn.' },
 ];
+/** Ujjayanta Palace's front garden (lawn, pools and fountains): kept clear of trees and electric poles. */
+export const PALACE_GARDEN = { x0: -45, x1: 125, z0: -35, z1: 50 } as const;
+export const inPalaceGarden = (x: number, z: number): boolean => x > PALACE_GARDEN.x0 && x < PALACE_GARDEN.x1 && z > PALACE_GARDEN.z0 && z < PALACE_GARDEN.z1;
 export const placeById = (id: string): RealPlace | undefined => REAL_PLACES.find((p) => p.id === id);
 /** The MBB College buildings: everything OSM maps on the hill east of the stadium. */
 export const CAMPUS: [number, number][] = [[1520, 975], [1725, 975], [1725, 1118], [1520, 1118]];

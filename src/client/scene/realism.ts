@@ -4,6 +4,7 @@
  * shutters on the main roads. All instanced, so thousands cost little.
  */
 import * as THREE from 'three';
+import { inPalaceGarden } from '../../shared/places.js';
 import { mulberry } from '../../shared/rng.js';
 import { type CityMap, ROAD_W, getH } from '../map/data.js';
 import type { Kit, Plan } from './buildings.js';
@@ -48,7 +49,8 @@ function poles(scene: THREE.Scene, map: CityMap, rng: () => number): void {
       const dx = (bx - ax) / L, dz = (bz - az) / L;
       while (acc < L) {
         const x = ax + dx * acc + dz * off * side, z = az + dz * acc - dx * off * side; const rot = Math.atan2(dx, dz);
-        if (!map.nearBuilding(x, z, 0.4) && !map.inWaterPoly(x, z)) {
+        if (inPalaceGarden(x, z)) prev = null; // no poles or wires across the palace lawn
+        else if (!map.nearBuilding(x, z, 0.4) && !map.inWaterPoly(x, z)) {
           const p = { x, z, rot }; pts.push(p);
           if (prev && Math.hypot(prev.x - x, prev.z - z) < 45) {
             for (const o of [-0.6, 0, 0.6]) {
