@@ -75,9 +75,10 @@
       <div class="eyebrow">Agartala · Tripura</div>
       <h1>Amar Agartala<span>আমার আগরতলা</span></h1>
       <p>You come home to Agartala, to your grandfather's bari on the bank of the Haora, behind Maharaja Bir Bikram Stadium. Shibnagar, Math Chowmuhani, Ramnagar and Joynagar are all around you, every road, lane and pond where it really is. Grow paddy and Queen pineapple, tap rubber at dawn, ride tomtoms round the paras, help the neighbours, and keep the festivals from Garia Puja to Durga Puja at Modern Club.</p>
-      <label class="fromrow" for="fromIn"><span>Coming home from</span><input id="fromIn" list="cityList" maxlength="40" autocomplete="address-level2" placeholder="Bengaluru"></label>
+      <!-- where the player comes home from is taken from their connection (IP), not asked -->
+      <label class="fromrow" for="fromIn" hidden><span>Coming home from</span><input id="fromIn" list="cityList" maxlength="40" autocomplete="address-level2" placeholder="Bengaluru"></label>
       <datalist id="cityList"></datalist>
-      <div id="geoNote"></div>
+      <div id="geoNote" hidden></div>
       <label class="fromrow" for="homeIn"><span>Your home in Agartala</span><input id="homeIn" list="homeList" maxlength="60" autocomplete="off" placeholder="Shibnagar, Ramnagar, Joynagar…"><button class="btn ghost" id="homePick" type="button">Pick on map</button></label>
       <datalist id="homeList"></datalist>
       <div id="homeNote" class="sm" style="color:var(--ink-dim);font-size:12.5px">Type a neighbourhood or chowmuhani, or pick a spot on the map. Your house and Grandpa will be there; the family fields stay by the Haora.</div>
