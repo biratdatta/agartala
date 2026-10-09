@@ -1,7 +1,8 @@
 import { ownedLunga, type GameState, type Inventory } from './save.js';
 import type { GameEvent } from './rules.js';
+import { PANDAL_GOAL, pujoSeason } from './pujo.js';
 
-export type MissionId = 'arrive' | 'home' | 'garia' | 'paddy' | 'sell' | 'pine' | 'rubber' | 'kharchi' | 'grow' | 'durga';
+export type MissionId = 'arrive' | 'home' | 'garia' | 'paddy' | 'sell' | 'pine' | 'rubber' | 'kharchi' | 'grow' | 'durga' | 'pujoPandals' | 'pujoAnjali' | 'pujoAarti' | 'pujoBisarjan';
 export interface Mission {
   id: MissionId;
   title: string;
@@ -37,6 +38,28 @@ export const MISSIONS: Mission[] = [
     done: (s) => !!s.flags.durga, reward: {}, msg: 'Shubho Bijoya' },
 ];
 
+/**
+ * The Durga Puja chapter. During the real Puja season it comes straight after meeting Grandpa (or
+ * interrupts wherever you are in the story), then the story carries on where it was.
+ */
+export const PUJO_MISSIONS: Mission[] = [
+  { id: 'pujoPandals', title: 'Pujo in Agartala', text: 'Dhak are beating all over town: Durga Puja is here. Grandpa says it isn\'t Pujo until you\'ve seen Ma Durga in five pandals. Go pandal hopping: Durgabari by the palace, Modern Club, Palace Compound, Kaman Chowmuhani, Paradise Chowmuhani, Joynagar and Ramnagar. Tomtoms run late all week.',
+    progress: (s) => `Pandals ${Math.min(s.pandals.length, PANDAL_GOAL)} / ${PANDAL_GOAL}`, done: (s) => s.pandals.length >= PANDAL_GOAL, reward: { money: 200 }, msg: '+₹200 of Pujo money from Grandpa, for new clothes' },
+  { id: 'pujoAnjali', title: 'Ashtami anjali at Durgabari', text: 'On Ashtami morning the whole city offers pushpanjali. Go to Durgabari, by Ujjayanta Palace, between 06:00 and 12:00, fast till then, and offer flowers to Ma with the priest.',
+    done: (s) => !!s.flags.pujoAnjali, reward: { money: 150 }, msg: '+₹150. Grandma used to stand in exactly that spot, Grandpa says.' },
+  { id: 'pujoAarti', title: 'Sandhya aarti at Modern Club', text: 'After 18:00, go to the Modern Club pandal by College Lake for the evening aarti. The dhakis play, the conch is blown, and everyone dances the dhunuchi naach with smoking clay dhunuchis.',
+    done: (s) => !!s.flags.pujoAarti, reward: { money: 150 }, msg: '+₹150. Your eyes sting from the dhuno smoke and you are grinning.' },
+  { id: 'pujoBisarjan', title: 'Bijoya Dashami', text: 'Ma goes home to Kailash today. After 15:00, follow the procession to the ghat on the Haora, east of the fields, and say goodbye. Then wish everyone Shubho Bijoya.',
+    done: (s) => !!s.flags.pujoBisarjan, reward: { money: 300 }, msg: 'Shubho Bijoya! Asche bochor abar hobe: next year, again.' },
+];
+const PUJO_IDS = new Set(PUJO_MISSIONS.map((m) => m.id));
+export const isPujoMission = (m: Mission | null): boolean => !!m && PUJO_IDS.has(m.id);
+/** The Puja chapter's current step, if it's the season and you're home. */
+export function pujoMission(s: GameState): Mission | null {
+  if (!pujoSeason(s.ts) || !s.flags.metGrandpa) return null;
+  return PUJO_MISSIONS[Math.max(0, Math.floor(Number(s.flags.pujoDone) || 0))] || null;
+}
+
 /** Fills the hometown into a mission's text. */
 export function missionText(text: string, s: GameState): string {
   const from = s.from || 'the city';
@@ -44,18 +67,19 @@ export function missionText(text: string, s: GameState): string {
   return text.replace('{from}', from).replace('{km}', km).replace('{home}', s.home?.name || 'the fields by the Haora');
 }
 
-export const currentMission = (s: GameState): Mission | null => MISSIONS[s.mission] || null;
+export const currentMission = (s: GameState): Mission | null => pujoMission(s) || MISSIONS[s.mission] || null;
 export const missionIndex = (id: MissionId): number => MISSIONS.findIndex((m) => m.id === id);
 
 /** Completes every mission whose condition now holds, in order, paying rewards. */
 export function checkMissions(s: GameState, ev: GameEvent[]): void {
-  for (let guard = 0; guard < MISSIONS.length; guard++) {
+  for (let guard = 0; guard < MISSIONS.length + PUJO_MISSIONS.length; guard++) {
     const m = currentMission(s);
     if (!m || !m.done(s)) return;
     if (m.reward.money) s.money += m.reward.money;
     if (m.reward.paddySeed) s.inv.paddySeed += m.reward.paddySeed;
     if (m.reward.sucker) s.inv.sucker += m.reward.sucker;
-    s.mission++;
+    if (isPujoMission(m)) s.flags.pujoDone = (Number(s.flags.pujoDone) || 0) + 1; // the Puja chapter is kept in flags; the main story stays where it was
+    else s.mission++;
     const next = currentMission(s);
     ev.push({ kind: 'mission', text: m.msg, title: m.title, next: next ? next.title : undefined });
     if (!next && !s.ended) { s.ended = true; ev.push({ kind: 'ending', text: 'The bari is alive again' }); }

@@ -1,5 +1,5 @@
 /** Goal card, clock, money, inventory chips and the action prompt. */
-import { MISSIONS, currentMission, missionText } from '../../shared/missions.js';
+import { MISSIONS, PUJO_MISSIONS, currentMission, isPujoMission, missionText } from '../../shared/missions.js';
 import { MONTHS, SEASONS } from '../../shared/constants.js';
 import { monthOf } from '../../shared/economy.js';
 import { festivalsOn, kept, nextFestival } from '../../shared/festivals.js';
@@ -18,7 +18,7 @@ let lastInv = '';
 export interface HudInput { S: GameState; place: string; target: { x: number; z: number; stand?: boolean } | null; px: number; pz: number; yaw: number; online: boolean; lost: boolean; others?: number }
 export function updateHud(h: HudInput, force = false): void {
   const { S } = h; const m = currentMission(S);
-  $('#goalEyebrow').textContent = m ? `Mission ${S.mission + 1} of ${MISSIONS.length}` : 'Free play';
+  $('#goalEyebrow').textContent = !m ? 'Free play' : isPujoMission(m) ? `Durga Puja · ${(Number(S.flags.pujoDone) || 0) + 1} of ${PUJO_MISSIONS.length}` : `Mission ${S.mission + 1} of ${MISSIONS.length}`;
   $('#goalTitle').textContent = m ? m.title : 'Your city, your fields';
   $('#goalText').textContent = m ? missionText(m.text, S) : 'Every mission is done. Keep farming, chase the best rates at the bazar, and explore the city.';
   $('#goalProg').textContent = m?.progress ? m.progress(S) : '';

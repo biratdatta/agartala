@@ -20,6 +20,7 @@ import { tripById, tripOpen } from './trips.js';
 import { weekId } from './week.js';
 import { rnd2 } from './rng.js';
 import { AREA } from './area.js';
+import { ANJALI_HOURS, AARTI_FROM, BISARJAN_FROM, PANDALS, PANDAL_GOAL, pandalById, pujoSeason } from './pujo.js';
 import { FARES_PER_DAY, FARE_MAX_SPEED, RENTALS, RENT_RATE, canFare, fareFor, owns, rentalCost, vehicleByKey, type VehKey } from './vehicles.js';
 
 export type Action =
@@ -47,6 +48,10 @@ export type Action =
   | { t: 'giveBamboo' }
   | { t: 'kharchi' }
   | { t: 'durga' }
+  | { t: 'pandal'; id: string }
+  | { t: 'anjali' }
+  | { t: 'aarti' }
+  | { t: 'bisarjan' }
   | { t: 'name'; name: string }
   | { t: 'pos'; x: number; z: number; face: number }
   // added with the bigger world
@@ -261,6 +266,28 @@ export function apply(s: GameState, a: Action, now: number): Result {
       if (currentMission(s)?.id !== 'durga') return fail('Durga Puja is not on');
       if (s.hour < 18 && s.hour >= 5) return fail('The puja starts after dark');
       s.flags.durga = true; sfx('dhak'); break;
+    }
+    case 'pandal': {
+      if (!pujoSeason(now)) return fail('The pandals come up for Durga Puja');
+      const p = pandalById(String(a.id)); if (!p) return fail('No such pandal');
+      if (s.pandals.includes(p.id)) return fail(`You have had darshan at ${p.name} already`);
+      s.pandals = [...s.pandals, p.id]; s.energy = Math.min(ENERGY_MAX, s.energy + 8); s.stats.sights++;
+      toast(`Darshan of Ma Durga at ${p.name} · prasad +8 energy · ${Math.min(s.pandals.length, PANDALS.length)} of ${PANDALS.length} pandals${s.pandals.length === PANDAL_GOAL ? ' · that makes five!' : ''}`, 'dhak'); break;
+    }
+    case 'anjali': {
+      if (currentMission(s)?.id !== 'pujoAnjali') return fail('Anjali is offered on Ashtami morning');
+      if (s.hour < ANJALI_HOURS[0] || s.hour >= ANJALI_HOURS[1]) return fail('Pushpanjali is offered in the morning, 06:00 to 12:00');
+      s.flags.pujoAnjali = true; sfx('dhak'); break;
+    }
+    case 'aarti': {
+      if (currentMission(s)?.id !== 'pujoAarti') return fail('The sandhya aarti is later in the Puja');
+      if (s.hour < AARTI_FROM && s.hour >= 5) return fail('The aarti starts after 18:00');
+      s.flags.pujoAarti = true; sfx('dhak'); break;
+    }
+    case 'bisarjan': {
+      if (currentMission(s)?.id !== 'pujoBisarjan') return fail('Bisarjan is on Dashami, at the end of the Puja');
+      if (s.hour < BISARJAN_FROM && s.hour >= 5) return fail('The procession reaches the ghat after 15:00');
+      s.flags.pujoBisarjan = true; befriend(s, 'nKalibari', 10); sfx('dhak'); break;
     }
     case 'name': {
       const n = sanitizeName(a.name); if (n.length < 2) return fail('Pick a name of at least 2 letters');

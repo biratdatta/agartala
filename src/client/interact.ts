@@ -13,6 +13,7 @@ import { KER_SPOT } from './scene/citylife.js';
 import { NEIGHBOURS } from '../shared/kaam.js';
 import { SIGHTS, SIGHT_REWARD, dailyDeliveries, deliveryById } from '../shared/errands.js';
 import { currentMission } from '../shared/missions.js';
+import { AARTI_FROM, ANJALI_HOURS, BISARJAN_FROM, GHAT, PANDALS, pujoSeason } from '../shared/pujo.js';
 import type { GameState } from '../shared/save.js';
 import { SPOTS } from '../shared/spots.js';
 import { standByKey, standsFor, type Stand } from '../shared/stands.js';
@@ -139,6 +140,36 @@ export function dynamicSpots(c: Ctx): Spot[] {
     { x: c.npc.grandpa.x, z: c.npc.grandpa.z, r: 2.2, get: () => ({ label: nextChapter(S()) && S().flags.metGrandpa ? 'Talk to Grandpa Hemanta · he has a story for you' : 'Talk to Grandpa Hemanta', run: () => talkGrandpa(c) }) },
     { ...c.home.kitchen, r: 1.8, get: () => { const s = S(); return s.inv.paddy >= 1 ? { label: `Cook pitha · 1 paddy and ₹${PRICES.jaggery} of jaggery make 4${pithaSeason(s.day) ? ' · it is pitha season' : ''}`, run: () => c.game.dispatch({ t: 'cook' }) } : { label: 'The chula · cook pitha from 1 sack of paddy' }; } },
   ];
+  // Durga Puja: darshan at each pandal, and the chapter's anjali, aarti and bisarjan (only in the Puja season)
+  if (pujoSeason(c.game.now())) {
+    const s = S(); const m = currentMission(s)?.id; const act = c.game.dispatch.bind(c.game);
+    for (const p of PANDALS) out.push({ x: p.x, z: p.z, r: 7.5, get: () => {
+      const st = S(); const mm = currentMission(st)?.id;
+      if (p.id === 'durgabari' && mm === 'pujoAnjali') {
+        if (st.hour < ANJALI_HOURS[0] || st.hour >= ANJALI_HOURS[1]) return { label: 'Ashtami pushpanjali is offered in the morning, 06:00 to 12:00' };
+        return { label: 'Offer pushpanjali to Ma Durga', run: () => dialog({ name: 'The purohit', role: 'Durgabari · Ashtami' }, [
+          'Hold the flowers and the bel leaves in your joined hands, and say the mantra after me. Three times.',
+          'Ya Devi sarvabhuteshu, Shakti-rupena samsthita… Now let the flowers go at Ma\'s feet.',
+        ], () => act({ t: 'anjali' })) };
+      }
+      if (p.id === 'modern' && mm === 'pujoAarti') {
+        if (st.hour < AARTI_FROM && st.hour >= 5) return { label: 'The sandhya aarti starts after 18:00' };
+        return { label: 'Join the aarti and the dhunuchi naach', run: () => dialog({ name: 'Modern Club', role: 'Sandhya aarti' }, [
+          'The dhakis pick up the beat, the conch shells sound, and the priest circles the lamps before Ma.',
+          'Someone hands you a clay dhunuchi full of smoking coconut husk. Hold it high and dance!',
+        ], () => act({ t: 'aarti' })) };
+      }
+      if (st.pandals.includes(p.id)) return { label: `${p.name} · you have had darshan here` };
+      return { label: `Darshan of Ma Durga · ${p.name}`, run: () => dialog({ name: p.name, role: `Durga Puja · pandal ${st.pandals.length + 1} of ${PANDALS.length}` }, [p.about, 'You fold your hands before Ma. Someone presses a little prasad of sandesh and fruit into your palm.'], () => act({ t: 'pandal', id: p.id })) };
+    } });
+    if (m === 'pujoBisarjan') out.push({ x: GHAT.x, z: GHAT.z, r: 12, get: () => {
+      const st = S(); if (st.hour < BISARJAN_FROM && st.hour >= 5) return { label: 'The bisarjan procession reaches the ghat after 15:00' };
+      return { label: 'Say goodbye to Ma: bisarjan at the ghat', run: () => dialog({ name: 'The ghat on the Haora', role: 'Bijoya Dashami' }, [
+        'The procession comes down to the river with the dhak going and everyone covered in red sindoor.',
+        'Ma is carried into the water. "Asche bochor abar hobe!" Next year, again. Everyone hugs and says Shubho Bijoya.',
+      ], () => act({ t: 'bisarjan' })) };
+    } });
+  }
   for (const st of standsFor(S().home)) out.push({ x: st.x, z: st.z, r: 2.8, get: () => (kerClosed(S()) ? { label: 'Ker Puja: no tomtoms run until 18:00' } : { label: S().flags.freeRide ? `Take a tomtom from ${st.name} · first ride on Grandpa` : `Take a tomtom from ${st.name} · ₹${PRICES.fare}`, run: () => openRide(S(), st, (to) => c.ride(st, to)) }) });
   return out;
 }
@@ -270,6 +301,10 @@ export function missionTarget(s: GameState, p: XZ, spots: Spot[], grandpa: XZ): 
     case 'rubber': return standFor(s.inv.latex >= 3 ? ROLLER : (s.hour >= TAP_FROM && s.hour < TAP_UNTIL ? nearest(RUBBER.filter((_, i) => s.trees[i].tapped !== s.day), p) : null) || HILLS[1]);
     case 'kharchi': return standFor({ x: SPOTS.busTerminus[0], z: SPOTS.busTerminus[1] });
     case 'durga': return standFor({ x: SPOTS.pandal[0], z: SPOTS.pandal[1] });
+    case 'pujoPandals': return standFor(nearest(PANDALS.filter((d) => !s.pandals.includes(d.id)), p));
+    case 'pujoAnjali': return standFor(PANDALS[0]);
+    case 'pujoAarti': return standFor({ x: SPOTS.pandal[0], z: SPOTS.pandal[1] });
+    case 'pujoBisarjan': return standFor(GHAT);
   }
   return null;
 }

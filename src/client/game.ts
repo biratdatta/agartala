@@ -13,6 +13,8 @@ export class Game {
   }
   onChange(fn: () => void): void { this.listeners.push(fn); }
   private changed(): void { for (const f of this.listeners) f(); }
+  /** The server's clock (real time). */
+  now(): number { return this.net.now(); }
 
   /** Applies a move locally, shows its effects, and sends it to the server. */
   dispatch(a: Action): Result {

@@ -36,6 +36,8 @@ import { RoadGraph } from './route.js';
 import { City, KitFleet, loadKit, planBuildings } from './scene/buildings.js';
 import { FarmView } from './scene/farm.js';
 import { shuffledTour } from './scene/tour.js';
+import { Pandals } from './scene/pujo.js';
+import { pujoSeason } from '../shared/pujo.js';
 import { STADIUM, StandsView, buildBus, buildCrowds, buildNPCs, buildPandal, buildStadiumLights, buildStall } from './scene/landmarks.js';
 import { PARAS } from '../shared/area.js';
 import { Crowd, animPerson, sit, Traffic } from './scene/people.js';
@@ -98,6 +100,7 @@ async function boot(): Promise<void> {
   const graph = new RoadGraph(map);
   const rideView = new RideView(scene, map, graph, new KitFleet(scene, kit, 'tomtom', 1, ['#2f8f4e']), 0);
   const lighting = new Lighting(scene, skyFx, palaceLights, pandal);
+  const pandals = new Pandals(scene, map); // Durga Puja pandals round the city, in the Puja season
 
   /* ---------- settings: applied now and whenever they change ---------- */
   const QUALITY: Record<Exclude<Graphics, 'auto'>, { pr: number; shadow: number }> = {
@@ -192,7 +195,7 @@ async function boot(): Promise<void> {
   }
   const refresh = () => {
     const S = game.S; farm.refresh(S); placeHome();
-    player.body.userData.shawl.visible = !!S.flags.shawl; pandal.visible = S.mission >= durgaIdx || isFestival(S.day, 'durga');
+    player.body.userData.shawl.visible = !!S.flags.shawl; pandal.visible = (S.mission >= durgaIdx || isFestival(S.day, 'durga')) && !pujoSeason(net.now()); // the season's Modern Club pandal replaces it
     kerShrine.visible = isFestival(S.day, 'ker'); showInbox(S);
     if (!$('#shop').hidden) renderShop(S);
     hudTick(true);
@@ -623,6 +626,7 @@ async function boot(): Promise<void> {
     const hold = lanternOn && !vehicles.riding && !rideView.active && !photo.active;
     const flame = player.updateLantern(hold, lighting.nightFactor);
     lighting.update(S, player.body.position, dt, playing ? { at: hold ? flame : null, on: lanternOn } : null);
+    pandals.update(pujoSeason(net.now()), lighting.nightFactor, time);
     kit.material.emissiveIntensity = lighting.nightFactor * 0.85;
     lamps.update(lighting.nightFactor); real.setNight(lighting.nightFactor); diyas.visible = isFestival(S.day, 'diwali') && lighting.nightFactor > 0.4;
     renderer.render(scene, camera);

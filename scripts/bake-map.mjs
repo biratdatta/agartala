@@ -63,6 +63,9 @@ const TARGETS = {
   stHome: [1563, 1205, { clear: 3, maxType: 6 }],
   // the old town west of the stadium paras: the palace gate, Motor Stand (PRM Centrepoint) and Paradise Chowmuhani (City Centre)
   stPalace: [30, 40], stMotor: [-13, 727], stParadise: [-740, 876],
+  // Durga Puja pandals round the city (src/shared/pujo.ts); Modern Club's is the 'pandal' spot above
+  pdDurgabari: [-90, 290, { clear: 8, rmax: 50 }], pdPalace: [200, 90, { clear: 9, rmax: 70 }], pdKaman: [60, 680, { clear: 9, rmax: 70 }],
+  pdParadise: [-690, 910, { clear: 9, rmax: 70 }], pdJoynagar: [1280, 580, { clear: 9, rmax: 70 }], pdRamnagar: [1040, 1450, { clear: 9, rmax: 70 }],
   // neighbours who ask for help (daily kaam), each beside a lane in one of the paras
   nShiva: [910, 1060, { clear: 4 }], nRadhanagar: [760, 650, { clear: 4 }], nKrishnanagar: [1150, 560, { clear: 4 }],
   nSupari: [1050, 760, { clear: 4 }], nKadamtali: [900, 1420, { clear: 4 }], nMelarmath: [1150, 1380, { clear: 4 }],
