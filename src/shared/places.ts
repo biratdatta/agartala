@@ -3,17 +3,28 @@
  * Each one gets its real building tinted and signed, a label, a spot on the map, and for most a
  * line of history when you visit. Positions are metres from the map origin (x east, z south).
  */
-export type PlaceKind = 'college' | 'stadium' | 'school' | 'temple' | 'park' | 'lake' | 'clinic' | 'apartment' | 'shop' | 'mosque';
+export type PlaceKind = 'college' | 'stadium' | 'school' | 'temple' | 'park' | 'lake' | 'clinic' | 'apartment' | 'shop' | 'mosque' | 'palace' | 'mall' | 'civic' | 'stand';
 export interface RealPlace {
   id: string; name: string; bn?: string; kind: PlaceKind; x: number; z: number;
   /** Wall colour for its building (if it has one). */
   paint?: string;
   /** Shown when you visit; also the sight's lore. */
   lore: string;
-  source: 'OpenStreetMap' | 'OpenStreetMap, Wikipedia';
+  source: 'OpenStreetMap' | 'OpenStreetMap, Wikipedia' | 'Local knowledge';
 }
 
 export const REAL_PLACES: RealPlace[] = [
+  // the old town round the palace
+  { id: 'palace', name: 'Ujjayanta Palace', bn: 'উজ্জয়ন্ত প্রাসাদ', kind: 'palace', x: 31, z: -67, paint: '#f4f1ea', source: 'OpenStreetMap, Wikipedia',
+    lore: 'Maharaja Radha Kishore Manikya built Ujjayanta Palace between 1899 and 1901, white, with three Mughal domes over a garden of pools and fountains. Rabindranath Tagore, a friend of the royal family, gave it its name. It housed the Tripura Legislative Assembly until 2011 and is now the Tripura State Museum. On festival nights the whole front is lit up and the crowds spill onto the road.' },
+  { id: 'townhall', name: 'Agartala Town Hall', bn: 'আগরতলা টাউন হল', kind: 'civic', x: 155, z: -32, paint: '#e9dcc0', source: 'OpenStreetMap',
+    lore: 'The Town Hall beside the palace grounds, where the city holds its meetings, book fairs and cultural evenings.' },
+  { id: 'motorstand', name: 'Motor Stand', bn: 'মোটর স্ট্যান্ড', kind: 'stand', x: -13, z: 727, source: 'Local knowledge',
+    lore: 'Motor Stand by Kaman Chowmuhani: buses, shared jeeps and tomtoms leave from here for every corner of the city and beyond, with the conductors calling out the stops. Tea, singara and newspapers at every hour.' },
+  { id: 'prm', name: 'PRM Centrepoint', bn: 'পিআরএম সেন্টারপয়েন্ট', kind: 'mall', x: 22, z: 768, paint: '#dfe6ea', source: 'Local knowledge',
+    lore: 'The newest mall in town, right at Motor Stand. Brands, a food court, air-conditioning on a hot afternoon, and a crowd every weekend.' },
+  { id: 'citycentre', name: 'Agartala City Centre', bn: 'আগরতলা সিটি সেন্টার', kind: 'mall', x: -797, z: 841, paint: '#e6dccb', source: 'OpenStreetMap',
+    lore: 'The shopping mall on Hari Ganga Basak Road at Paradise Chowmuhani. Clothes, phones, a food court, and families out for the evening.' },
   { id: 'mbbcollege', name: 'Maharaja Bir Bikram College', bn: 'মহারাজা বীর বিক্রম কলেজ', kind: 'college', x: 1600, z: 1040, paint: '#e8c25a', source: 'OpenStreetMap, Wikipedia',
     lore: 'MBB College, the oldest college in Tripura. Maharaja Bir Bikram planned it in 1937 on a hill east of the town and called the place Vidyapattan. During the Second World War the half-built ground floor became an army hospital. Regent Maharani Kanchan Prava Devi opened the college on 9 September 1947, for students uprooted from East Bengal. Its colours are yellow and brown, and its motto means "knowledge is the key to immortality". MBB University shares the hill, which everyone calls College Tilla.' },
   { id: 'stadium', name: 'Maharaja Bir Bikram Stadium', bn: 'মহারাজা বীর বিক্রম স্টেডিয়াম', kind: 'stadium', x: 1459, z: 961, source: 'OpenStreetMap, Wikipedia',

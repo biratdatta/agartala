@@ -54,7 +54,7 @@ describe('the baked city', () => {
     for (const pl of REAL_PLACES.filter((p) => p.paint)) expect(plans.some((p) => p.place === pl.id), pl.name).toBe(true);
     expect(plans.filter((p) => p.place === 'mbbcollege').length).toBeGreaterThan(10);
     const bs = map.raw.bs!; expect(plans.slice(bs).filter((p) => inCampus(p.cx, p.cz)).length).toBe(0);
-    const { SIGHTS } = await import('../src/shared/errands.js'); expect(SIGHTS).toHaveLength(11);
+    const { SIGHTS } = await import('../src/shared/errands.js'); expect(SIGHTS).toHaveLength(16);
   });
 
   it('places every neighbour on open ground', () => {

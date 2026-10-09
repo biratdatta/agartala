@@ -4,7 +4,7 @@
 
 You fly home from wherever you live now to your grandfather's bari on the bank of the Haora river, behind Maharaja Bir Bikram (MBB) Stadium. When the game is deployed, your hometown comes from where you log in (Cloudflare or Vercel IP geolocation), and you can change it on the title screen.
 
-The game covers a small, detailed part of Agartala: **Shibnagar, Math Chowmuhani, MBB Stadium, Ramnagar and Joynagar**, about 1.9 × 1.9 km. You arrive at the stadium gate and ride your first tomtom to the fields by the river. Then you grow paddy and Queen pineapple, tap rubber at dawn, and help neighbours across the paras with daily kaam. The festivals run from Garia Puja to Durga Puja at Modern Club.
+The game covers a detailed part of Agartala, about 3.3 × 2.2 km: the old town round **Ujjayanta Palace** (the Town Hall, **Motor Stand** with PRM Centrepoint at Kaman Chowmuhani, and **Agartala City Centre** at Paradise Chowmuhani), and **Shibnagar, Math Chowmuhani, MBB Stadium, Ramnagar and Joynagar**. You arrive at the stadium gate and ride your first tomtom to the fields by the river. Then you grow paddy and Queen pineapple, tap rubber at dawn, and help neighbours across the paras with daily kaam. The festivals run from Garia Puja to Durga Puja at Modern Club.
 
 Every road, lane, pond and lake, and the river, come from OpenStreetMap and sit where they really are. About 6,800 real building footprints are filled out to about 8,900 houses (see *A fuller city* below).
 

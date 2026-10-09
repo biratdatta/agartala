@@ -2,7 +2,7 @@ import { SPOTS } from './spots.js';
 
 /** Tomtom (shared e-rickshaw) stands. Rides between them cost a flat fare. */
 export interface Stand { k: StandKey; name: string; x: number; z: number }
-export type StandKey = 'stHome' | 'stFields' | 'stStadium' | 'stShibnagar' | 'stMath' | 'stRamnagar' | 'stJoynagar' | 'stBridge';
+export type StandKey = 'stHome' | 'stFields' | 'stStadium' | 'stShibnagar' | 'stMath' | 'stRamnagar' | 'stJoynagar' | 'stBridge' | 'stPalace' | 'stMotor' | 'stParadise';
 /** Where the player's house is, if they moved it away from the family fields. */
 export interface HomeSite { name: string; x: number; z: number; sx: number; sz: number; face: number }
 
@@ -14,6 +14,9 @@ const CITY: [CityKey, string][] = [
   ['stRamnagar', 'Ramnagar'],
   ['stJoynagar', 'Joynagar'],
   ['stBridge', 'Haora bridge'],
+  ['stPalace', 'Ujjayanta Palace'],
+  ['stMotor', 'Motor Stand · PRM Centrepoint'],
+  ['stParadise', 'Paradise Chowmuhani · City Centre'],
 ];
 export const STAND_KEYS: StandKey[] = ['stHome', 'stFields', ...CITY.map(([k]) => k)];
 const CITY_STANDS: Stand[] = CITY.map(([k, name]) => ({ k, name, x: SPOTS[k][0], z: SPOTS[k][1] }));

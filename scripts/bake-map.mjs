@@ -3,7 +3,7 @@
  * Turns data/raw/agartala-osm.json into the game's map:
  *   public/agartala-map.json   buildings, roads, water, parks and named places round MBB Stadium, coordinates × 2 as integers
  *   src/shared/spots.ts        free spots beside real roads for the bazar stall, bus, pandal and tomtom stands
- * The Ujjayanta Palace footprint is dropped (the game places its own model there).
+ * Ujjayanta Palace keeps its real footprint; the game dresses it with domes and a garden (realplaces.ts).
  */
 import { readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -54,13 +54,15 @@ function freeSpot(tx, tz, { clear = 6, rmin = 1.5, rmax = 14, search = 90, maxTy
 /* The play area: the paras round Maharaja Bir Bikram Stadium (Shibnagar, Math Chowmuhani, Ramnagar,
  * Joynagar) and the Haora river bank, where the family fields are. Same origin as before (near
  * Ujjayanta Palace), so x east and z south in metres. */
-const AREA = { x0: 500, x1: 2400, z0: 100, z1: 2000 };
+const AREA = { x0: -950, x1: 2400, z0: -180, z1: 2000 };
 /** The family fields: open land between the stadium buildings and the river. OSM footprints inside are left out. */
 const FARM_ZONE = [[1566, 1122], [1846, 1122], [1745, 1258], [1695, 1302], [1590, 1302], [1562, 1262]];
 const TARGETS = {
   gopal: [870, 640, { clear: 5 }], busTerminus: [1330, 470, { clear: 5 }], pandal: [960, 975, { clear: 9, rmax: 40 }],
   stStadium: [1440, 862], stShibnagar: [880, 1080], stMath: [845, 625], stRamnagar: [1000, 1330], stJoynagar: [1250, 500], stBridge: [1450, 1600],
   stHome: [1563, 1205, { clear: 3, maxType: 6 }],
+  // the old town west of the stadium paras: the palace gate, Motor Stand (PRM Centrepoint) and Paradise Chowmuhani (City Centre)
+  stPalace: [30, 40], stMotor: [-13, 727], stParadise: [-740, 876],
   // neighbours who ask for help (daily kaam), each beside a lane in one of the paras
   nShiva: [910, 1060, { clear: 4 }], nRadhanagar: [760, 650, { clear: 4 }], nKrishnanagar: [1150, 560, { clear: 4 }],
   nSupari: [1050, 760, { clear: 4 }], nKadamtali: [900, 1420, { clear: 4 }], nMelarmath: [1150, 1380, { clear: 4 }],
@@ -70,7 +72,7 @@ const spots = {};
 for (const [k, [x, z, opt]] of Object.entries(TARGETS)) { spots[k] = freeSpot(x, z, opt); console.log(`${k.padEnd(14)} → ${JSON.stringify(spots[k])}`); if (!spots[k]) throw new Error(`No free spot for ${k}`); }
 
 const centre = (p) => [p.reduce((a, q) => a + q[0], 0) / p.length, p.reduce((a, q) => a + q[1], 0) / p.length];
-const skip = new Set([...blds.flatMap((b, i) => ((b.name >= 0 && /Ujj/.test(N[b.name])) || pip(...centre(b.p), FARM_ZONE) || !(centre(b.p)[0] > AREA.x0 && centre(b.p)[0] < AREA.x1 && centre(b.p)[1] > AREA.z0 && centre(b.p)[1] < AREA.z1) ? [i] : [])), ...bldNear(spots.pandal[0], spots.pandal[1], 10)]);
+const skip = new Set([...blds.flatMap((b, i) => (pip(...centre(b.p), FARM_ZONE) || !(centre(b.p)[0] > AREA.x0 && centre(b.p)[0] < AREA.x1 && centre(b.p)[1] > AREA.z0 && centre(b.p)[1] < AREA.z1) ? [i] : [])), ...bldNear(spots.pandal[0], spots.pandal[1], 10)]);
 /* Some OSM footprints sit right across a street (gates, overhangs, mapping slips). Tomtoms and
  * walkers follow the street, so drop any footprint that a road's centre line runs through. */
 let acrossRoad = 0;
@@ -164,6 +166,8 @@ for (const r of roads) {
 markPoly(FARM_ZONE.map(([x, z]) => [x, z]), 6);
 // the MBB College campus (src/shared/places.ts CAMPUS): only its real buildings, no invented houses
 markPoly([[1520, 975], [1725, 975], [1725, 1118], [1520, 1118]], 0);
+// Ujjayanta Palace's grounds: lawns, pools and fountains in front of the palace, no invented houses
+markPoly([[-70, -110], [135, -110], [135, 70], [-70, 70]], 0);
 const keepOpen = [...Object.values(spots).map(([x, z]) => [x, z, 14])];
 for (const [x, z, r] of keepOpen) for (let dz = -r; dz <= r; dz += CELL) for (let dx = -r; dx <= r; dx += CELL) if (dx * dx + dz * dz <= r * r) { const c = cellOf(x + dx, z + dz); if (c >= 0) occ[c] = 1; }
 // how built-up is each neighbourhood? (existing buildings per 100 m cell)

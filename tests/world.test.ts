@@ -198,7 +198,7 @@ describe('weekly boards and saves', () => {
   });
   it('upgrades an older save', () => {
     const s = normalize({ v: 4, money: 500, inv: { paddy: 3 }, plots: [] }, T0);
-    const moved = normalize({ v: 5, pos: { x: -700, z: -1452, face: 0 }, home: { name: 'Krishnanagar', x: -730, z: -160, sx: -735, sz: -150, face: 0 }, ride: { from: 'stCircuit', to: 'stLake', start: T0, ms: 20000, hours: 0.2, done: 0 } }, T0);
+    const moved = normalize({ v: 5, pos: { x: -700, z: -1452, face: 0 }, home: { name: 'Krishnanagar', x: -1730, z: -160, sx: -1735, sz: -150, face: 0 }, ride: { from: 'stCircuit', to: 'stLake', start: T0, ms: 20000, hours: 0.2, done: 0 } }, T0);
     expect(inArea(moved.pos.x, moved.pos.z)).toBe(true); expect(moved.home).toBeNull(); expect(moved.ride).toBeNull();
     expect(s.v).toBe(6); expect(s.energy).toBe(ENERGY_MAX); expect(s.tea).toHaveLength(8); expect(s.inv.tea).toBe(0); expect(s.inv.paddy).toBe(3);
     const bad = normalize({ friends: { '<script>': 5, nShiva: 999 }, energy: -4, market: { paddy: 1e9 } }, T0);

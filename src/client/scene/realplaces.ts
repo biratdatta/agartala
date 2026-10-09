@@ -78,6 +78,9 @@ function spec(id: string, isMain: boolean, area: number): { floors: number; styl
     case 'bhaumik': return { floors: 3, style: 'plain', roof: '#c9c4ba' };
     case 'carshringaar': return { floors: 2, style: 'shop', roof: '#a8a294' };
     case 'masjid': return { floors: 1, style: 'arch', roof: '#e8e4da' };
+    case 'palace': return { floors: 3, style: 'arch', roof: '#efe9dc' };
+    case 'townhall': return { floors: 2, style: 'arch', roof: '#c9bfae' };
+    case 'prm': case 'citycentre': return { floors: 4, style: 'shop', roof: '#9fb0ba' };
     default: return { floors: 2, style: 'plain', roof: '#b8b2a6' };
   }
 }
@@ -106,11 +109,14 @@ export class RealPlaces {
       if (i === main?.i) this.portico(scene, p, H);
       if (p.place === 'masjid') this.dome(scene, p, y0 + H);
       if (p.place === 'stadium' && p.w * p.d > 400) this.canopy(scene, p, y0 + H);
+      if (p.place === 'palace') this.palace(scene, p, y0, H);
+      if (p.place === 'prm' || p.place === 'citycentre') this.mall(scene, p, y0 + H, p.place === 'prm' ? 'PRM Centrepoint' : 'City Centre', p.place === 'prm' ? '#0f4c75' : '#7a1f3d');
     });
     // name boards on the real buildings
     for (const pl of REAL_PLACES) {
       if (pl.kind === 'temple') { const p = plans.find((q) => q.place === pl.id); this.temple(scene, p ? p.cx : pl.x, p ? p.cz : pl.z, p ? p.ang : 0); continue; }
-      const mine = plans.filter((p) => p.place === pl.id); if (!mine.length || pl.id === 'mbbcollege' || pl.id === 'stadium') continue;
+      if (pl.kind === 'stand') { this.motorStand(scene, pl.x, pl.z); continue; }
+      const mine = plans.filter((p) => p.place === pl.id); if (!mine.length || pl.id === 'mbbcollege' || pl.id === 'stadium' || pl.id === 'palace') continue;
       const p = mine.reduce((a, b) => (Math.hypot(a.cx - pl.x, a.cz - pl.z) <= Math.hypot(b.cx - pl.x, b.cz - pl.z) ? a : b));
       this.sign(scene, pl, p, Math.min(spec(pl.id, false, p.w * p.d).floors * 3.2 - 0.6, 4.2));
     }
@@ -125,7 +131,7 @@ export class RealPlaces {
 
   private sign(scene: THREE.Scene, pl: RealPlace, p: Plan, y: number): void {
     const fx = Math.sin(p.ang), fz = Math.cos(p.ang);
-    const colour = pl.kind === 'clinic' ? '#2f6f5a' : pl.kind === 'school' || pl.kind === 'college' ? '#24336f' : pl.kind === 'mosque' ? '#1f6f3c' : '#7d1d3f';
+    const colour = pl.kind === 'mall' ? '#0f4c75' : pl.kind === 'civic' ? '#5a3a1c' : pl.kind === 'clinic' ? '#2f6f5a' : pl.kind === 'school' || pl.kind === 'college' ? '#24336f' : pl.kind === 'mosque' ? '#1f6f3c' : '#7d1d3f';
     const b = board(pl.name, pl.bn, colour, Math.min(p.w * 0.85, Math.max(4, pl.name.length * 0.3)));
     b.position.set(p.cx + fx * (p.d / 2 + 0.25), getH(p.cx, p.cz) + y, p.cz + fz * (p.d / 2 + 0.25)); b.rotation.y = p.ang; scene.add(b);
   }
@@ -138,6 +144,84 @@ export class RealPlaces {
     box(g, W + 0.6, 0.6, 3.4, '#d9a441', 0, H + 0.3, 2); const ped = add(g, new THREE.CylinderGeometry(0.01, (W + 0.6) / 2, 2.2, 3, 1), '#e8c25a', 0, H + 1.7, 2.1); ped.rotation.set(Math.PI / 2, 0, Math.PI / 2); ped.scale.set(1, 1.5, 0.6);
     const b = board('Maharaja Bir Bikram College', 'মহারাজা বীর বিক্রম কলেজ', '#7a4a22', Math.min(W, 10)); b.position.set(0, H - 0.4, 3.75); g.add(b);
     const fx = Math.sin(p.ang), fz = Math.cos(p.ang); g.position.set(p.cx + fx * (p.d / 2), getH(p.cx, p.cz), p.cz + fz * (p.d / 2)); g.rotation.y = p.ang; scene.add(g);
+  }
+
+  /**
+   * Ujjayanta Palace: the real footprint, dressed white with its three Mughal domes (the tall one
+   * over the centre), corner chhatris, broad steps, and the lawn with two long pools and fountains
+   * in front, facing the lakes.
+   */
+  private palace(scene: THREE.Scene, p: Plan, y0: number, H: number): void {
+    const ang = Math.cos(p.ang) >= 0 ? p.ang : p.ang + Math.PI; // the front faces south, to the lakes
+    const W = p.w, D = p.d; const g = new THREE.Group(); const white = '#f6f3ec', cream = '#ece2cf', gold = '#e0b04a';
+    const domeAt = (x: number, z: number, r: number, drum: number, y: number) => {
+      cyl(g, r * 0.95, r * 0.95, drum, cream, x, y + drum / 2, z, 20);
+      const d = add(g, new THREE.SphereGeometry(r, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), white, x, y + drum, z); d.scale.y = 1.25;
+      add(g, new THREE.ConeGeometry(r * 0.12, r * 0.7, 8), gold, x, y + drum + r * 1.25 + r * 0.3, z); sph(g, r * 0.1, gold, x, y + drum + r * 1.25 + r * 0.05, z, 8, 6);
+    };
+    // the central tower and its big dome, two smaller domes on the wings
+    box(g, Math.min(22, W * 0.2), 7, Math.min(20, D * 0.45), white, 0, H + 3.5, 0);
+    domeAt(0, 0, Math.min(9, W * 0.08), 4, H + 7);
+    for (const s of [-1, 1]) { box(g, 11, 4, 11, white, s * (W / 2 - 9), H + 2, 0); domeAt(s * (W / 2 - 9), 0, 5, 2.5, H + 4); }
+    // chhatris on the corners and along the roofline
+    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
+      const x = sx * (W / 2 - 2), z = sz * (D / 2 - 2); for (const [ox, oz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) cyl(g, 0.18, 0.18, 2.6, cream, x + ox * 1.1, H + 2.2, z + oz * 1.1, 6);
+      domeAt(x, z, 1.7, 0.4, H + 3.5);
+    }
+    // a gallery of arches across the front, and the steps
+    const arches = Math.max(6, Math.floor(W / 6));
+    for (let i = 0; i <= arches; i++) cyl(g, 0.45, 0.5, H - 1, cream, -W / 2 + 2 + (i * (W - 4)) / arches, (H - 1) / 2 + 0.6, D / 2 + 1.6, 10);
+    box(g, W - 2, 0.8, 3.2, white, 0, H - 0.2, D / 2 + 1.6);
+    for (let i = 0; i < 4; i++) box(g, 26 - i * 2, 0.3, 4 - i * 0.8, '#e2d9c8', 0, 0.15 + i * 0.3, D / 2 + 5 - i * 0.6);
+    // the garden in front: lawn, a path down the middle, two long pools with fountains
+    const lawnD = 60; const lawn = box(g, W + 10, 0.06, lawnD, '#6fa84a', 0, 0.05, D / 2 + 6 + lawnD / 2); lawn.receiveShadow = true;
+    box(g, 7, 0.08, lawnD, '#d9cfbf', 0, 0.08, D / 2 + 6 + lawnD / 2);
+    for (const s of [-1, 1]) {
+      const px = s * (W * 0.22), pz = D / 2 + 6 + lawnD / 2;
+      box(g, 14, 0.5, lawnD - 12, '#d9cfbf', px, 0.25, pz); box(g, 12.6, 0.52, lawnD - 13.4, '#4f8fb3', px, 0.27, pz);
+      for (const k of [-1, 0, 1]) { const fz = pz + k * (lawnD - 20) / 2; cyl(g, 0.9, 1.1, 0.6, white, px, 0.6, fz, 12); cyl(g, 0.12, 0.12, 1.6, white, px, 1.5, fz, 6); sph(g, 0.45, '#cfe6f2', px, 2.4, fz, 10, 8); }
+    }
+    g.position.set(p.cx, y0, p.cz); g.rotation.y = ang; scene.add(g);
+    const fx = Math.sin(ang), fz = Math.cos(ang), ux = Math.cos(ang), uz = -Math.sin(ang);
+    for (const s of [-1, 1]) { const off = D / 2 + 6 + 30; colliders.push({ x: p.cx + fx * off + ux * s * W * 0.22, z: p.cz + fz * off + uz * s * W * 0.22, r: 5 }); }
+    // the gate board at the bottom of the garden
+    const b = board('Ujjayanta Palace · Tripura State Museum', 'উজ্জয়ন্ত প্রাসাদ', '#5a3a1c', 9);
+    const gx = p.cx + fx * (D / 2 + 6 + lawnD + 3), gz = p.cz + fz * (D / 2 + 6 + lawnD + 3);
+    const gate = new THREE.Group(); for (const s of [-1, 1]) { box(gate, 1.4, 6, 1.4, white, s * 6, 3, 0); sph(gate, 0.8, white, s * 6, 6.6, 0, 10, 8); } b.position.y = 4.6; gate.add(b);
+    gate.position.set(gx, getH(gx, gz), gz); gate.rotation.y = ang; scene.add(gate); for (const s of [-1, 1]) colliders.push({ x: gx + ux * s * 6, z: gz + uz * s * 6, r: 1 });
+  }
+
+  /** A mall: glass across the ground floor, a canopy, and its name lit up on the roof. */
+  private mall(scene: THREE.Scene, p: Plan, y: number, name: string, colour: string): void {
+    const fx = Math.sin(p.ang), fz = Math.cos(p.ang); const g = new THREE.Group();
+    box(g, p.w * 0.9, 3.4, 0.2, '#7fb3cc', 0, 1.9 - (y - getH(p.cx, p.cz)), 0);
+    const can = box(g, p.w * 0.9, 0.25, 3, '#e8e8e2', 0, 3.9 - (y - getH(p.cx, p.cz)), 1.5); can.castShadow = true;
+    const b = board(name, undefined, colour, Math.min(p.w * 0.8, 16)); b.position.set(0, 2.2, 0); g.add(b);
+    const glow = new THREE.MeshLambertMaterial({ color: '#ffffff', emissive: '#ffd27a', emissiveIntensity: 0 }); this.glows.push(glow);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(Math.min(p.w * 0.8, 16), 0.2, 0.2), glow); strip.position.set(0, 0.6, 0.1); g.add(strip);
+    g.position.set(p.cx + fx * (p.d / 2 + 0.3), y, p.cz + fz * (p.d / 2 + 0.3)); g.rotation.y = p.ang; scene.add(g);
+  }
+
+  /** Motor Stand: a shelter, a row of buses and jeeps waiting to fill, and the stand's board. */
+  private motorStand(scene: THREE.Scene, x: number, z: number): void {
+    const rn = this.map.roadNear(x, z); const rot = rn ? this.map.roadAngle(rn) : 0;
+    // along the road (nx, nz) and across it, pointing away from the road to the stand's side (ox, oz)
+    const nx = Math.sin(rot), nz = Math.cos(rot); let ox = Math.cos(rot), oz = -Math.sin(rot);
+    if (rn && (x - rn.px) * ox + (z - rn.pz) * oz < 0) { ox = -ox; oz = -oz; }
+    const kerb = rn ? ROAD_W[rn.r.t] / 2 : 0; const bx0 = rn ? rn.px : x, bz0 = rn ? rn.pz : z;
+    const cols = ['#c9452f', '#2f6fb0', '#e9b23b', '#2f8f4e'];
+    for (let i = 0; i < 4; i++) {
+      const bus = new THREE.Group(); const L = i % 2 ? 6 : 10;
+      box(bus, 2.5, 2.6, L, cols[i], 0, 1.7, 0); box(bus, 2.52, 0.7, L - 0.6, '#9fc7d6', 0, 2.3, 0); box(bus, 2.55, 0.3, L, '#f2e6c8', 0, 1.2, 0);
+      for (const zz of [-L / 2 + 1.5, L / 2 - 1.8]) for (const xx of [-1.2, 1.2]) cyl(bus, 0.5, 0.5, 0.3, '#1a1a1a', xx, 0.5, zz, 10).rotation.z = Math.PI / 2;
+      const bx = bx0 + nx * (i - 1.5) * 12 + ox * (kerb + 2.2), bz = bz0 + nz * (i - 1.5) * 12 + oz * (kerb + 2.2);
+      if (this.map.nearBuilding(bx, bz, 2)) continue;
+      place(scene, bus, bx, bz, rot); colliders.push({ x: bx, z: bz, r: 2.2 });
+    }
+    const sh = new THREE.Group(); for (const s of [-1, 1]) for (const t of [-1, 1]) cyl(sh, 0.12, 0.12, 3, '#5d6266', s * 4.5, 1.5, t * 1.4, 6);
+    const roof = box(sh, 10, 0.2, 3.6, '#2f6f5a', 0, 3.1, 0); roof.rotation.x = 0.06; box(sh, 8, 0.1, 0.5, '#7a5a3a', 0, 0.5, -0.9);
+    const b = board('Motor Stand', 'মোটর স্ট্যান্ড', '#2f6f5a', 5); b.position.set(0, 4.1, 0); sh.add(b);
+    const sx = bx0 + ox * (kerb + 6.5) + nx * 26, sz = bz0 + oz * (kerb + 6.5) + nz * 26; if (!this.map.nearBuilding(sx, sz, 2)) { place(scene, sh, sx, sz, rot + Math.PI / 2); colliders.push({ x: sx, z: sz, r: 1.2 }); }
   }
 
   /** A sloping roof canopy over a gallery stand. */

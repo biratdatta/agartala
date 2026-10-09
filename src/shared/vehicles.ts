@@ -34,6 +34,9 @@ export const RENTALS: Record<string, VehKey[]> = {
   stRamnagar: ['cycle', 'scooter'],
   stJoynagar: ['cycle', 'bike', 'car'],
   stBridge: ['cycle', 'rickshaw', 'bike'],
+  stPalace: ['cycle', 'rickshaw'],
+  stMotor: ['scooter', 'bike', 'car'],
+  stParadise: ['cycle', 'scooter'],
 };
 /** The longest a rental is charged for in one go (a forgotten rental overnight costs a day, not a fortune). */
 export const RENT_MAX_HOURS = 24;

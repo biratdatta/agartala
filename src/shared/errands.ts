@@ -30,7 +30,7 @@ export function deliveryById(id: string): Delivery | undefined {
 
 export interface Sight { id: string; name: string; x: number; z: number; lore: string }
 /** Places worth seeing, at their real map positions. The first visit to each pays a little. */
-const SIGHT_IDS = ['stadium', 'mbbcollege', 'lakes', 'collegelake', 'shivmandir', 'modernclub', 'lawcollege', 'mgschool'];
+const SIGHT_IDS = ['stadium', 'mbbcollege', 'lakes', 'collegelake', 'shivmandir', 'modernclub', 'lawcollege', 'mgschool', 'palace', 'townhall', 'motorstand', 'prm', 'citycentre'];
 export const SIGHTS: Sight[] = [
   ...SIGHT_IDS.map((id) => { const p = placeById(id)!; return { id, name: p.name, x: p.x, z: p.z, lore: p.lore }; }),
   { id: 'ghat', name: 'The Haora riverbank', x: 1720, z: 1330, lore: 'The Haora winds round the east of the city. In the dry months it is a gentle stream; in the monsoon it rises right up to the fields.' },
