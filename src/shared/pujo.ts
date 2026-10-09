@@ -6,8 +6,8 @@
  */
 import { SPOTS } from './spots.js';
 
-/** The real-world Puja season (UTC). From Mahalaya, 10 October 2026 in India, to the start of November. */
-export const PUJO_SEASON = { from: Date.UTC(2026, 9, 9, 18, 30), to: Date.UTC(2026, 10, 2, 18, 30) };
+/** The real-world Puja season (UTC). Opens on the eve of Mahalaya (9 October 2026) and runs to the start of November. */
+export const PUJO_SEASON = { from: Date.UTC(2026, 9, 9, 6, 30), to: Date.UTC(2026, 10, 2, 18, 30) };
 export const pujoSeason = (t: number): boolean => t >= PUJO_SEASON.from && t < PUJO_SEASON.to;
 
 export interface Pandal { id: string; name: string; bn: string; x: number; z: number; theme: [string, string]; about: string }
