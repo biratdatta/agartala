@@ -1,0 +1,63 @@
+import { ownedLunga, type GameState, type Inventory } from './save.js';
+import type { GameEvent } from './rules.js';
+
+export type MissionId = 'arrive' | 'home' | 'garia' | 'paddy' | 'sell' | 'pine' | 'rubber' | 'kharchi' | 'grow' | 'durga';
+export interface Mission {
+  id: MissionId;
+  title: string;
+  text: string;
+  progress?: (s: GameState) => string;
+  done: (s: GameState) => boolean;
+  reward: { money?: number } & Partial<Pick<Inventory, 'paddySeed' | 'sucker'>>;
+  msg: string;
+}
+
+export const GROW_TARGET = 3000;
+
+export const MISSIONS: Mission[] = [
+  { id: 'arrive', title: 'Home to Agartala', text: 'You have flown home from {from}, {km} away. The airport cab has left you at Circuit House. Take a tomtom from the stand to the Home stand in {home} (Grandpa has paid for your first ride).',
+    done: (s) => !!s.flags.arrived, reward: {}, msg: 'Home at last. The lane smells of wet earth and woodsmoke.' },
+  { id: 'home', title: 'Khulumkha, home', text: 'Grandpa Hemanta is waiting in the courtyard of your bari in {home}. Walk over and talk to him.',
+    done: (s) => !!s.flags.metGrandpa, reward: { money: 150, paddySeed: 4 }, msg: '+₹150 and 4 pouches of paddy seed' },
+  { id: 'garia', title: 'A pole for Garia Puja', text: 'Cut 5 culms from the bamboo clumps around the fields, then take them to Rina Jamatia at her loom, just east along the lane.',
+    progress: (s) => `Bamboo ${Math.min(s.inv.bamboo, 5)} / 5`, done: (s) => !!s.flags.gariaDone, reward: { money: 200 }, msg: '+₹200 and Rina\'s rikutu. The para dances round the Garia pole this evening.' },
+  { id: 'paddy', title: 'Dhan in the lunga', text: 'Till the lunga plots at the family fields in Bhati Abhoynagar (there is a tomtom stand on their lane), sow paddy, and water them each day from the pukur. Harvest 4 plots. Crops only grow on days they are watered, unless it rains.',
+    progress: (s) => `Paddy harvested ${Math.min(s.stats.harvest.paddy, 4)} / 4`, done: (s) => s.stats.harvest.paddy >= 4, reward: { money: 100 }, msg: '+₹100 from Grandpa, who is very proud' },
+  { id: 'sell', title: 'Lake Chowmuhani Bazar', text: 'Sell your paddy to Gopal Saha at Lake Chowmuhani Bazar, about 2 km south-east. Walk the lanes, or take a tomtom from the stand on your lane for ₹20.',
+    done: (s) => (s.stats.sold.paddy || 0) >= 1, reward: { sucker: 6 }, msg: 'Gopal adds 6 Queen pineapple suckers from his cousin\'s tilla' },
+  { id: 'pine', title: 'Queen of the tilla', text: 'Plant pineapple suckers on the terraced beds of the small tilla behind the paddy at the fields, water them, and harvest 4 beds.',
+    progress: (s) => `Pineapple harvested ${Math.min(s.stats.harvest.pineapple, 4)} / 4`, done: (s) => s.stats.harvest.pineapple >= 4, reward: { money: 250 }, msg: '+₹250' },
+  { id: 'rubber', title: 'White gold', text: 'Tap the rubber trees on the back tilla at the fields between 05:00 and 11:00. Each tree gives one cup a day. Roll 3 cups into a sheet at the roller by the field shed. Make 3 sheets.',
+    progress: (s) => `Sheets ${Math.min(s.stats.sheets, 3)} / 3 · latex ${s.inv.latex}`, done: (s) => s.stats.sheets >= 3, reward: { money: 300 }, msg: '+₹300' },
+  { id: 'kharchi', title: 'Kharchi Puja', text: 'Kharchi Puja has begun at the Chaturdasha Devata Mandir in Old Agartala, 8 km east. Take 3 sacks of paddy and 2 pineapples to Radhanagar Bus Terminus and catch the bus.',
+    progress: (s) => `Paddy ${Math.min(s.inv.paddy, 3)} / 3 · pineapple ${Math.min(s.inv.pineapple, 2)} / 2`, done: (s) => !!s.flags.kharchi, reward: { money: 500 }, msg: '+₹500 in gifts. Your crops now grow 20% faster.' },
+  { id: 'grow', title: 'Grow the bari', text: 'Buy 2 more lunga plots from Gopal and save ₹3,000.',
+    progress: (s) => `Lunga plots ${Math.min(ownedLunga(s), 8)} / 8 · ₹${s.money.toLocaleString('en-IN')} / ₹3,000`, done: (s) => ownedLunga(s) >= 8 && s.money >= GROW_TARGET, reward: {}, msg: 'The bari is growing' },
+  { id: 'durga', title: 'Durga Puja at the palace', text: 'Durga Puja is on. After 18:00, go to the Durgabari pandal at the south end of Jagannath Lake, below Ujjayanta Palace, and join the puja.',
+    done: (s) => !!s.flags.durga, reward: {}, msg: 'Shubho Bijoya' },
+];
+
+/** Fills the hometown into a mission's text. */
+export function missionText(text: string, s: GameState): string {
+  const from = s.from || 'the city';
+  const km = s.fromKm > 30 ? `${s.fromKm.toLocaleString('en-IN')} km` : 'a long way';
+  return text.replace('{from}', from).replace('{km}', km).replace('{home}', s.home?.name || 'Bhati Abhoynagar');
+}
+
+export const currentMission = (s: GameState): Mission | null => MISSIONS[s.mission] || null;
+export const missionIndex = (id: MissionId): number => MISSIONS.findIndex((m) => m.id === id);
+
+/** Completes every mission whose condition now holds, in order, paying rewards. */
+export function checkMissions(s: GameState, ev: GameEvent[]): void {
+  for (let guard = 0; guard < MISSIONS.length; guard++) {
+    const m = currentMission(s);
+    if (!m || !m.done(s)) return;
+    if (m.reward.money) s.money += m.reward.money;
+    if (m.reward.paddySeed) s.inv.paddySeed += m.reward.paddySeed;
+    if (m.reward.sucker) s.inv.sucker += m.reward.sucker;
+    s.mission++;
+    const next = currentMission(s);
+    ev.push({ kind: 'mission', text: m.msg, title: m.title, next: next ? next.title : undefined });
+    if (!next && !s.ended) { s.ended = true; ev.push({ kind: 'ending', text: 'The bari is alive again' }); }
+  }
+}

@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Haora Bari · Agartala</title>
+<meta name="description" content="A 3D farming game set in the real streets of Agartala, Tripura, built from OpenStreetMap.">
+<meta name="theme-color" content="#1c1624">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Tiro+Bangla&display=swap">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='6' fill='%231c1624'/%3E%3Cpath d='M6 22h20l-10-12z' fill='%23e9b23b'/%3E%3Crect x='6' y='22' width='20' height='3' fill='%2386b54a'/%3E%3C/svg%3E">
+</head>
+<body>
+
+<div id="game">
+  <canvas id="c" tabindex="0" aria-label="Agartala game view"></canvas>
+  <div id="loading">Laying out the streets of Agartala…</div>
+
+  <div id="hud" hidden>
+    <section id="goal" class="card" aria-live="polite">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="eyebrow" id="goalEyebrow">Mission</div>
+        <h2 id="goalTitle"></h2>
+        <p id="goalText"></p>
+        <div id="goalProg"></div>
+        <div id="goalDir"><svg id="dirArrow" viewBox="0 0 14 14" aria-hidden="true"><path d="M7 0 L13 13 L7 9.5 L1 13 Z" fill="currentColor"/></svg><span id="dirDist"></span></div>
+      </div>
+    </section>
+    <section id="status" class="card">
+      <div class="stripe"></div>
+      <div class="in">
+        <div id="clock">06:30</div>
+        <div id="date"></div>
+        <div id="place"></div>
+        <div id="money">₹0</div>
+        <div id="net" hidden></div>
+        <canvas id="mini" width="288" height="288" aria-label="Minimap, click for the full map"></canvas>
+      </div>
+    </section>
+    <div id="toasts"></div>
+    <div id="prompt" hidden></div>
+    <div id="inv"></div>
+    <div id="btns">
+      <button class="hbtn" id="bMap"><span class="key">M</span>Map</button>
+      <button class="hbtn" id="bBoard"><span class="key">L</span>Farm</button>
+      <button class="hbtn" id="bHelp"><span class="key">H</span>Help</button>
+      <button class="hbtn" id="bSound">Sound on</button>
+    </div>
+    <div id="attrib">Map data © OpenStreetMap contributors</div>
+  </div>
+
+  <div id="touch" hidden>
+    <div id="joy"><div id="joyKnob"></div></div>
+    <button id="tAct">Act</button>
+    <button id="tSleep" class="hbtn">Sleep</button>
+  </div>
+
+  <div id="title" class="overlay" hidden>
+    <div class="wrap">
+      <div class="eyebrow">Agartala · Tripura · real streets from OpenStreetMap</div>
+      <h1>Haora Bari<span>হাওড়া বাড়ি</span></h1>
+      <p>You come home to Agartala, to your grandfather's house in whichever para you call home, and the family fields at Bhati Abhoynagar. Every road, lane and pond of the city centre is where it really is, and its 30,000 houses follow the real streets. Grow paddy and Queen pineapple, tap rubber at dawn, ride tomtoms through the real streets, help the neighbours, and keep the festivals from Garia Puja to Durga Puja at Ujjayanta Palace.</p>
+      <label class="fromrow" for="fromIn"><span>Coming home from</span><input id="fromIn" list="cityList" maxlength="40" autocomplete="address-level2" placeholder="Bengaluru"></label>
+      <datalist id="cityList"></datalist>
+      <div id="geoNote"></div>
+      <label class="fromrow" for="homeIn"><span>Your home in Agartala</span><input id="homeIn" list="homeList" maxlength="60" autocomplete="off" placeholder="Krishnanagar, Banamalipur, Kalibari…"><button class="btn ghost" id="homePick" type="button">Pick on map</button></label>
+      <datalist id="homeList"></datalist>
+      <div id="homeNote" class="sm" style="color:var(--ink-dim);font-size:12.5px">Type a neighbourhood or chowmuhani, or pick a spot on the map. Your house and Grandpa will be there; the family fields stay at Bhati Abhoynagar.</div>
+      <div class="row">
+        <button class="btn" id="bContinue" hidden>Continue</button>
+        <button class="btn" id="bNew">Start</button>
+      </div>
+      <div id="offline" hidden>No game server found, so this farm will be saved in this browser only.</div>
+      <div class="ctrl">
+        <span><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> walk</span>
+        <span><span class="key">Shift</span>/<span class="key">R</span> run</span>
+        <span>Drag to look</span>
+        <span><span class="key">E</span> act / talk</span>
+        <span><span class="key">Z</span> sleep at night</span>
+        <span><span class="key">M</span> map</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="dialog" class="overlay" hidden>
+    <div class="panel card">
+      <div class="stripe"></div>
+      <div class="in">
+        <div><div id="dlgName"></div><div class="eyebrow" id="dlgRole"></div></div>
+        <div id="dlgText"></div>
+        <div class="row"><button class="btn" id="dlgNext">Continue</button><span class="eyebrow" style="color:var(--ink-dim)">E / Enter</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="shop" class="overlay" hidden>
+    <div class="panel card" style="width:min(640px,100%)">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="row" style="justify-content:space-between">
+          <div><h3>Lake Chowmuhani Bazar</h3><div class="eyebrow" id="shopSub">Gopal Saha · today's rates</div></div>
+          <button class="btn ghost" id="shopClose">Close · Esc</button>
+        </div>
+        <div class="tblwrap"><table id="sellTbl"></table></div>
+        <div class="tblwrap"><table id="buyTbl"></table></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ride" class="overlay" hidden>
+    <div class="panel card">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="row" style="justify-content:space-between">
+          <div><h3>Tomtom stand</h3><div class="eyebrow" id="rideSub">Shared e-rickshaw · ₹20 a ride</div></div>
+          <button class="btn ghost" id="rideClose">Close · Esc</button>
+        </div>
+        <div id="rideList" class="ridelist"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="bigmap" class="overlay" hidden>
+    <div class="panel card" style="width:min(760px,100%)">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="row" style="justify-content:space-between"><h3 id="mapTitle">Agartala</h3><button class="btn ghost" id="mapClose">Close · M</button></div>
+        <div class="row jumprow">
+          <input id="jumpIn" list="placeList" placeholder="Jump to a place: Lake Chowmuhani, Kalibari, home…" autocomplete="off" aria-label="Jump to a place">
+          <button class="btn" id="jumpGo">Jump</button>
+        </div>
+        <datalist id="placeList"></datalist>
+        <canvas id="mapCv" width="900" height="900" aria-label="City map. Click a spot to jump there."></canvas>
+        <div class="row" style="justify-content:space-between">
+          <span class="sm" id="jumpHint">Click anywhere on the map to jump there.</span>
+          <span class="eyebrow" style="color:var(--ink-dim)">Map data © OpenStreetMap contributors (ODbL)</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="help" class="overlay" hidden>
+    <div class="panel card">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="row" style="justify-content:space-between"><h3>How to play</h3><button class="btn ghost" id="helpClose">Close · H</button></div>
+        <dl>
+          <dt><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span></dt><dd>Walk. Hold Shift to run, or press <b>R</b> to switch running on and off. Drag the mouse to turn the camera, scroll to zoom, press <b>C</b> to reset the camera.</dd>
+          <dt><span class="key">E</span></dt><dd>Do the thing in front of you: till, sow, water, harvest, tap, cut, talk, trade, take a tomtom. The prompt at the bottom says what E will do.</dd>
+          <dt><span class="key">Z</span></dt><dd>Sleep till 06:00. Only after 19:00 or before 05:00.</dd>
+          <dt><span class="key">M</span></dt><dd>Map of the city.</dd>
+          <dt><span class="key">L</span></dt><dd>Your farm: leaderboard, farm name, farm code and sign-in.</dd>
+        </dl>
+        <p style="margin:0;color:var(--ink-dim);font-size:14px;line-height:1.55">The city is real: streets, ponds and buildings come from OpenStreetMap. Tomtom stands (the green e-rickshaws) take you across town for ₹20. Paddy grows in the low <b style="color:var(--ink)">lunga</b>, pineapple on the <b style="color:var(--ink)">tilla</b>. Crops grow only on days they are watered; rain waters everything. Rubber gives latex once a day between 05:00 and 11:00, and 3 cups roll into one sheet. The game saves on its own in this browser.</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="endcard" class="overlay" hidden>
+    <div class="panel card">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="eyebrow">Durga Puja · Ujjayanta Palace</div>
+        <h3>The bari is alive again</h3>
+        <p style="margin:0;line-height:1.55;color:var(--ink-dim)">The dhak is beating by Jagannath Lake, the palace is lit end to end, and Grandpa Hemanta is telling anyone who will listen that the Abhoynagar fields are green again. The city is still yours to wander. Keep farming as long as you like.</p>
+        <div class="stats" id="endStats"></div>
+        <div class="row"><button class="btn" id="endClose">Keep playing</button></div>
+      </div>
+    </div>
+  </div>
+
+
+  <div id="board" class="overlay" hidden>
+    <div class="panel card" style="width:min(720px,100%)">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="row" style="justify-content:space-between"><h3>Your farm</h3><button class="btn ghost" id="boardClose">Close · L</button></div>
+        <div class="cols">
+          <div>
+            <h4>Net worth</h4>
+            <div id="worth">₹0</div>
+            <h4 style="margin-top:14px">Name on the leaderboard</h4>
+            <div class="row"><input id="nameIn" maxlength="24" placeholder="Your name" autocomplete="nickname"><button class="btn" id="nameSave">Save</button></div>
+            <h4 style="margin-top:14px">Home</h4>
+            <div class="row"><input id="homeIn2" list="homeList" maxlength="60" autocomplete="off" placeholder="Neighbourhood or chowmuhani"><button class="btn" id="homeMove">Move</button><button class="btn ghost" id="homePick2">Map</button></div>
+            <h4 style="margin-top:14px">Farm code</h4>
+            <div id="codeOut">—</div>
+            <p class="sm" id="acctNote" style="margin:4px 0 0"></p>
+            <div class="row" style="margin-top:8px"><input id="codeIn" placeholder="Open another farm: ABCD-2345" autocomplete="off"><button class="btn ghost" id="codeGo">Open</button></div>
+            <div id="signin" hidden style="margin-top:14px">
+              <h4>Sign in to keep this farm on every device</h4>
+              <div class="row" id="gRow"><button class="btn" id="gIn">Sign in with Google</button></div>
+              <div class="row" id="eRow" style="margin-top:8px"><input id="emailIn" type="email" placeholder="you@example.com" autocomplete="email"><button class="btn ghost" id="eIn">Email me a link</button></div>
+            </div>
+            <div class="row" style="margin-top:14px"><button class="btn ghost" id="resetFarm">Start a new farm</button></div>
+          </div>
+          <div>
+            <h4>Today's kaam · neighbours who need a hand</h4>
+            <ol id="kaamList"></ol>
+            <h4 style="margin-top:14px">Parcels to carry</h4>
+            <ol id="parcelList" class="errlist"></ol>
+            <h4 style="margin-top:14px">Sights of Agartala · <span id="sightCount"></span></h4>
+            <ol id="sightList" class="errlist sights"></ol>
+            <h4 style="margin-top:14px">Leaderboard · richest farmers in Agartala</h4>
+            <ol id="lbList"></ol>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="fade"></div>
+</div>
+
+<script type="module" src="/src/client/main.ts"></script>
+</body>
+</html>

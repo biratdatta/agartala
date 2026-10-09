@@ -1,0 +1,11 @@
+node_modules
+dist
+.data
+.env
+.env.local
+.vercel
+*.log
+.DS_Store
+.dev.vars
+.wrangler
+prototype

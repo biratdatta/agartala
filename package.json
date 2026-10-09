@@ -1,0 +1,39 @@
+{
+  "name": "haora-bari-agartala",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Haora Bari: a 3D farming game set in the real streets of Agartala, Tripura. Three.js, Vite, Cloudflare Pages + D1 (or Vercel).",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "map:fetch": "node scripts/fetch-osm.mjs",
+    "map:bake": "node scripts/bake-map.mjs",
+    "map": "npm run map:fetch && npm run map:bake",
+    "assets": "node scripts/build-assets.mjs",
+    "cf:dev": "vite build && wrangler pages dev",
+    "cf:db": "wrangler d1 execute agartala --remote --file=cloudflare/schema.sql",
+    "cf:db:local": "wrangler d1 execute agartala --local --file=cloudflare/schema.sql",
+    "cf:deploy": "npm run build && wrangler pages deploy"
+  },
+  "dependencies": {
+    "three": "0.169.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "4.20241022.0",
+    "@types/node": "22.8.1",
+    "@types/three": "0.169.0",
+    "typescript": "5.6.3",
+    "vite": "5.4.10",
+    "vitest": "2.1.4",
+    "wrangler": "3.84.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
