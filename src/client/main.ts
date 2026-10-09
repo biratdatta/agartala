@@ -111,12 +111,6 @@ async function boot(): Promise<void> {
     resize();
     const label = $('#setGfxV'); label.textContent = `Running at ${q[0].toUpperCase()}${q.slice(1)}`;
   };
-  onSettings((st) => {
-    player.lookScale = st.look; lighting.viewFar = st.view; camera.far = Math.max(1200, st.view * 1.6); camera.updateProjectionMatrix();
-    setVolume(st.volume / 100);
-    document.documentElement.dataset.text = st.text; document.documentElement.dataset.motion = st.reduceMotion ? 'reduce' : '';
-    applyQuality(st.graphics === 'auto' ? autoLevel : st.graphics);
-  });
   // Auto quality: if the frame rate stays low for a few seconds, step down one level
   let fpsT = 0, fpsN = 0;
   const watchFps = (dt: number) => {
@@ -149,6 +143,13 @@ async function boot(): Promise<void> {
   const others = new OtherPlayers(scene, net); const ambience = new Ambience();
   const mapView = new MapView(map);
   const player = new Player(scene, map, camera, canvas);
+  // apply the saved settings now that the player exists (and again whenever they change)
+  onSettings((st) => {
+    player.lookScale = st.look; lighting.viewFar = st.view; camera.far = Math.max(1200, st.view * 1.6); camera.updateProjectionMatrix();
+    setVolume(st.volume / 100);
+    document.documentElement.dataset.text = st.text; document.documentElement.dataset.motion = st.reduceMotion ? 'reduce' : '';
+    applyQuality(st.graphics === 'auto' ? autoLevel : st.graphics);
+  });
   const vehicles = new Vehicles(scene, map, player, (i) => home.parking(i), stalls);
   const labels = new Labels(scene);
   let homeLabel: THREE.Sprite | null = null;
