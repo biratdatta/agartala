@@ -50,6 +50,8 @@ const TOMTOM_COLOURS = ['#2f8f4e', '#3a9a5a', '#e3b23c', '#2f8f4e', '#2a7fb0', '
 async function boot(): Promise<void> {
   const loading = $('#loading');
   const net = new Net();
+  /** The lantern comes out by itself after dark; T puts it out or lights it again. */
+  let lanternWanted = true;
   const authResult = takeAuthResult();
   if (authResult?.token) net.adopt(authResult.token);
   const authReady = loadAuthConfig();
@@ -330,6 +332,11 @@ async function boot(): Promise<void> {
   menuBtn.onclick = (e) => { e.stopPropagation(); setMenu(!btns.classList.contains('open')); };
   btns.addEventListener('click', (e) => { if (e.target !== menuBtn && !menuBtn.contains(e.target as Node)) setMenu(false); });
   document.addEventListener('pointerdown', (e) => { if (btns.classList.contains('open') && !btns.contains(e.target as Node)) setMenu(false); });
+  function toggleLantern(): void {
+    lanternWanted = !lanternWanted; toast(lanternWanted ? 'Lantern lit.' : 'Lantern out.');
+    $('#bLantern').lastChild!.textContent = lanternWanted ? 'Lantern on' : 'Lantern off';
+  }
+  $('#bLantern').onclick = toggleLantern;
   $('#bSound').onclick = () => ($('#bSound').textContent = toggleSound() ? 'Sound on' : 'Sound off');
   $('#dlgNext').onclick = nextPage; $('#endClose').onclick = () => ($('#endcard').hidden = true);
   for (const s of ['#bigmap', '#help', '#shop', '#ride', '#endcard', '#board', '#stall', '#trips']) $(s).addEventListener('click', (e) => { if (e.target === $(s)) $(s).hidden = true; });
@@ -357,6 +364,7 @@ async function boot(): Promise<void> {
     if (k === 'escape') { if (photo.active) return togglePhoto(); return closePanels(); }
     if (k === 'p' && !e.repeat) return togglePhoto();
     if (k === 'm') return toggleMap();
+    if (k === 't' && !e.repeat) return toggleLantern();
     if (k === 'h') { $('#help').hidden = !$('#help').hidden; return; }
     if (k === 'l') { if ($('#board').hidden) board(); else $('#board').hidden = true; return; }
     if (modalOpen()) return;
@@ -503,7 +511,11 @@ async function boot(): Promise<void> {
     dancers.forEach((g, i) => { g.visible = !!dancing; if (!dancing) return; const a = time * 0.5 + (i / dancers.length) * Math.PI * 2; g.position.set(RINA.pole.x + Math.cos(a) * 3.2, Math.abs(Math.sin(time * 4 + i)) * 0.15, RINA.pole.z + Math.sin(a) * 3.2); g.rotation.y = a + Math.PI; animPerson(g, 0.6, dt); g.userData.armL.rotation.z = -0.6; g.userData.armR.rotation.z = 0.6; });
     const durgaOn = !!S.flags.durga || (currentMission(S)?.id === 'durga' && isNight(S));
     crowd.forEach((g, i) => { g.visible = durgaOn; if (durgaOn) g.position.y = Math.max(0, Math.sin(time * 6 + i)) * 0.06; });
-    lighting.update(S, player.body.position, dt);
+    const dark = lighting.nightFactor > 0.35 || (S.rain && lighting.nightFactor > 0.2);
+    const lanternOn = playing && lanternWanted && dark;
+    const hold = lanternOn && !vehicles.riding && !rideView.active && !photo.active;
+    const flame = player.updateLantern(hold, lighting.nightFactor);
+    lighting.update(S, player.body.position, dt, playing ? { at: hold ? flame : null, on: lanternOn } : null);
     kit.material.emissiveIntensity = lighting.nightFactor * 0.85;
     lamps.update(lighting.nightFactor); real.setNight(lighting.nightFactor); diyas.visible = isFestival(S.day, 'diwali') && lighting.nightFactor > 0.4;
     renderer.render(scene, camera);

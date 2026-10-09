@@ -26,6 +26,10 @@ export class Player {
   maxDist = 22;
   private vx = 0; private vz = 0; private runBlend = 0; private phase = 0; private lastStep = 0;
   private camTarget = new THREE.Vector3(); private camPos = new THREE.Vector3();
+  /** A hurricane lantern carried in the right hand after dark (T switches it off and on). */
+  readonly lantern = new THREE.Group();
+  private lanternGlass = new THREE.MeshLambertMaterial({ color: '#fff2c8', emissive: '#ffb84a', emissiveIntensity: 0, transparent: true, opacity: 0.85 });
+  private lanternPos = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, private map: CityMap, private camera: THREE.PerspectiveCamera, canvas: HTMLCanvasElement) {
     this.body = person({ shirt: '#efe8d6', lowerMat: MAT.lungi, gamcha: true }); this.body.rotation.order = 'YXZ'; scene.add(this.body);
@@ -34,6 +38,14 @@ export class Player {
     for (const z of [-0.6, 0.7]) add(sc, new THREE.TorusGeometry(0.22, 0.07, 6, 14), '#1a1a1a', 0, 0.22, z).rotation.y = Math.PI / 2;
     cyl(sc, 0.08, 0.08, 0.05, '#ffe9a0', 0, 0.98, 0.66, 8).rotation.x = Math.PI / 2;
     sc.position.y = -0.35; sc.visible = false; this.body.add(sc);
+    // the lantern: brass base and cap, a glowing glass chimney, wire guards and a handle
+    const L = this.lantern; const brass = '#b8862f';
+    cyl(L, 0.09, 0.1, 0.06, brass, 0, -0.28, 0, 10); cyl(L, 0.04, 0.04, 0.02, brass, 0, -0.24, 0, 8);
+    const glass = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.075, 0.18, 12), this.lanternGlass); glass.position.y = -0.15; L.add(glass);
+    for (let i = 0; i < 4; i++) { const a = (i / 4) * Math.PI * 2; cyl(L, 0.006, 0.006, 0.2, '#3a3a3a', Math.cos(a) * 0.085, -0.15, Math.sin(a) * 0.085, 4); }
+    add(L, new THREE.ConeGeometry(0.085, 0.07, 10), brass, 0, -0.03, 0);
+    const handle = add(L, new THREE.TorusGeometry(0.07, 0.007, 4, 12, Math.PI), '#3a3a3a', 0, 0.0, 0); handle.rotation.y = Math.PI / 2;
+    L.position.set(0, -0.62, 0.06); L.visible = false; (this.body.userData.armR as THREE.Group).add(L);
     addEventListener('keydown', (e) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
       const k = e.key.toLowerCase(); this.keys[k] = true;
@@ -48,6 +60,13 @@ export class Player {
     const end = (e: PointerEvent) => { if (drag && drag.id === e.pointerId) drag = null; };
     canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
     canvas.addEventListener('wheel', (e) => { this.dist = clamp(this.dist + e.deltaY * 0.01 * (this.dist > 22 ? 3 : 1), 2.8, this.maxDist); e.preventDefault(); }, { passive: false });
+  }
+
+  /** Shows or hides the lantern, keeps it hanging straight while the arm swings, and says where its flame is. */
+  updateLantern(on: boolean, glow: number): THREE.Vector3 {
+    const arm = this.body.userData.armR as THREE.Group; this.lantern.visible = on;
+    this.lantern.rotation.x = -arm.rotation.x; this.lanternGlass.emissiveIntensity = on ? 0.6 + glow * 1.4 : 0;
+    return this.lantern.getWorldPosition(this.lanternPos);
   }
 
   get x() { return this.body.position.x; }
