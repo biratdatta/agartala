@@ -205,3 +205,25 @@ describe('weekly boards and saves', () => {
     expect(bad.friends).toEqual({ nShiva: 100 }); expect(bad.energy).toBe(0); expect(bad.market.paddy).toBe(999);
   });
 });
+
+describe('vehicles', () => {
+  it('starts with Grandpa\'s cycle-rickshaw and sells the rest once', async () => {
+    const { owns } = await import('../src/shared/vehicles.js');
+    const g = game(); expect(g.s.garage).toEqual(['rickshaw']);
+    g.s.money = 50000; g.ok({ t: 'buy', item: 'car' }); expect(owns(g.s, 'car')).toBe(true);
+    expect(g.do({ t: 'buy', item: 'car' }).ok).toBe(false);
+    g.ok({ t: 'buy', item: 'cycle' }); expect(g.s.cycle).toBe(true);
+    expect(g.s.money).toBe(50000 - PRICES.car - PRICES.cycle);
+    const old = normalize({ v: 5, cycle: true, scooter: true }, T0); expect(old.garage.sort()).toEqual(['cycle', 'rickshaw', 'scooter']);
+  });
+  it('pays fares for real passenger trips, not impossible ones', async () => {
+    const { FARES_PER_DAY } = await import('../src/shared/vehicles.js');
+    const g = game(); g.at(9); const m = g.s.money;
+    expect(g.do({ t: 'fare', veh: 'car', from: 'stStadium', to: 'stMath' }).ok).toBe(false); // a car takes no fares
+    g.ok({ t: 'fare', veh: 'rickshaw', from: 'stStadium', to: 'stMath' }); expect(g.s.money).toBeGreaterThan(m);
+    expect(g.do({ t: 'fare', veh: 'rickshaw', from: 'stMath', to: 'stRamnagar' }).ok).toBe(false); // too fast: no time has passed
+    g.wait(4); g.ok({ t: 'fare', veh: 'rickshaw', from: 'stMath', to: 'stRamnagar' });
+    expect(g.do({ t: 'fare', veh: 'rickshaw', from: 'stMath', to: 'stMath' }).ok).toBe(false);
+    g.s.fares.n = FARES_PER_DAY; g.wait(2); expect(g.do({ t: 'fare', veh: 'rickshaw', from: 'stJoynagar', to: 'stBridge' }).ok).toBe(false);
+  });
+});

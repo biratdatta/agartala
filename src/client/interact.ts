@@ -29,6 +29,8 @@ export interface Prompt { label: string; run?: () => void }
 export interface Spot extends XZ { r: number; get: () => Prompt }
 export interface Ctx {
   game: Game; map: CityMap; npc: Record<NpcKey, Npc>; neighbours: NeighbourNpc[]; traffic: Traffic; home: HomeView; stalls: StallView[];
+  /** Extra things to walk up to that move around (your parked vehicles). */
+  extra: () => Spot[];
   sleep: () => void; ride: (from: Stand, to: Stand) => void; kharchiTrip: () => void;
   /** Goes on a bus trip: fades out, shows the arrival pages, then applies the trip. */
   trip: (t: Trip, sell?: Partial<Record<ItemKey, number>>) => void;
@@ -153,7 +155,7 @@ const nameOf = (id: string) => NEIGHBOURS.find((n) => n.id === id);
 export function findTarget(c: Ctx, spots: Spot[]): (Spot & { water?: boolean }) | null {
   const p = c.player(); const fx = Math.sin(p.face), fz = Math.cos(p.face);
   let best: Spot | null = null, bd = 1e9;
-  for (const it of [...dynamicSpots(c), ...spots]) {
+  for (const it of [...dynamicSpots(c), ...c.extra(), ...spots]) {
     const d = Math.hypot(p.x - it.x, p.z - it.z); if (d >= it.r + 0.8) continue;
     const score = d - (((it.x - p.x) * fx + (it.z - p.z) * fz) / (d || 1)) * 0.6; if (score < bd) { bd = score; best = it; }
   }

@@ -20,6 +20,8 @@ export class Player {
   autoRun = false;
   /** On a scooter you go faster than a bicycle; when tired you cannot run. */
   scooter = false; tired = false;
+  /** When you last dragged the camera round (the driving camera waits a moment before settling behind you). */
+  lastLook = 0;
   /** Furthest the camera may pull back (photo mode lets it go further). */
   maxDist = 22;
   private vx = 0; private vz = 0; private runBlend = 0; private phase = 0; private lastStep = 0;
@@ -42,7 +44,7 @@ export class Player {
     addEventListener('blur', () => { for (const k in this.keys) this.keys[k] = false; });
     let drag: { x: number; y: number; id: number } | null = null;
     canvas.addEventListener('pointerdown', (e) => { if (e.pointerType === 'touch' && e.clientX < innerWidth * 0.4) return; drag = { x: e.clientX, y: e.clientY, id: e.pointerId }; canvas.setPointerCapture(e.pointerId); canvas.focus(); });
-    canvas.addEventListener('pointermove', (e) => { if (!drag || drag.id !== e.pointerId) return; this.yaw -= (e.clientX - drag.x) * 0.0055; this.pitch = clamp(this.pitch + (e.clientY - drag.y) * 0.004, 0.08, 1.35); drag.x = e.clientX; drag.y = e.clientY; });
+    canvas.addEventListener('pointermove', (e) => { if (!drag || drag.id !== e.pointerId) return; this.lastLook = performance.now(); this.yaw -= (e.clientX - drag.x) * 0.0055; this.pitch = clamp(this.pitch + (e.clientY - drag.y) * 0.004, 0.08, 1.35); drag.x = e.clientX; drag.y = e.clientY; });
     const end = (e: PointerEvent) => { if (drag && drag.id === e.pointerId) drag = null; };
     canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
     canvas.addEventListener('wheel', (e) => { this.dist = clamp(this.dist + e.deltaY * 0.01 * (this.dist > 22 ? 3 : 1), 2.8, this.maxDist); e.preventDefault(); }, { passive: false });

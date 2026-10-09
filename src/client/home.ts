@@ -55,5 +55,7 @@ export class HomeView {
 
   get bed(): { x: number; z: number } { return this.world(BED_LOCAL.x, BED_LOCAL.z); }
   get kitchen(): { x: number; z: number } { return this.world(KITCHEN_LOCAL.x, KITCHEN_LOCAL.z); }
+  /** Parking places in front of the fence, side by side along the lane. */
+  parking(i: number): { x: number; z: number; face: number } { const lx = [-16, -11, -6, 9, 14, 19][i % 6]; const p = this.world(lx, 18.5); return { ...p, face: this.origin.ry + Math.PI / 2 }; }
   get front(): { x: number; z: number } { return this.world(0, 16); }
 }

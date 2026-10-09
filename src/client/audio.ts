@@ -37,6 +37,7 @@ export const SFX: Record<string, () => void> = {
   no: () => tone(196, 0.15, 'sine', 0.08, -40),
   horn: () => { tone(620, 0.18, 'square', 0.05); tone(620, 0.18, 'square', 0.05, 0, 0.25); },
   mission: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, 0.35, 'triangle', 0.11, 0, i * 0.11)),
+  engine: () => { tone(70, 0.5, 'sawtooth', 0.025, 15); tone(140, 0.4, 'square', 0.008, 10); },
   dhak: () => { for (let i = 0; i < 8; i++) { tone(95, 0.25, 'sine', 0.3, -40, i * 0.19 + (i % 2) * 0.05); noise(0.06, 0.25, 900, 2, i * 0.19); } },
 };
 export const play = (name?: string): void => { if (name && SFX[name]) SFX[name](); };

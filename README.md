@@ -39,6 +39,7 @@ If you deploy only `dist/` to a static host with no API, the game still works: i
 | **M** | city map: type a place and press Jump, or click anywhere on it to jump there |
 | **L** | your farm: farm, people, Grandpa's album and the boards |
 | **P** | photo mode: hide the HUD and save a postcard |
+| **E** by a vehicle | get on; then **W**/**S** throttle, brake and reverse, **A**/**D** steer, **Space** brake, **E** get off |
 | **H** | help |
 
 On phones there's a joystick and an Act button.
@@ -105,7 +106,8 @@ The family fields stay by the Haora with their own stand, so farming becomes a c
 
 - **A bazar that moves:** Gopal's rates follow the season, one item is in demand each day (+30%), and selling a lot at once pushes the rate down for a few days. Fruit, fish and pitha go off overnight unless you build a cold store.
 - **More to grow and make:** tea on the third tilla (plant once, pluck every morning), agar trees (a month to grow, worth a fortune), rohu and katla in the pukur, cane baskets from bamboo, pitha from paddy in the kitchen.
-- **Kit:** scooter, diesel pump set (waters every plot at once), cold store, and a farm hand who waters and harvests at dawn for a week.
+- **Vehicles you drive:** Grandpa's old cycle-rickshaw from day one, and a bicycle, scooter, motorbike, tomtom and car from Gopal. They park by the house; walk up and press E. Each handles differently (the car is quick but wide, the rickshaw slow and heavy), and they bump off walls and stop at water. Stop a rickshaw or tomtom at any tomtom stand to pick up a passenger, follow the gold marker, and get paid a fare (up to 12 a day). Code in `src/client/vehicles.ts`.
+- **Kit:** diesel pump set (waters every plot at once), cold store, and a farm hand who waters and harvests at dawn for a week.
 - **Energy and food:** work tires you; rest, sleep, or eat at the food stalls by every tomtom stand (momo, mui borok, chakhwi, wahan mosdeng…).
 - **Seasons:** monsoon floods in Asharh and Srabon (paddy grows faster, the lunga can't be tilled, rides are slow on muddy roads).
 - **Festivals every year:** Kharchi Puja fair, Ker Puja (no tomtoms till 18:00), Durga Puja at Modern Club, Diwali lamps on the lakes, Pous Sankranti pitha.

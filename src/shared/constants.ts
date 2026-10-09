@@ -29,6 +29,10 @@ export const PRICES = {
   agarSapling: 200,
   fingerling: 150,
   scooter: 2500,
+  bike: 6000,
+  car: 30000,
+  tomtom: 14000,
+  rickshaw: 3000,
   pump: 1500,
   coldStore: 1200,
   helper: 420,
@@ -40,7 +44,7 @@ export const PRICES = {
 } as const;
 
 export type ItemKey = 'paddy' | 'pineapple' | 'jackfruit' | 'sheet' | 'bamboo' | 'tea' | 'agar' | 'fish' | 'basket' | 'pitha';
-export type BuyKey = 'paddySeed' | 'sucker' | 'plot' | 'bhar' | 'cycle' | 'teaSapling' | 'agarSapling' | 'fingerling' | 'scooter' | 'pump' | 'coldStore' | 'helper';
+export type BuyKey = 'paddySeed' | 'sucker' | 'plot' | 'bhar' | 'cycle' | 'teaSapling' | 'agarSapling' | 'fingerling' | 'scooter' | 'pump' | 'coldStore' | 'helper' | 'bike' | 'car' | 'tomtom' | 'rickshaw';
 export type CropKey = keyof typeof NEED;
 
 export const ITEMS: Record<ItemKey, { name: string; unit: string; base: number }> = {

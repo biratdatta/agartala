@@ -8,6 +8,7 @@ import { ownedLunga, type GameState } from '../../shared/save.js';
 import { standsFor, type Stand } from '../../shared/stands.js';
 import { CHAPTERS, nextChapter } from '../../shared/story.js';
 import { TRIPS, lastTrip, tripOpen, type Trip } from '../../shared/trips.js';
+import { VEHICLES, owns } from '../../shared/vehicles.js';
 import { play } from '../audio.js';
 import type { Game } from '../game.js';
 import type { FarmSummary, Net } from '../net.js';
@@ -51,12 +52,11 @@ export function renderShop(S: GameState): void {
     ['fingerling', 'Rohu and katla fingerlings', S.pond.stocked ? 'the pukur is stocked' : 'one batch stocks the pukur · net in 3 days', !S.pond.stocked],
     ['plot', 'Lunga plot', all ? 'you own the whole lunga' : `you own ${ownedLunga(S)} of 12 lunga plots`, !all],
     ['bhar', 'Bamboo bhar', S.canMax > 8 ? 'you already carry two cans' : 'two cans on a shoulder pole · 16 waterings', S.canMax <= 8],
-    ['cycle', 'Bicycle', S.cycle ? 'you have one' : 'twice as fast through the lanes', !S.cycle],
-    ['scooter', 'Scooter', S.scooter ? 'you have one' : 'faster than any bicycle', !S.scooter],
     ['pump', 'Diesel pump set', S.pump ? 'by the pukur' : `waters every plot at once · ₹${PRICES.diesel} of diesel a day`, !S.pump],
     ['coldStore', 'Cold store', S.coldStore ? 'nothing goes off now' : 'fruit, fish and pitha stop going off overnight', !S.coldStore],
     ['helper', 'Hire a farm hand', S.helperUntil >= S.day ? `working until day ${S.helperUntil} · hire again to add ${HELPER_DAYS} days` : `waters and harvests every dawn for ${HELPER_DAYS} days`, true],
   ];
+  for (const v of VEHICLES) rows.push([v.k as BuyKey, v.name, owns(S, v.k) ? 'parked by your house · walk up and press E to ride' : v.blurb, !owns(S, v.k)]);
   let b = '<tr><th>Buy</th><th class="r">Price</th><th></th></tr>';
   for (const [k, n, d, ok] of rows) b += `<tr><td>${n}<div class="sm">${d}</div></td><td class="r">₹${PRICES[k].toLocaleString('en-IN')}</td><td class="r"><button class="b2" data-buy="${k}" ${ok && S.money >= PRICES[k] ? '' : 'disabled'}>Buy</button></td></tr>`;
   $('#buyTbl').innerHTML = b;
@@ -138,7 +138,7 @@ function renderBoard(): void {
   if (tab === 'farm') {
     ($('#nameIn') as HTMLInputElement).value = S.name;
     $('#worth').textContent = rupees(netWorth(S));
-    const kit = [S.cycle && 'bicycle', S.scooter && 'scooter', S.canMax > 8 && 'bhar', S.pump && 'pump set', S.coldStore && 'cold store', S.helperUntil >= S.day && `farm hand until day ${S.helperUntil}`].filter(Boolean);
+    const kit = [...VEHICLES.filter((v) => owns(S, v.k)).map((v) => v.name.toLowerCase()), S.canMax > 8 && 'bhar', S.pump && 'pump set', S.coldStore && 'cold store', S.helperUntil >= S.day && `farm hand until day ${S.helperUntil}`].filter(Boolean);
     $('#upgrades').textContent = kit.length ? `You have: ${kit.join(', ')}` : '';
     $('#codeOut').textContent = net.online ? net.code : 'offline';
     $('#acctNote').textContent = !net.online ? 'No server is running, so this farm is saved in this browser only.' : net.signedIn ? `Signed in${net.email ? ` as ${net.email}` : ''}: this farm follows your account to any device.` : 'Playing as a guest. Keep your farm code secret: it opens this farm on any device.';

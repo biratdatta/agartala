@@ -2,6 +2,7 @@ import { CAN_SMALL, ENERGY_MAX, ITEMS, type CropKey, type ItemKey } from './cons
 import { AGAR, BAMBOO, JACK, LUNGA_COUNT, PLOTS, RUBBER, SPAWN, START_OWNED_LUNGA, TEA } from './farm.js';
 import { STAND_KEYS, type HomeSite, type StandKey } from './stands.js';
 import { inArea } from './area.js';
+import { VEHICLES, type VehKey } from './vehicles.js';
 
 export const SAVE_VERSION = 6;
 
@@ -86,6 +87,10 @@ export interface GameState {
   attended: string[];
   week: Week;
   inbox: Note[];
+  /** Vehicles you own (see vehicles.ts). Grandpa's cycle-rickshaw comes with the bari. */
+  garage: VehKey[];
+  /** Passenger fares carried today, and when the last one was paid (real ms). */
+  fares: { day: number; n: number; last: number };
 }
 
 export function newState(now: number, name = '', from = '', fromKm = 0): GameState {
@@ -103,6 +108,7 @@ export function newState(now: number, name = '', from = '', fromKm = 0): GameSta
     tea: TEA.map(() => ({ planted: false, growth: 0, picked: 0 })), agar: AGAR.map(() => ({ planted: false, growth: 0, picked: 0 })),
     pond: { stocked: false, growth: 0 }, boostUntil: 0, friends: {}, chats: [], phrases: [], chapters: [], fests: [], pithaGiven: [], trips: [], attended: [],
     week: { id: '', paddy: 0, deliveries: 0, kaam: 0, sights: 0, earned: 0 }, inbox: [],
+    garage: ['rickshaw'], fares: { day: 0, n: 0, last: 0 },
   };
 }
 
@@ -146,6 +152,9 @@ export function normalize(raw: unknown, now: number): GameState {
   s.chats = strs(r.chats, 40); s.phrases = strs(r.phrases, 60); s.chapters = strs(r.chapters, 40); s.fests = strs(r.fests, 60); s.pithaGiven = strs(r.pithaGiven, 40); s.trips = strs(r.trips, 40); s.attended = strs(r.attended, 40);
   const w = (r.week || {}) as Partial<Week>; s.week = { id: typeof w.id === 'string' ? w.id.slice(0, 10) : '', paddy: num(w.paddy, 0, 0), deliveries: num(w.deliveries, 0, 0), kaam: num(w.kaam, 0, 0), sights: num(w.sights, 0, 0), earned: num(w.earned, 0, 0) };
   s.inbox = Array.isArray(r.inbox) ? r.inbox.filter((n): n is Note => !!n && typeof n.t === 'number' && typeof n.text === 'string').slice(-10).map((n) => ({ t: n.t, text: n.text.slice(0, 160) })) : [];
+  const keys = VEHICLES.map((v) => v.k);
+  s.garage = [...new Set<VehKey>(['rickshaw', ...(Array.isArray(r.garage) ? r.garage.filter((k): k is VehKey => keys.includes(k as VehKey)) : []), ...(s.cycle ? ['cycle' as const] : []), ...(s.scooter ? ['scooter' as const] : [])])];
+  s.fares = { day: num(r.fares?.day, 0, 0), n: num(r.fares?.n, 0, 0, 99), last: num(r.fares?.last, 0, 0) };
   const rd = r.ride; s.ride = rd && typeof rd === 'object' && typeof rd.to === 'string' && STAND_KEYS.includes(rd.to as StandKey) && STAND_KEYS.includes(rd.from as StandKey) ? { from: String(rd.from), to: rd.to, start: num(rd.start, now), ms: num(rd.ms, 30000, 1000, 120000), hours: num(rd.hours, 0.2, 0, 3), done: num(rd.done, 0, 0, 3) } : null;
   return s;
 }

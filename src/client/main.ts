@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { clamp } from '../shared/rng.js';
 import './styles.css';
 import { CITIES, kmFromCity } from '../shared/geo.js';
 import { currentMission, missionIndex, missionText } from '../shared/missions.js';
@@ -13,6 +14,7 @@ import { tripOpen, type Trip } from '../shared/trips.js';
 import type { ItemKey } from '../shared/constants.js';
 import { Ambience, play, toggleSound, unlockAudio } from './audio.js';
 import { OtherPlayers } from './social.js';
+import { Vehicles } from './vehicles.js';
 import { PhotoMode } from './photo.js';
 import { StreetLamps, buildDiyas, buildKer, buildStalls, updateStalls } from './scene/citylife.js';
 import { auth, loadAuthConfig, signIn, takeAuthResult } from './auth.js';
@@ -92,6 +94,7 @@ async function boot(): Promise<void> {
   const mapView = new MapView(map);
   const player = new Player(scene, map, camera, canvas);
   const labels = new Labels(scene);
+  const vehicles = new Vehicles(scene, map, player, (i) => home.parking(i));
   let homeLabel: THREE.Sprite | null = null;
   void (document.fonts?.ready ?? Promise.resolve()).then(() => {
     labels.add('MBB Stadium', 'মহারাজা বীর বিক্রম স্টেডিয়াম', STADIUM.x, 44, STADIUM.z, 3, 2500);
@@ -127,7 +130,7 @@ async function boot(): Promise<void> {
     const h = game.S.home; const key = h ? `${h.x},${h.z}` : 'fields';
     standsView.update(standsFor(h));
     if (homeLabel) { const f = home.front; homeLabel.position.set(f.x, 12, f.z); }
-    if (key === placedHome) return; placedHome = key; home.place(h);
+    if (key === placedHome) { vehicles.sync(game.S); return; } placedHome = key; home.place(h); vehicles.sync(game.S, true);
     if (homeLabel) { const f = home.front; homeLabel.position.set(f.x, 12, f.z); }
   }
   const refresh = () => {
@@ -165,8 +168,10 @@ async function boot(): Promise<void> {
   };
 
   /* ---------- interactions ---------- */
+  vehicles.onFare = (veh, from, to) => { game.dispatch({ t: 'fare', veh, from, to }); };
+  vehicles.onMessage = (text) => toast(text);
   const ctx: Ctx = {
-    game, map, npc, neighbours, traffic, home, stalls,
+    game, map, npc, neighbours, traffic, home, stalls, extra: () => vehicles.spots(),
     trip: async (t: Trip, sell?: Partial<Record<ItemKey, number>>) => {
       const why = tripOpen(game.S, t); if (why) { toast(why); play('no'); return; }
       play('horn'); fade(true); await wait(700); fade(false);
@@ -180,7 +185,7 @@ async function boot(): Promise<void> {
       ], () => game.dispatch({ t: 'fest', id: 'kharchiFair' }));
     },
     player: () => ({ x: player.x, z: player.z, face: player.face }),
-    sleep: async () => { fade(true); await wait(650); game.dispatch({ t: 'sleep' }); await wait(350); fade(false); },
+    sleep: async () => { if (vehicles.riding) { toast('Get off first (E).'); return; } fade(true); await wait(650); game.dispatch({ t: 'sleep' }); await wait(350); fade(false); },
     ride: startRide,
     kharchiTrip: async () => {
       play('horn'); fade(true); await wait(700); fade(false);
@@ -209,7 +214,7 @@ async function boot(): Promise<void> {
   const sightMarks = () => SIGHTS.filter((x) => !game.S.visited.includes(x.id)).map((x) => ({ x: x.x, z: x.z }));
   const marks = () => ({ player: { x: player.x, z: player.z, face: player.face }, target, kaam: kaamMarks(), errand: errandMarks(), sights: sightMarks(), home: home.front, others: others.marks(), stalls });
   function hudTick(force = false) {
-    target = rideView.active ? null : missionTarget(game.S, { x: player.x, z: player.z }, spots, { x: npc.grandpa.x, z: npc.grandpa.z });
+    target = rideView.active ? null : vehicles.target || missionTarget(game.S, { x: player.x, z: player.z }, spots, { x: npc.grandpa.x, z: npc.grandpa.z });
     updateHud({ S: game.S, place: map.placeName(player.x, player.z), target, px: player.x, pz: player.z, yaw: player.yaw, online: net.online, lost: net.lost, others: others.count }, force);
     mapView.drawMini(marks());
   }
@@ -278,7 +283,7 @@ async function boot(): Promise<void> {
     fade(true);
     setTimeout(() => {
       const rn = map.roadNear(p.x, p.z); const face = rn ? Math.atan2(rn.px - p.x, rn.pz - p.z) : player.face;
-      player.teleport(p.x, p.z, face); player.yaw = face + Math.PI; $('#bigmap').hidden = true;
+      if (vehicles.riding) vehicles.teleport(p.x, p.z, face); else { player.teleport(p.x, p.z, face); player.yaw = face + Math.PI; } $('#bigmap').hidden = true;
       game.dispatch({ t: 'pos', x: p.x, z: p.z, face }); city.update(p.x, p.z); hudTick(true);
       fade(false); toast(`You are at ${label}.`);
     }, 350);
@@ -319,14 +324,14 @@ async function boot(): Promise<void> {
   wireShop(game);
   $('#nameSave').onclick = () => { if (game.dispatch({ t: 'name', name: ($('#nameIn') as HTMLInputElement).value }).ok) { toast('Your farm is on the leaderboard.'); setTimeout(board, 900); } };
   $('#codeGo').onclick = async () => {
-    try { const s = await net.restore(($('#codeIn') as HTMLInputElement).value); game.replace(s); player.teleport(s.pos.x, s.pos.z, s.pos.face); toast('Farm restored on this device.'); board(); }
+    try { const s = await net.restore(($('#codeIn') as HTMLInputElement).value); vehicles.sendHome(); game.replace(s); player.teleport(s.pos.x, s.pos.z, s.pos.face); toast('Farm restored on this device.'); board(); }
     catch (e) { toast((e as Error).message); }
   };
   $('#gIn').onclick = async () => { try { await net.flush(); toast(await signIn(net.session, 'google')); } catch (e) { toast((e as Error).message); } };
   $('#eIn').onclick = async () => { try { toast(await signIn(net.session, 'email', ($('#emailIn') as HTMLInputElement).value)); } catch (e) { toast((e as Error).message); } };
   $('#resetFarm').onclick = async () => {
     const b = $('#resetFarm'); if (b.dataset.armed !== '1') { b.dataset.armed = '1'; b.textContent = 'Tap again to start over'; return; }
-    const s = await net.reset(); game.replace(s); player.teleport(s.pos.x, s.pos.z, s.pos.face); b.dataset.armed = ''; b.textContent = 'Start a new farm'; $('#board').hidden = true;
+    vehicles.sendHome(); const s = await net.reset(); game.replace(s); player.teleport(s.pos.x, s.pos.z, s.pos.face); b.dataset.armed = ''; b.textContent = 'Start a new farm'; $('#board').hidden = true;
   };
 
   /* ---------- keyboard & touch ---------- */
@@ -404,7 +409,7 @@ async function boot(): Promise<void> {
   // test hooks for scripted play-throughs and screenshots (only when a test page asks for them)
   if ((window as unknown as { __HAORA_DEBUG__?: boolean }).__HAORA_DEBUG__) {
     (window as unknown as Record<string, unknown>).__haora = {
-      start, game, player, map, ride: (a: string, b: string) => startRide(standByKey(a)!, standByKey(b)!),
+      start, game, player, map, vehicles, ride: (a: string, b: string) => startRide(standByKey(a)!, standByKey(b)!),
       teleport: (x: number, z: number, face = 0) => player.teleport(x, z, face), view: (yaw: number, pitch: number, dist: number) => { player.yaw = yaw; player.pitch = pitch; player.dist = dist; },
     };
   }
@@ -422,10 +427,15 @@ async function boot(): Promise<void> {
           let d = rideView.heading() + Math.PI - player.yaw; d = Math.atan2(Math.sin(d), Math.cos(d)); player.yaw += d * Math.min(1, dt * 1.5);
           promptP = { label: `Riding to ${info.to.name} · ${(info.left / 1000).toFixed(1)} km to go · E or Space to skip`, run: () => leaveRide(true) }; prompt = null;
         }
-      } else if (!modalOpen()) { player.scooter = game.S.scooter; player.tired = game.S.energy < 15; player.move(dt, game.S.cycle || game.S.scooter, time); }
+      } else if (vehicles.riding) {
+        const k = player.keys; let f = 0, st = 0;
+        if (!modalOpen()) { if (k.w || k.arrowup) f += 1; if (k.s || k.arrowdown) f -= 1; if (k.d || k.arrowright) st += 1; if (k.a || k.arrowleft) st -= 1; if (player.joy.active) { f -= player.joy.y; st += player.joy.x; } }
+        vehicles.drive(dt, clamp(f, -1, 1), clamp(st, -1, 1), !!k[' '] && !modalOpen());
+      } else if (!modalOpen()) { player.tired = game.S.energy < 15; player.move(dt, false, time); }
       game.tick();
       const S = game.S;
-      if (!rideView.active) {
+      if (vehicles.riding) { prompt = null; promptP = vehicles.prompt(S); }
+      else if (!rideView.active) {
         rideTo = null;
         prompt = findTarget(ctx, spots); promptP = prompt ? prompt.get() : null;
       }

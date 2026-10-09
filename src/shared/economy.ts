@@ -65,6 +65,7 @@ export interface WorthInput {
   cycle: boolean;
   scooter?: boolean; pump?: boolean; coldStore?: boolean;
   tea?: { planted: boolean }[]; agar?: { planted: boolean }[];
+  garage?: string[];
 }
 
 /** Net worth for the leaderboard: cash, goods at base rates, and land and kit at purchase price. */
@@ -73,8 +74,7 @@ export function netWorth(s: WorthInput): number {
   for (const k of SELLABLE) w += (s.inv[k] || 0) * ITEMS[k].base;
   w += s.plots.slice(0, 12).filter((p) => p.owned).length * PRICES.plot;
   if (s.canMax > 8) w += PRICES.bhar;
-  if (s.cycle) w += PRICES.cycle;
-  if (s.scooter) w += PRICES.scooter;
+  for (const k of s.garage || [...(s.cycle ? ['cycle'] : []), ...(s.scooter ? ['scooter'] : [])]) if (k !== 'rickshaw') w += (PRICES as Record<string, number>)[k] || 0;
   if (s.pump) w += PRICES.pump;
   if (s.coldStore) w += PRICES.coldStore;
   w += (s.tea || []).filter((t) => t.planted).length * PRICES.teaSapling;

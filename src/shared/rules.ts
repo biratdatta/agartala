@@ -20,6 +20,7 @@ import { tripById, tripOpen } from './trips.js';
 import { weekId } from './week.js';
 import { rnd2 } from './rng.js';
 import { AREA } from './area.js';
+import { FARES_PER_DAY, FARE_MAX_SPEED, fareFor, owns, vehicleByKey, type VehKey } from './vehicles.js';
 
 export type Action =
   | { t: 'till'; plot: number }
@@ -64,13 +65,14 @@ export type Action =
   | { t: 'chapter'; id: string }
   | { t: 'fest'; id: FestId }
   | { t: 'trip'; id: string; sell?: Partial<Record<ItemKey, number>> }
-  | { t: 'readInbox' };
+  | { t: 'readInbox' }
+  | { t: 'fare'; veh: string; from: string; to: string };
 
 export interface GameEvent { kind: 'toast' | 'day' | 'mission' | 'ending' | 'sfx' | 'phrase' | 'chapter'; text: string; title?: string; next?: string; sfx?: string }
 export type Result = { ok: true; events: GameEvent[] } | { ok: false; err: string; events: GameEvent[] };
 
 const ITEM_KEYS = Object.keys(ITEMS) as ItemKey[];
-const BUY_KEYS: BuyKey[] = ['paddySeed', 'sucker', 'plot', 'bhar', 'cycle', 'teaSapling', 'agarSapling', 'fingerling', 'scooter', 'pump', 'coldStore', 'helper'];
+const BUY_KEYS: BuyKey[] = ['paddySeed', 'sucker', 'plot', 'bhar', 'cycle', 'teaSapling', 'agarSapling', 'fingerling', 'scooter', 'pump', 'coldStore', 'helper', 'bike', 'car', 'tomtom', 'rickshaw'];
 const int = (v: unknown): v is number => typeof v === 'number' && Number.isInteger(v);
 export const TEA_PER_PLUCK = 2, AGAR_PER_TREE = 2, FISH_PER_NET = 6, PITHA_PER_COOK = 4, PLUCK_FROM = 5, PLUCK_UNTIL = 14;
 /** Weekly tallies, keyed by the real-world ISO week. */
@@ -167,12 +169,15 @@ export function apply(s: GameState, a: Action, now: number): Result {
       const price = PRICES[a.item]; if (s.money < price) return fail('Not enough money');
       if (a.item === 'plot') { const i = s.plots.findIndex((p) => !p.owned); if (i < 0) return fail('You own the whole lunga'); s.plots[i].owned = true; toast('The plot is yours. Gopal\'s cousin hands over the patta.', 'coin'); }
       else if (a.item === 'bhar') { if (s.canMax >= CAN_BIG) return fail('You already have a bhar'); s.canMax = CAN_BIG; toast('A bamboo bhar: two cans on one shoulder pole.', 'coin'); }
-      else if (a.item === 'cycle') { if (s.cycle) return fail('You already have a bicycle'); s.cycle = true; toast('A second-hand bicycle from a shop at Math Chowmuhani. Ride it home.', 'coin'); }
-      else if (a.item === 'scooter') { if (s.scooter) return fail('You already have a scooter'); s.scooter = true; toast('A second-hand scooter from a showroom on HGB Road. Zoom.', 'coin'); }
+      else if (['cycle', 'scooter', 'bike', 'car', 'tomtom', 'rickshaw'].includes(a.item)) {
+        const v = vehicleByKey(a.item)!; if (owns(s, v.k)) return fail(`You already have a ${v.name.toLowerCase()}`);
+        s.garage = [...s.garage, v.k]; if (v.k === 'cycle') s.cycle = true; if (v.k === 'scooter') s.scooter = true;
+        toast(`${v.name}: it is parked by your house. Walk up to it and press E to ride.`, 'coin');
+      }
       else if (a.item === 'pump') { if (s.pump) return fail('You already have a pump set'); s.pump = true; toast('Lalit the mechanic sets up a diesel pump by your pukur. One pull waters every plot.', 'coin'); }
       else if (a.item === 'coldStore') { if (s.coldStore) return fail('You already have a cold store'); s.coldStore = true; toast('A small cold store goes up by the field shed. Nothing will go off now.', 'coin'); }
       else if (a.item === 'helper') { s.helperUntil = Math.max(s.helperUntil, s.day) + HELPER_DAYS; toast(`Gopal\'s nephew will water and harvest your fields every dawn until day ${s.helperUntil}.`, 'coin'); }
-      else { s.inv[a.item]++; sfx('coin'); }
+      else if (a.item === 'paddySeed' || a.item === 'sucker' || a.item === 'teaSapling' || a.item === 'agarSapling' || a.item === 'fingerling') { s.inv[a.item]++; sfx('coin'); }
       s.money -= price; break;
     }
     case 'ride': {
@@ -398,6 +403,16 @@ export function apply(s: GameState, a: Action, now: number): Result {
       toast(`The bus brings you back to Joynagar at ${String(Math.floor(s.hour)).padStart(2, '0')}:${String(Math.floor((s.hour % 1) * 60)).padStart(2, '0')}.`, 'horn'); break;
     }
     case 'readInbox': { s.inbox = []; return { ok: true, events: ev }; }
+    case 'fare': {
+      const v = vehicleByKey(a.veh); if (!v?.fares || !owns(s, v.k as VehKey)) return fail('You need a rickshaw or a tomtom to carry passengers');
+      const from = standByKey(a.from, s.home), to = standByKey(a.to, s.home); if (!from || !to || from.k === to.k) return fail('No such ride');
+      if (s.fares.day !== s.day) s.fares = { day: s.day, n: 0, last: s.fares.last };
+      if (s.fares.n >= FARES_PER_DAY) return fail('That is enough passengers for one day');
+      const m = Math.hypot(from.x - to.x, from.z - to.z);
+      if (now - s.fares.last < (m / FARE_MAX_SPEED) * 1000) return fail('Nobody could get there that fast');
+      const pay = fareFor(m, v.fares); s.fares = { day: s.day, n: s.fares.n + 1, last: now }; earn(s, now, pay);
+      toast(`The passenger hands over ₹${pay}. ${FARES_PER_DAY - s.fares.n} more fares today.`, 'coin'); break;
+    }
     default: return fail('Unknown action');
   }
   checkMissions(s, ev);
