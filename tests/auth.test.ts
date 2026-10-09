@@ -44,9 +44,9 @@ describe('auth', () => {
   });
 
   it('reports which methods are configured', async () => {
-    expect(await (await config(req('/api/auth-config'))).json()).toEqual({ google: true, email: true });
+    expect(await (await config(req('/api/auth-config'))).json()).toEqual({ google: true, email: true, required: false });
     setEnv({ AUTH_SECRET: 'short' });
-    expect(await (await config(req('/api/auth-config'))).json()).toEqual({ google: false, email: false });
+    expect(await (await config(req('/api/auth-config'))).json()).toEqual({ google: false, email: false, required: false });
   });
 
   it('links a farm with Google, then brings that farm to a second device', async () => {
@@ -96,5 +96,55 @@ describe('auth', () => {
     const codes = [];
     for (let i = 0; i < 6; i++) codes.push((await start(req('/api/auth-start', { method: 'POST', token: a.token, body: JSON.stringify({ how: 'email', email: 'a@b.co' }) }))).status);
     expect(codes).toEqual([200, 200, 200, 200, 200, 429]);
+  });
+
+  describe('when sign-in is required', () => {
+    beforeEach(() => setEnv({ ...ENV, REQUIRE_SIGNIN: '1' }));
+    const post = (body: unknown, token?: string) => session(req('/api/session', { method: 'POST', token, body: JSON.stringify(body) }));
+
+    it('makes no guest farms and refuses farm codes', async () => {
+      const r = await post({});
+      expect(r.status).toBe(401); expect(await r.json()).toMatchObject({ signin: true });
+      expect((await post({ code: 'ABCD-2345' })).status).toBe(401);
+      expect(await (await config(req('/api/auth-config'))).json()).toMatchObject({ google: true, required: true });
+    });
+
+    it('signs in with Google from nothing and creates that account\'s farm', async () => {
+      const s = await start(req('/api/auth-start', { method: 'POST', body: JSON.stringify({ how: 'google' }) }));
+      expect(s.status).toBe(200);
+      const st = new URL(((await s.json()) as { url: string }).url).searchParams.get('state');
+      const cookie = s.headers.get('set-cookie')!.split(';')[0];
+      const t = fragment(await googleCallback(req(`/api/auth-google-callback?code=good&state=${st}`, { cookie }))).get('auth')!;
+      const v = (await (await post({}, t)).json()) as { signedIn: boolean; email: string; code: string };
+      expect(v).toMatchObject({ signedIn: true, email: 'birat@example.com' });
+
+      // a second sign-in (another device) brings back the same farm
+      const s2 = await start(req('/api/auth-start', { method: 'POST', body: JSON.stringify({ how: 'google' }) }));
+      const st2 = new URL(((await s2.json()) as { url: string }).url).searchParams.get('state');
+      const t2 = fragment(await googleCallback(req(`/api/auth-google-callback?code=good&state=${st2}`, { cookie: s2.headers.get('set-cookie')!.split(';')[0] }))).get('auth')!;
+      expect(((await (await post({}, t2)).json()) as { code: string }).code).toBe(v.code);
+
+      // "New farm" keeps the account and points it at the new farm
+      const n = (await (await post({ reset: true }, t2)).json()) as { signedIn: boolean; code: string; token: string };
+      expect(n.signedIn).toBe(true); expect(n.code).not.toBe(v.code);
+      const s3 = await start(req('/api/auth-start', { method: 'POST', body: JSON.stringify({ how: 'google' }) }));
+      const st3 = new URL(((await s3.json()) as { url: string }).url).searchParams.get('state');
+      const t3 = fragment(await googleCallback(req(`/api/auth-google-callback?code=good&state=${st3}`, { cookie: s3.headers.get('set-cookie')!.split(';')[0] }))).get('auth')!;
+      expect(((await (await post({}, t3)).json()) as { code: string }).code).toBe(n.code);
+    });
+
+    it('locks out guest farms made before the switch, but lets them be linked', async () => {
+      setEnv({ ...ENV }); const g = await guest(); setEnv({ ...ENV, REQUIRE_SIGNIN: '1' });
+      expect((await post({}, g.token)).status).toBe(401);
+      const s = await start(req('/api/auth-start', { method: 'POST', token: g.token, body: JSON.stringify({ how: 'google' }) }));
+      const st = new URL(((await s.json()) as { url: string }).url).searchParams.get('state');
+      const t = fragment(await googleCallback(req(`/api/auth-google-callback?code=good&state=${st}`, { cookie: s.headers.get('set-cookie')!.split(';')[0] }))).get('auth')!;
+      expect(((await (await post({}, t)).json()) as { code: string; signedIn: boolean })).toMatchObject({ code: g.code, signedIn: true });
+    });
+
+    it('stays open to guests if Google is not configured (so nobody is locked out)', async () => {
+      setEnv({ AUTH_SECRET: 'x'.repeat(40), REQUIRE_SIGNIN: '1' });
+      expect((await post({})).status).toBe(201);
+    });
   });
 });

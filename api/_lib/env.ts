@@ -21,6 +21,8 @@ export interface Env {
   VERCEL?: string;
   CF_PAGES?: string;
   NODE_ENV?: string;
+  /** "1" = players must sign in (Google) before they get a farm; no guest play. Set in wrangler.toml [vars]. */
+  REQUIRE_SIGNIN?: string;
 }
 
 let current: Env | null = null;
@@ -29,5 +31,9 @@ export function getEnv(): Env {
   if (current) return current;
   const p = (globalThis as { process?: { env?: Record<string, string> } }).process;
   return (p?.env || {}) as Env;
+}
+/** Sign-in is required only when it is switched on AND Google sign-in is configured (otherwise nobody could play). */
+export function signinRequired(e = getEnv()): boolean {
+  return e.REQUIRE_SIGNIN === '1' && !!e.AUTH_SECRET && e.AUTH_SECRET.length >= 32 && !!(e.GOOGLE_CLIENT_ID && e.GOOGLE_CLIENT_SECRET);
 }
 export const deployed = (e = getEnv()): boolean => !!(e.VERCEL || e.CF_PAGES || e.DB || e.NODE_ENV === 'production');

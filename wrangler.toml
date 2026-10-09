@@ -10,6 +10,11 @@ directory = "dist"
 binding = "ASSETS"
 not_found_handling = "single-page-application"
 
+# Players must sign in with Google before they get a farm (no guest play) — keeps bots out.
+# Only takes effect once AUTH_SECRET, GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET are set. "0" allows guests.
+[vars]
+REQUIRE_SIGNIN = "1"
+
 [observability]
 enabled = true
 

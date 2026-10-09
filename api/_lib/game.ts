@@ -5,6 +5,7 @@ import { weekId } from '../../src/shared/week.js';
 import { paraAt } from '../../src/shared/area.js';
 import { HOME } from '../../src/shared/farm.js';
 import type { Store } from './store.js';
+import { signinRequired } from './env.js';
 
 /** What is stored under save:<id>. The game state plus account bookkeeping. */
 export interface SaveDoc { state: GameState; code: string; userId?: string; email?: string; created: number }
@@ -30,14 +31,19 @@ export async function createSession(store: Store, saveId: string): Promise<strin
 
 export interface Geo { city: string; country: string; km: number }
 
-export async function createGuest(store: Store, now: number, geo?: Geo | null): Promise<{ token: string; loaded: Loaded }> {
+/** A brand-new farm (no session yet). */
+export async function createFarm(store: Store, now: number, geo?: Geo | null, owner?: { userId: string; email: string }): Promise<Loaded> {
   const saveId = randomUUID();
   let code = newCode();
   for (let i = 0; i < 5 && !(await store.put(`code:${code}`, { saveId }, null)); i++) code = newCode();
-  const doc: SaveDoc = { state: newState(now, '', geo?.city || '', geo?.km || 0), code, created: now };
+  const doc: SaveDoc = { state: newState(now, '', geo?.city || '', geo?.km || 0), code, created: now, ...(owner ? { userId: owner.userId, email: owner.email } : {}) };
   await store.put(`save:${saveId}`, doc, null);
-  const token = await createSession(store, saveId);
-  return { token, loaded: { saveId, doc, rev: 1 } };
+  return { saveId, doc, rev: 1 };
+}
+
+export async function createGuest(store: Store, now: number, geo?: Geo | null): Promise<{ token: string; loaded: Loaded }> {
+  const loaded = await createFarm(store, now, geo);
+  return { token: await createSession(store, loaded.saveId), loaded };
 }
 
 export async function loadSave(store: Store, saveId: string, now: number): Promise<Loaded | null> {
@@ -47,10 +53,16 @@ export async function loadSave(store: Store, saveId: string, now: number): Promi
   return { saveId, doc: e.value, rev: e.rev };
 }
 
-export async function loadByToken(store: Store, token: string | null, now: number): Promise<Loaded | null> {
+/**
+ * The farm behind a session token. When sign-in is required, a guest (not signed-in) farm counts
+ * as no session, so every endpoint refuses it; pass { guest: true } only for linking it to an account.
+ */
+export async function loadByToken(store: Store, token: string | null, now: number, opts: { guest?: boolean } = {}): Promise<Loaded | null> {
   if (!token) return null;
   const s = await store.get<{ saveId: string }>(`session:${token}`);
-  return s ? loadSave(store, s.value.saveId, now) : null;
+  const l = s ? await loadSave(store, s.value.saveId, now) : null;
+  if (l && !l.doc.userId && !opts.guest && signinRequired()) return null;
+  return l;
 }
 
 /** A farm's public id: safe to show other players (never the session token or farm code). */

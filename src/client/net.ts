@@ -30,6 +30,8 @@ export class Net {
   lost = false;
   code = '';
   signedIn = false;
+  /** The server only lets signed-in players in, and this device isn't signed in yet. */
+  needsSignin = false;
   email = '';
   /** Your visit code (for friends) and public id. */
   visit = ''; pid = '';
@@ -59,9 +61,14 @@ export class Net {
   }
 
   /** Opens (or creates) this device's farm. Falls back to a browser-only save if there is no server. */
-  async start(): Promise<GameState> {
+  async start(body = '{}'): Promise<GameState> {
     try {
-      const r = await fetch('/api/session', { method: 'POST', headers: this.headers(), body: '{}' });
+      const r = await fetch('/api/session', { method: 'POST', headers: this.headers(), body });
+      if (r.status === 401 && ((await r.clone().json().catch(() => ({}))) as { signin?: boolean }).signin) {
+        // Server is up but wants a Google sign-in first. Keep any guest token so that farm can be linked.
+        this.needsSignin = true; this.online = true; this.signedIn = false;
+        return newState(Date.now());
+      }
       if (!r.ok) throw new Error(String(r.status));
       const v = (await r.json()) as SessionView; this.accept(v); this.online = true;
       return normalize(v.state, this.now());
@@ -84,6 +91,7 @@ export class Net {
     const batch = this.pending.splice(0, 60); this.busy = true;
     try {
       const r = await fetch('/api/act', { method: 'POST', headers: this.headers(), body: JSON.stringify({ actions: batch }) });
+      if (r.status === 401 && ((await r.clone().json().catch(() => ({}))) as { signin?: boolean }).signin) { location.reload(); return; }
       if (r.status === 401) { this.token = null; ls.del(TOKEN_KEY); const s = await this.start(); this.onState(s, 'Your session expired, so a new farm was started'); return; }
       if (!r.ok) throw new Error(String(r.status));
       const v = (await r.json()) as ActResponse; this.accept(v);
@@ -153,5 +161,10 @@ export class Net {
   }
 
   /** Starts over on this device. */
-  async reset(): Promise<GameState> { this.token = null; ls.del(TOKEN_KEY); ls.del(LOCAL_KEY); this.pending = []; return this.start(); }
+  /** A fresh farm. Signed in, the server gives the account a new farm; as a guest, a new guest farm. */
+  async reset(): Promise<GameState> {
+    ls.del(LOCAL_KEY); this.pending = [];
+    if (this.signedIn) return this.start(JSON.stringify({ reset: true }));
+    this.token = null; ls.del(TOKEN_KEY); return this.start();
+  }
 }

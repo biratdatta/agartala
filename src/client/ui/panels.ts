@@ -124,7 +124,7 @@ export function openRide(S: GameState, from: Stand, go: (to: Stand) => void): vo
 }
 
 /* ---------- the farm board ---------- */
-export interface BoardDeps { game: Game; net: Net; auth: { available: boolean; config: { google: boolean; email: boolean } }; readChapter: (id: string) => void; onState: (s: GameState) => void }
+export interface BoardDeps { game: Game; net: Net; auth: { available: boolean; config: { google: boolean; email: boolean; required?: boolean } }; readChapter: (id: string) => void; onState: (s: GameState) => void }
 let deps: BoardDeps | null = null; let tab = 'farm'; let boardKind = 'rich'; let visiting: FarmSummary | null = null;
 
 export function openBoard(d: BoardDeps): void { deps = d; $('#board').hidden = false; renderBoard(); }
@@ -144,6 +144,7 @@ function renderBoard(): void {
     $('#acctNote').textContent = !net.online ? 'No server is running, so this farm is saved in this browser only.' : net.signedIn ? `Signed in${net.email ? ` as ${net.email}` : ''}: this farm follows your account to any device.` : 'Playing as a guest. Keep your farm code secret: it opens this farm on any device.';
     $('#signin').hidden = !auth.available || !net.online || net.signedIn;
     $('#gRow').hidden = !auth.config.google; $('#eRow').hidden = !auth.config.email;
+    $('#codeIn').parentElement!.hidden = !!auth.config.required; // farm codes don't open farms when sign-in is required
     const who = (id: string) => NEIGHBOURS.find((n) => n.id === id);
     const carrying = S.carry ? deliveryById(S.carry) : null;
     $('#parcelList').innerHTML = (carrying ? `<li><b>Carrying ${esc(carrying.parcel)}</b> to ${esc(who(carrying.to)?.name || '')} · ${esc(who(carrying.to)?.para || '')}<div class="sm">Pays ${rupees(carrying.reward)} on delivery</div></li>` : '')

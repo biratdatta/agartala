@@ -1,4 +1,5 @@
 import { backToGame, backWithError, linkAccount, verify } from './_lib/auth.js';
+import { geoFrom } from './_lib/game.js';
 import { guard } from './_lib/http.js';
 import { getStore } from './_lib/store.js';
 
@@ -9,7 +10,7 @@ export const GET = guard(async (req) => {
   const store = await getStore();
   if (!(await store.put(`used:${p.n}`, { at: Date.now() }, null))) return backWithError(req, 'That sign-in link was already used');
   try {
-    const r = await linkAccount(store, `user:email:${p.email}`, p.email, p.sid, Date.now());
+    const r = await linkAccount(store, `user:email:${p.email}`, p.email, p.sid || null, Date.now(), geoFrom(req));
     return backToGame(req, r.token, p.email);
   } catch (e) { return backWithError(req, (e as Error).message); }
 });

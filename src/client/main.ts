@@ -417,6 +417,12 @@ async function boot(): Promise<void> {
   // Sign in with Google right on the title screen (it's also in the Farm panel, L, for later).
   await authReady;
   $('#titleSignin').hidden = !auth.config.google || !net.online || net.signedIn;
+  if (net.needsSignin) {
+    // This server only lets signed-in players in (keeps bots out): Google is the only way past the title.
+    $('#bNew').hidden = true; $('#bContinue').hidden = true;
+    $('#titleSignin').classList.add('gate');
+    $('#titleSignin .sm').textContent = 'Sign in with Google to play. Your farm is kept with your account, on any device.';
+  }
   $('#titleWho').hidden = !net.signedIn;
   $('#titleWho').textContent = net.signedIn ? `Signed in${net.email ? ` as ${net.email}` : ''}. This farm follows your account.` : '';
   $('#tgIn').onclick = async () => {

@@ -252,6 +252,8 @@ Everything runs on one Cloudflare Worker: the static game as Workers Static Asse
      npx wrangler secret put EMAIL_FROM     # e.g. Haora Bari <login@biratdatta.tech>
      ```
 
+**Sign-in required:** `REQUIRE_SIGNIN = "1"` in `wrangler.toml` means nobody gets a farm without signing in with Google: no guest farms, and farm codes don't open farms. This keeps bots from filling the database. It only takes effect once the three Google/auth secrets are set; set it to `"0"` to allow guests again.
+
 8. **Redeploy** (`npm run cf:deploy`) so the secrets take effect, then open `https://agartala.biratdatta.tech/api/health`. It should say `"store":"D1Store"`. `/api/auth-config` shows which sign-in methods are on.
 
 **Auto-deploy from GitHub instead:** under Workers & Pages → Create application → Import a repository, pick this repo, with build command `npm run build` and deploy command `npx wrangler deploy`, and add `NODE_VERSION` = `22` as a build variable. The D1 binding comes from `wrangler.toml`; add the secrets under the Worker's Settings → Variables and Secrets.

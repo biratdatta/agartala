@@ -3,8 +3,8 @@
  * Either way the browser ends up back on the game with #auth=<session> in the URL, which
  * Net picks up. Signing in on a new device brings that account's farm with it.
  */
-export interface AuthConfig { google: boolean; email: boolean }
-export const auth = { config: { google: false, email: false } as AuthConfig, get available() { return this.config.google || this.config.email; } };
+export interface AuthConfig { google: boolean; email: boolean; required?: boolean }
+export const auth = { config: { google: false, email: false, required: false } as AuthConfig, get available() { return this.config.google || this.config.email; } };
 
 export async function loadAuthConfig(): Promise<AuthConfig> {
   try { const r = await fetch('/api/auth-config'); if (r.ok) auth.config = (await r.json()) as AuthConfig; } catch { /* offline */ }
@@ -13,8 +13,10 @@ export async function loadAuthConfig(): Promise<AuthConfig> {
 
 /** Starts a sign-in for the farm behind `token`. Google navigates away; email returns a message for the player. */
 export async function signIn(token: string | null, how: 'google' | 'email', email?: string): Promise<string> {
-  if (!token) throw new Error('Sign-in needs the server');
-  const r = await fetch('/api/auth-start', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${token}` }, body: JSON.stringify({ how, email }) });
+  if (!token && !auth.config.required) throw new Error('Sign-in needs the server');
+  const headers: Record<string, string> = { 'content-type': 'application/json' };
+  if (token) headers.authorization = `Bearer ${token}`;
+  const r = await fetch('/api/auth-start', { method: 'POST', headers, body: JSON.stringify({ how, email }) });
   const v = (await r.json().catch(() => ({}))) as { url?: string; message?: string; error?: string };
   if (!r.ok) throw new Error(v.error || 'Sign-in failed');
   if (v.url) { location.assign(v.url); return 'Opening Google…'; }

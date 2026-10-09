@@ -9,8 +9,8 @@
  * An account is stored as user:<provider>:<id> → { saveId }. Signing in on a new device
  * switches that device to the account's farm, so a farm follows its owner.
  */
-import { createSession, loadByToken, loadSave, view, b64url, type Loaded } from './game.js';
-import { getEnv } from './env.js';
+import { createFarm, createSession, loadByToken, loadSave, view, b64url, type Geo, type Loaded } from './game.js';
+import { getEnv, signinRequired } from './env.js';
 import type { Store } from './store.js';
 
 const enc = new TextEncoder();
@@ -45,24 +45,26 @@ export const nonce = (): string => b64url(crypto.getRandomValues(new Uint8Array(
 
 export function authConfig() {
   const e = getEnv(); const ok = !!e.AUTH_SECRET && e.AUTH_SECRET.length >= 32;
-  return { google: ok && !!(e.GOOGLE_CLIENT_ID && e.GOOGLE_CLIENT_SECRET), email: ok && !!e.RESEND_API_KEY };
+  return { google: ok && !!(e.GOOGLE_CLIENT_ID && e.GOOGLE_CLIENT_SECRET), email: ok && !!e.RESEND_API_KEY, required: signinRequired(e) };
 }
 
 /**
  * Ties an account to a farm. If the account already owns a farm, that one wins and the device
  * gets a session for it; otherwise the farm being played becomes the account's.
  */
-export async function linkAccount(store: Store, userKey: string, email: string, saveId: string | null, now: number): Promise<{ token: string; l: Loaded }> {
+export async function linkAccount(store: Store, userKey: string, email: string, saveId: string | null, now: number, geo: Geo | null = null): Promise<{ token: string; l: Loaded }> {
   const existing = await store.get<{ saveId: string }>(userKey);
   if (existing) {
     const l = await loadSave(store, existing.value.saveId, now); if (!l) throw new Error('Your farm is missing');
     if (email && l.doc.email !== email) { l.doc.email = email; const r = await store.put(`save:${l.saveId}`, l.doc, l.rev); if (r) l.rev = r; }
     return { token: await createSession(store, l.saveId), l };
   }
-  const l = saveId ? await loadSave(store, saveId, now) : null;
-  if (!l) throw new Error('Open the game first, then sign in');
+  let l = saveId ? await loadSave(store, saveId, now) : null;
+  if (!l && saveId) throw new Error('Open the game first, then sign in');
+  // Signing in with no farm yet (sign-in required): this account gets a brand-new farm.
+  if (!l) l = await createFarm(store, now, geo);
   if (l.doc.userId && l.doc.userId !== userKey) throw new Error('This farm already belongs to another account');
-  if (!(await store.put(userKey, { saveId: l.saveId }, null))) return linkAccount(store, userKey, email, saveId, now); // raced: someone just created it
+  if (!(await store.put(userKey, { saveId: l.saveId }, null))) return linkAccount(store, userKey, email, saveId, now, geo); // raced: someone just created it
   for (let i = 0; i < 4; i++) {
     l.doc.userId = userKey; l.doc.email = email || l.doc.email;
     const rev = await store.put(`save:${l.saveId}`, l.doc, l.rev);
@@ -74,7 +76,7 @@ export async function linkAccount(store: Store, userKey: string, email: string, 
 
 /** The farm behind a bearer token, for starting a sign-in. */
 export async function saveIdFor(store: Store, token: string | null, now: number): Promise<string | null> {
-  return (await loadByToken(store, token, now))?.saveId || null;
+  return (await loadByToken(store, token, now, { guest: true }))?.saveId || null;
 }
 
 /** After sign-in the browser comes back to the game with its new session in the URL fragment (never sent to servers). */

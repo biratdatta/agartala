@@ -3,6 +3,9 @@ export const json = (data: unknown, status = 200): Response =>
 
 export const fail = (error: string, status = 400): Response => json({ error }, status);
 
+/** 401 meaning "this server only lets signed-in players in". */
+export const needSignin = (): Response => json({ error: 'Sign in with Google to play', signin: true }, 401);
+
 const MAX_BODY = 64 * 1024;
 export async function readJson<T>(req: Request): Promise<T | null> {
   const text = await req.text();
