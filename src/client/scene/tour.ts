@@ -5,6 +5,8 @@
 export interface TourStop { name: string; bn: string; x: number; z: number; r: number; h: number }
 
 export const TITLE_TOUR: TourStop[] = [
+  { name: 'Durga Puja at Durgabari', bn: 'দুর্গাবাড়ির দুর্গাপূজা', x: -96, z: 290, r: 70, h: 30 },
+  { name: 'The Modern Club pandal', bn: 'মডার্ন ক্লাবের পূজা', x: 960, z: 961, r: 70, h: 30 },
   { name: 'Ujjayanta Palace', bn: 'উজ্জয়ন্ত প্রাসাদ', x: 31, z: -20, r: 210, h: 85 },
   { name: 'Motor Stand · PRM Centrepoint', bn: 'মোটর স্ট্যান্ড · পিআরএম সেন্টারপয়েন্ট', x: 5, z: 745, r: 150, h: 70 },
   { name: 'Agartala City Centre, Paradise Chowmuhani', bn: 'আগরতলা সিটি সেন্টার', x: -790, z: 850, r: 150, h: 70 },
