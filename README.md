@@ -1,4 +1,4 @@
-# Haora Bari · হাওড়া বাড়ি
+# Amar Agartala · আমার আগরতলা
 
 **A 3D farming game set in the real streets of Agartala, Tripura.**
 
@@ -249,7 +249,7 @@ Everything runs on one Cloudflare Worker: the static game as Workers Static Asse
 
      ```bash
      npx wrangler secret put RESEND_API_KEY
-     npx wrangler secret put EMAIL_FROM     # e.g. Haora Bari <login@biratdatta.tech>
+     npx wrangler secret put EMAIL_FROM     # e.g. Amar Agartala <login@biratdatta.tech>
      ```
 
 **Sign-in required:** `REQUIRE_SIGNIN = "1"` in `wrangler.toml` means nobody gets a farm without signing in with Google: no guest farms, and farm codes don't open farms. This keeps bots from filling the database. It only takes effect once the three Google/auth secrets are set; set it to `"0"` to allow guests again.

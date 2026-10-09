@@ -1,4 +1,4 @@
--- Haora Bari · Agartala — run this once in Supabase → SQL Editor.
+-- Amar Agartala — run this once in Supabase → SQL Editor.
 -- Row-level security is on with no policies, so only the server (service role key) can read or write.
 
 create table if not exists public.kv (

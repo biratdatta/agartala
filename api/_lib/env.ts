@@ -15,7 +15,7 @@ export interface Env {
   GOOGLE_CLIENT_SECRET?: string;
   /** Resend API key for email sign-in links (optional). */
   RESEND_API_KEY?: string;
-  /** "From" address for sign-in emails, e.g. "Haora Bari <login@biratdatta.tech>". */
+  /** "From" address for sign-in emails, e.g. "Amar Agartala <login@biratdatta.tech>". */
   EMAIL_FROM?: string;
   /** Set on Vercel; we also treat Cloudflare as deployed. */
   VERCEL?: string;

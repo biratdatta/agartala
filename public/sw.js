@@ -1,5 +1,5 @@
 /*
- * Haora Bari service worker: keeps the game, the city map and the 3D models on the device so the
+ * Amar Agartala service worker: keeps the game, the city map and the 3D models on the device so the
  * game opens offline (it then saves in the browser until the server is back). The API is never cached.
  */
 const CACHE = 'haora-v3';

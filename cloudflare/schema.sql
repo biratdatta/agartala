@@ -1,4 +1,4 @@
--- Haora Bari · Agartala on Cloudflare D1. Apply with: npm run cf:db  (or --local for wrangler dev)
+-- Amar Agartala on Cloudflare D1. Apply with: npm run cf:db  (or --local for wrangler dev)
 -- Saves, sessions, farm codes and accounts are all rows in kv; each write is compare-and-set on rev.
 CREATE TABLE IF NOT EXISTS kv (
   key        TEXT PRIMARY KEY,

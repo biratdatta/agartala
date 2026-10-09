@@ -138,9 +138,9 @@ export async function sendEmailLink(to: string, link: string, fetcher: typeof fe
   const r = await fetcher('https://api.resend.com/emails', {
     method: 'POST', headers: { authorization: `Bearer ${e.RESEND_API_KEY}`, 'content-type': 'application/json' },
     body: JSON.stringify({
-      from: e.EMAIL_FROM || 'Haora Bari <onboarding@resend.dev>', to: [to], subject: 'Your Haora Bari sign-in link',
-      text: `Open this link within 15 minutes to sign in to Haora Bari, Agartala:\n\n${link}\n\nIf you did not ask for this, ignore this email.`,
-      html: `<p>Open this link within 15 minutes to sign in to <b>Haora Bari, Agartala</b>:</p><p><a href="${link}">Sign in</a></p><p style="color:#777">If you did not ask for this, ignore this email.</p>`,
+      from: e.EMAIL_FROM || 'Amar Agartala <onboarding@resend.dev>', to: [to], subject: 'Your Amar Agartala sign-in link',
+      text: `Open this link within 15 minutes to sign in to Amar Agartala:\n\n${link}\n\nIf you did not ask for this, ignore this email.`,
+      html: `<p>Open this link within 15 minutes to sign in to <b>Amar Agartala</b>:</p><p><a href="${link}">Sign in</a></p><p style="color:#777">If you did not ask for this, ignore this email.</p>`,
     }),
   });
   if (!r.ok) throw new Error('The email could not be sent');

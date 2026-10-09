@@ -1,4 +1,4 @@
-# Cloudflare Worker for Haora Bari · Agartala.
+# Cloudflare Worker for Amar Agartala.
 # Static files come from dist/ (vite build) via Workers Static Assets;
 # worker/index.ts serves /api/* and hands everything else to the assets.
 name = "agartala"

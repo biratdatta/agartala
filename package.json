@@ -2,7 +2,7 @@
   "name": "haora-bari-agartala",
   "version": "1.0.0",
   "private": true,
-  "description": "Haora Bari: a 3D farming game set in the real streets of Agartala, Tripura. Three.js, Vite, Cloudflare Workers + D1 (or Vercel).",
+  "description": "Amar Agartala: a 3D farming game set in the real streets of Agartala, Tripura. Three.js, Vite, Cloudflare Workers + D1 (or Vercel).",
   "type": "module",
   "license": "MIT",
   "scripts": {
