@@ -339,6 +339,12 @@ async function boot(): Promise<void> {
     $('#bLantern').lastChild!.textContent = lanternWanted ? 'Lantern on' : 'Lantern off';
   }
   $('#bLantern').onclick = toggleLantern;
+  /** Sign out on this device: back to the title screen, ready for someone else (or another account) to sign in. */
+  async function signOut(): Promise<void> {
+    if (!confirm('Sign out on this device? Your farm stays safe with your account.')) return;
+    await net.signOut(); location.replace(location.pathname);
+  }
+  $('#signOut').onclick = signOut;
   $('#bSound').onclick = () => ($('#bSound').textContent = toggleSound() ? 'Sound on' : 'Sound off');
   $('#dlgNext').onclick = nextPage; $('#endClose').onclick = () => ($('#endcard').hidden = true);
   for (const s of ['#bigmap', '#help', '#shop', '#ride', '#endcard', '#board', '#stall', '#trips']) $(s).addEventListener('click', (e) => { if (e.target === $(s)) $(s).hidden = true; });
@@ -435,7 +441,8 @@ async function boot(): Promise<void> {
     $('#titleSignin .sm').textContent = 'Sign in with Google to play. Your farm is kept with your account, on any device.';
   }
   $('#titleWho').hidden = !net.signedIn;
-  $('#titleWho').textContent = net.signedIn ? `Signed in${net.email ? ` as ${net.email}` : ''}. This farm follows your account.` : '';
+  $('#titleWhoText').textContent = net.signedIn ? `Signed in${net.email ? ` as ${net.email}` : ''}. This farm follows your account.` : '';
+  $('#titleSignOut').onclick = signOut;
   $('#tgIn').onclick = async () => {
     const btn = $('#tgIn') as HTMLButtonElement; btn.disabled = true;
     try { applyFrom(); await net.flush(); toast(await signIn(net.session, 'google')); }

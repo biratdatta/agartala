@@ -59,8 +59,8 @@ export async function loadSave(store: Store, saveId: string, now: number): Promi
  */
 export async function loadByToken(store: Store, token: string | null, now: number, opts: { guest?: boolean } = {}): Promise<Loaded | null> {
   if (!token) return null;
-  const s = await store.get<{ saveId: string }>(`session:${token}`);
-  const l = s ? await loadSave(store, s.value.saveId, now) : null;
+  const s = await store.get<{ saveId: string; revoked?: number }>(`session:${token}`);
+  const l = s && !s.value.revoked ? await loadSave(store, s.value.saveId, now) : null; // signed-out sessions are dead
   if (l && !l.doc.userId && !opts.guest && signinRequired()) return null;
   return l;
 }

@@ -8,6 +8,7 @@ import * as authConfig from '../api/auth-config.js';
 import * as authEmailCallback from '../api/auth-email-callback.js';
 import * as authGoogleCallback from '../api/auth-google-callback.js';
 import * as authStart from '../api/auth-start.js';
+import * as authSignout from '../api/auth-signout.js';
 import * as farm from '../api/farm.js';
 import * as gift from '../api/gift.js';
 import * as help from '../api/help.js';
@@ -22,7 +23,7 @@ import { setEnv, type Env } from '../api/_lib/env.js';
 type Handler = (req: Request) => Promise<Response>;
 const routes: Record<string, Partial<Record<string, Handler>>> = {
   act, 'auth-config': authConfig, 'auth-email-callback': authEmailCallback, 'auth-google-callback': authGoogleCallback,
-  'auth-start': authStart, farm, gift, health, help, leaderboard, players, presence, session, state,
+  'auth-start': authStart, 'auth-signout': authSignout, farm, gift, health, help, leaderboard, players, presence, session, state,
 };
 
 interface WorkerEnv extends Env {

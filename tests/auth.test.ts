@@ -4,6 +4,7 @@ import { GET as emailCallback } from '../api/auth-email-callback.js';
 import { GET as googleCallback } from '../api/auth-google-callback.js';
 import { POST as start } from '../api/auth-start.js';
 import { POST as session } from '../api/session.js';
+import { POST as signout } from '../api/auth-signout.js';
 import { sign, verify } from '../api/_lib/auth.js';
 import { setEnv } from '../api/_lib/env.js';
 import { D1Store, MemoryStore, setStore } from '../api/_lib/store.js';
@@ -140,6 +141,20 @@ describe('auth', () => {
       const st = new URL(((await s.json()) as { url: string }).url).searchParams.get('state');
       const t = fragment(await googleCallback(req(`/api/auth-google-callback?code=good&state=${st}`, { cookie: s.headers.get('set-cookie')!.split(';')[0] }))).get('auth')!;
       expect(((await (await post({}, t)).json()) as { code: string; signedIn: boolean })).toMatchObject({ code: g.code, signedIn: true });
+    });
+
+    it('signs out: the session stops working and the account keeps its farm', async () => {
+      const s = await start(req('/api/auth-start', { method: 'POST', body: JSON.stringify({ how: 'google' }) }));
+      const st = new URL(((await s.json()) as { url: string }).url).searchParams.get('state');
+      const t = fragment(await googleCallback(req(`/api/auth-google-callback?code=good&state=${st}`, { cookie: s.headers.get('set-cookie')!.split(';')[0] }))).get('auth')!;
+      const code = ((await (await post({}, t)).json()) as { code: string }).code;
+      expect((await signout(req('/api/auth-signout', { method: 'POST', token: t, body: '{}' }))).status).toBe(200);
+      expect((await post({}, t)).status).toBe(401);
+      // signing in again brings the same farm back
+      const s2 = await start(req('/api/auth-start', { method: 'POST', body: JSON.stringify({ how: 'google' }) }));
+      const st2 = new URL(((await s2.json()) as { url: string }).url).searchParams.get('state');
+      const t2 = fragment(await googleCallback(req(`/api/auth-google-callback?code=good&state=${st2}`, { cookie: s2.headers.get('set-cookie')!.split(';')[0] }))).get('auth')!;
+      expect(((await (await post({}, t2)).json()) as { code: string }).code).toBe(code);
     });
 
     it('stays open to guests if Google is not configured (so nobody is locked out)', async () => {

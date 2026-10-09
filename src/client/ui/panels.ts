@@ -143,6 +143,7 @@ function renderBoard(): void {
     $('#codeOut').textContent = net.online ? net.code : 'offline';
     $('#acctNote').textContent = !net.online ? 'No server is running, so this farm is saved in this browser only.' : net.signedIn ? `Signed in${net.email ? ` as ${net.email}` : ''}: this farm follows your account to any device.` : 'Playing as a guest. Keep your farm code secret: it opens this farm on any device.';
     $('#signin').hidden = !auth.available || !net.online || net.signedIn;
+    $('#signOutRow').hidden = !net.signedIn;
     $('#gRow').hidden = !auth.config.google; $('#eRow').hidden = !auth.config.email;
     $('#codeIn').parentElement!.hidden = !!auth.config.required; // farm codes don't open farms when sign-in is required
     const who = (id: string) => NEIGHBOURS.find((n) => n.id === id);

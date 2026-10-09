@@ -89,7 +89,7 @@
         <button class="btn ghost" id="tgIn" type="button">Sign in with Google</button>
         <span class="sm">Keep this farm on every device. Or just press Start to play as a guest.</span>
       </div>
-      <div class="titlesign sm" id="titleWho" hidden></div>
+      <div class="titlesign sm" id="titleWho" hidden><span id="titleWhoText"></span><button class="btn ghost" id="titleSignOut" type="button">Sign out</button></div>
       <div id="offline" hidden>No game server found, so this farm will be saved in this browser only.</div>
       <div class="ctrl">
         <span><span class="key">W</span><span class="key">A</span><span class="key">S</span><span class="key">D</span> walk</span>
@@ -256,6 +256,7 @@
             <h4 style="margin-top:14px">Farm code</h4>
             <div id="codeOut">—</div>
             <p class="sm" id="acctNote" style="margin:4px 0 0"></p>
+            <div class="row" id="signOutRow" hidden style="margin-top:6px"><button class="btn ghost" id="signOut">Sign out</button></div>
             <div class="row" style="margin-top:8px"><input id="codeIn" placeholder="Open another farm: ABCD-2345" autocomplete="off"><button class="btn ghost" id="codeGo">Open</button></div>
             <div id="signin" hidden style="margin-top:14px">
               <h4>Sign in to keep this farm on every device</h4>

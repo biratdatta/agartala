@@ -162,6 +162,13 @@ export class Net {
   }
 
   /** Starts over on this device. */
+  /** Signs this device out: the server kills the session, and the browser forgets it and any local save. */
+  async signOut(): Promise<void> {
+    try { await this.flush(); } catch { /* best effort */ }
+    try { await fetch('/api/auth-signout', { method: 'POST', headers: this.headers(), body: '{}' }); } catch { /* offline: forgetting the token is enough here */ }
+    this.token = null; this.signedIn = false; this.email = ''; this.pending = []; ls.del(TOKEN_KEY); ls.del(LOCAL_KEY);
+  }
+
   /** A fresh farm. Signed in, the server gives the account a new farm; as a guest, a new guest farm. */
   async reset(): Promise<GameState> {
     ls.del(LOCAL_KEY); this.pending = [];
