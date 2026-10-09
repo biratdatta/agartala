@@ -227,3 +227,30 @@ describe('vehicles', () => {
     g.s.fares.n = FARES_PER_DAY; g.wait(2); expect(g.do({ t: 'fare', veh: 'rickshaw', from: 'stJoynagar', to: 'stBridge' }).ok).toBe(false);
   });
 });
+
+describe('renting', () => {
+  it('rents by the hour and charges the rest on return', async () => {
+    const { RENT_RATE, rentalCost } = await import('../src/shared/vehicles.js');
+    const g = game(); g.s.money = 1000; g.at(8);
+    expect(g.do({ t: 'rent', veh: 'car', at: 'stRamnagar' }).ok).toBe(false); // no car at Ramnagar
+    g.ok({ t: 'rent', veh: 'scooter', at: 'stStadium' }); expect(g.s.money).toBe(1000 - RENT_RATE.scooter);
+    expect(g.do({ t: 'rent', veh: 'cycle', at: 'stMath' }).ok).toBe(false); // one at a time
+    g.wait(3); g.do({ t: 'fill' }); expect(rentalCost(g.s)).toBe(Math.ceil(3 * RENT_RATE.scooter));
+    expect(g.do({ t: 'returnRental', at: 'nowhere' }).ok).toBe(false);
+    const before = g.s.money; g.ok({ t: 'returnRental', at: 'stJoynagar' });
+    expect(before - g.s.money).toBe(Math.ceil(3 * RENT_RATE.scooter) - RENT_RATE.scooter); expect(g.s.rental).toBeNull();
+    expect(g.do({ t: 'returnRental', at: 'stJoynagar' }).ok).toBe(false);
+  });
+  it('lets a rented rickshaw carry passengers, and caps a forgotten rental at a day', async () => {
+    const { RENT_RATE, RENT_MAX_HOURS, rentalCost } = await import('../src/shared/vehicles.js');
+    const g = game(); g.s.money = 5000; g.s.garage = []; g.at(8);
+    g.ok({ t: 'rent', veh: 'rickshaw', at: 'stBridge' }); g.wait(1);
+    g.ok({ t: 'fare', veh: 'rickshaw', from: 'stBridge', to: 'stRamnagar' });
+    g.wait(60); g.do({ t: 'fill' }); expect(rentalCost(g.s)).toBe(RENT_MAX_HOURS * RENT_RATE.rickshaw);
+  });
+  it('needs money up front, and only rents bicycles during Ker Puja', () => {
+    const g = game(); g.s.money = 10; g.at(8); expect(g.do({ t: 'rent', veh: 'car', at: 'stMath' }).ok).toBe(false);
+    const k = game(); k.s.money = 1000; while (!(k.s.day === 15)) { k.at(23.9); k.at(0.2); } k.at(9);
+    expect(k.do({ t: 'rent', veh: 'bike', at: 'stMath' }).ok).toBe(false); k.ok({ t: 'rent', veh: 'cycle', at: 'stMath' });
+  });
+});

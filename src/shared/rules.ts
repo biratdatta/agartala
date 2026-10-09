@@ -20,7 +20,7 @@ import { tripById, tripOpen } from './trips.js';
 import { weekId } from './week.js';
 import { rnd2 } from './rng.js';
 import { AREA } from './area.js';
-import { FARES_PER_DAY, FARE_MAX_SPEED, fareFor, owns, vehicleByKey, type VehKey } from './vehicles.js';
+import { FARES_PER_DAY, FARE_MAX_SPEED, RENTALS, RENT_RATE, canFare, fareFor, owns, rentalCost, vehicleByKey, type VehKey } from './vehicles.js';
 
 export type Action =
   | { t: 'till'; plot: number }
@@ -66,7 +66,9 @@ export type Action =
   | { t: 'fest'; id: FestId }
   | { t: 'trip'; id: string; sell?: Partial<Record<ItemKey, number>> }
   | { t: 'readInbox' }
-  | { t: 'fare'; veh: string; from: string; to: string };
+  | { t: 'fare'; veh: string; from: string; to: string }
+  | { t: 'rent'; veh: string; at: string }
+  | { t: 'returnRental'; at: string };
 
 export interface GameEvent { kind: 'toast' | 'day' | 'mission' | 'ending' | 'sfx' | 'phrase' | 'chapter'; text: string; title?: string; next?: string; sfx?: string }
 export type Result = { ok: true; events: GameEvent[] } | { ok: false; err: string; events: GameEvent[] };
@@ -403,8 +405,23 @@ export function apply(s: GameState, a: Action, now: number): Result {
       toast(`The bus brings you back to Joynagar at ${String(Math.floor(s.hour)).padStart(2, '0')}:${String(Math.floor((s.hour % 1) * 60)).padStart(2, '0')}.`, 'horn'); break;
     }
     case 'readInbox': { s.inbox = []; return { ok: true, events: ev }; }
+    case 'rent': {
+      const v = vehicleByKey(a.veh); if (!v || !RENTALS[a.at]?.includes(v.k)) return fail('Nothing like that to rent here');
+      if (s.rental) return fail(`You are already renting a ${vehicleByKey(s.rental.veh)!.name.toLowerCase()}. Return it at any rental point first.`);
+      if (kerClosed(s) && v.k !== 'cycle') return fail('Ker Puja: only bicycles are rented out until 18:00');
+      const first = RENT_RATE[v.k]; if (s.money < first * 2) return fail(`You need at least ₹${first * 2} to rent a ${v.name.toLowerCase()}`);
+      s.money -= first; s.rental = { veh: v.k, from: a.at, day: s.day, hour: s.hour };
+      toast(`${v.name} rented: ₹${first} for the first hour, then ₹${first} an hour. Return it at any rental point.`, 'coin'); break;
+    }
+    case 'returnRental': {
+      const r = s.rental; if (!r) return fail('You are not renting anything');
+      if (!RENTALS[a.at]) return fail('Return it at a rental point, by any tomtom stand');
+      const due = Math.max(0, rentalCost(s) - RENT_RATE[r.veh]); const paid = Math.min(s.money, due);
+      s.money -= paid; s.rental = null;
+      toast(`Returned the ${vehicleByKey(r.veh)!.name.toLowerCase()}. ₹${paid + RENT_RATE[r.veh]} in all${paid < due ? ' (you were short, and the man let it go)' : ''}.`, 'coin'); break;
+    }
     case 'fare': {
-      const v = vehicleByKey(a.veh); if (!v?.fares || !owns(s, v.k as VehKey)) return fail('You need a rickshaw or a tomtom to carry passengers');
+      const v = vehicleByKey(a.veh); if (!v?.fares || !canFare(s, v.k as VehKey)) return fail('You need a rickshaw or a tomtom to carry passengers');
       const from = standByKey(a.from, s.home), to = standByKey(a.to, s.home); if (!from || !to || from.k === to.k) return fail('No such ride');
       if (s.fares.day !== s.day) s.fares = { day: s.day, n: 0, last: s.fares.last };
       if (s.fares.n >= FARES_PER_DAY) return fail('That is enough passengers for one day');

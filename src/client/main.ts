@@ -84,8 +84,8 @@ async function boot(): Promise<void> {
   const home = new HomeView(scene, npc.grandpa);
   const neighbours = buildNeighbours(scene, map);
   const { dancers, crowd } = buildCrowds(scene, map);
-  const trafficFleet = new KitFleet(scene, kit, 'tomtom', 70, TOMTOM_COLOURS);
-  const traffic = new Traffic(scene, map, trafficFleet, 70);
+  const trafficFleet = new KitFleet(scene, kit, 'tomtom', 28, TOMTOM_COLOURS);
+  const traffic = new Traffic(scene, map, trafficFleet, 28);
   const graph = new RoadGraph(map);
   const rideView = new RideView(scene, map, graph, new KitFleet(scene, kit, 'tomtom', 1, ['#2f8f4e']), 0);
   const lighting = new Lighting(scene, skyFx, palaceLights, pandal);
@@ -93,8 +93,8 @@ async function boot(): Promise<void> {
   const others = new OtherPlayers(scene, net); const ambience = new Ambience();
   const mapView = new MapView(map);
   const player = new Player(scene, map, camera, canvas);
+  const vehicles = new Vehicles(scene, map, player, (i) => home.parking(i), stalls);
   const labels = new Labels(scene);
-  const vehicles = new Vehicles(scene, map, player, (i) => home.parking(i));
   let homeLabel: THREE.Sprite | null = null;
   void (document.fonts?.ready ?? Promise.resolve()).then(() => {
     labels.add('MBB Stadium', 'মহারাজা বীর বিক্রম স্টেডিয়াম', STADIUM.x, 44, STADIUM.z, 3, 2500);
@@ -170,8 +170,10 @@ async function boot(): Promise<void> {
   /* ---------- interactions ---------- */
   vehicles.onFare = (veh, from, to) => { game.dispatch({ t: 'fare', veh, from, to }); };
   vehicles.onMessage = (text) => toast(text);
+  vehicles.onRent = (veh, at) => game.dispatch({ t: 'rent', veh, at }).ok;
+  vehicles.onReturn = (at) => game.dispatch({ t: 'returnRental', at }).ok;
   const ctx: Ctx = {
-    game, map, npc, neighbours, traffic, home, stalls, extra: () => vehicles.spots(),
+    game, map, npc, neighbours, traffic, home, stalls, extra: () => vehicles.spots(game.S),
     trip: async (t: Trip, sell?: Partial<Record<ItemKey, number>>) => {
       const why = tripOpen(game.S, t); if (why) { toast(why); play('no'); return; }
       play('horn'); fade(true); await wait(700); fade(false);
@@ -212,7 +214,7 @@ async function boot(): Promise<void> {
     return dailyDeliveries(S.day).filter((d) => !S.delivered.includes(d.id)).map((d) => npcPos(d.from)).filter((n): n is NonNullable<typeof n> => !!n).map((n) => ({ x: n.x, z: n.z }));
   };
   const sightMarks = () => SIGHTS.filter((x) => !game.S.visited.includes(x.id)).map((x) => ({ x: x.x, z: x.z }));
-  const marks = () => ({ player: { x: player.x, z: player.z, face: player.face }, target, kaam: kaamMarks(), errand: errandMarks(), sights: sightMarks(), home: home.front, others: others.marks(), stalls });
+  const marks = () => ({ player: { x: player.x, z: player.z, face: player.face }, target, kaam: kaamMarks(), errand: errandMarks(), sights: sightMarks(), home: home.front, others: others.marks(), stalls, rentals: vehicles.rentalMarks });
   function hudTick(force = false) {
     target = rideView.active ? null : vehicles.target || missionTarget(game.S, { x: player.x, z: player.z }, spots, { x: npc.grandpa.x, z: npc.grandpa.z });
     updateHud({ S: game.S, place: map.placeName(player.x, player.z), target, px: player.x, pz: player.z, yaw: player.yaw, online: net.online, lost: net.lost, others: others.count }, force);

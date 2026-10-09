@@ -21,6 +21,30 @@ export const VEHICLES: VehicleDef[] = [
 ];
 export const vehicleByKey = (k: string): VehicleDef | undefined => VEHICLES.find((v) => v.k === k);
 export const owns = (s: GameState, k: VehKey): boolean => s.garage.includes(k);
+/**
+ * Rentals: every city tomtom stand has a rental point with a few vehicles. You pay the first game
+ * hour up front, then the meter runs until you return it at any rental point. Rates per game hour.
+ */
+export const RENT_RATE: Record<VehKey, number> = { cycle: 3, rickshaw: 5, scooter: 8, bike: 12, tomtom: 15, car: 30 };
+/** What sits at each rental point. */
+export const RENTALS: Record<string, VehKey[]> = {
+  stStadium: ['cycle', 'scooter', 'tomtom'],
+  stMath: ['cycle', 'bike', 'car'],
+  stShibnagar: ['cycle', 'rickshaw', 'scooter'],
+  stRamnagar: ['cycle', 'scooter'],
+  stJoynagar: ['cycle', 'bike', 'car'],
+  stBridge: ['cycle', 'rickshaw', 'bike'],
+};
+/** The longest a rental is charged for in one go (a forgotten rental overnight costs a day, not a fortune). */
+export const RENT_MAX_HOURS = 24;
+/** Game hours a rental has run, and what it has cost so far (never less than the first hour). */
+export function rentalHours(s: GameState): number {
+  const r = s.rental; if (!r) return 0;
+  return Math.min(RENT_MAX_HOURS, Math.max(1, (s.day - r.day) * 24 + s.hour - r.hour));
+}
+export const rentalCost = (s: GameState): number => (s.rental ? Math.ceil(rentalHours(s) * RENT_RATE[s.rental.veh]) : 0);
+export const canFare = (s: GameState, k: VehKey): boolean => owns(s, k) || s.rental?.veh === k;
+
 /** Most passenger fares a day, and the fare for a ride of `m` metres. */
 export const FARES_PER_DAY = 12;
 export const fareFor = (m: number, mult: number): number => Math.round((15 + (m / 1000) * 30) * mult / 5) * 5;

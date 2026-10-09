@@ -108,7 +108,7 @@ export class Crowd {
   private parts: { mesh: THREE.InstancedMesh; local: THREE.Matrix4; swing: 'legL' | 'legR' | 'armL' | 'armR' | null; femaleOnly?: boolean; maleOnly?: boolean }[] = [];
   private m = new THREE.Matrix4(); private base = new THREE.Matrix4(); private swing = new THREE.Matrix4(); private q = new THREE.Quaternion(); private v = new THREE.Vector3(); private one = new THREE.Vector3(1, 1, 1); private up = new THREE.Vector3(0, 1, 0);
   private rng = mulberry(77); private zero = new THREE.Matrix4().makeScale(0, 0, 0);
-  constructor(scene: THREE.Scene, private map: CityMap, readonly count = 700) {
+  constructor(scene: THREE.Scene, private map: CityMap, readonly count = 260) {
     const mat = new THREE.MeshLambertMaterial({ color: '#ffffff' });
     const mk = (geo: THREE.BufferGeometry, local: THREE.Matrix4, swing: Crowd['parts'][0]['swing'], colors: (i: number) => string, extra: Partial<Crowd['parts'][0]> = {}) => {
       const mesh = new THREE.InstancedMesh(geo, mat, count); mesh.frustumCulled = false; mesh.castShadow = true;

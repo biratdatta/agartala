@@ -9,7 +9,7 @@ import { $ } from './dom.js';
 
 const PX = 1800, SIZE = Math.max(X1 - X0, Z1 - Z0);
 const m2p = (v: number, o: number) => ((v - o) / SIZE) * PX;
-export interface MapMarks { player: { x: number; z: number; face: number }; target: { x: number; z: number } | null; others?: { x: number; z: number; name: string }[]; stalls?: { x: number; z: number }[]; kaam?: { x: number; z: number }[]; errand?: { x: number; z: number }[]; sights?: { x: number; z: number }[]; home?: { x: number; z: number } }
+export interface MapMarks { player: { x: number; z: number; face: number }; target: { x: number; z: number } | null; others?: { x: number; z: number; name: string }[]; stalls?: { x: number; z: number }[]; rentals?: { x: number; z: number }[]; kaam?: { x: number; z: number }[]; errand?: { x: number; z: number }[]; sights?: { x: number; z: number }[]; home?: { x: number; z: number } }
 
 export class MapView {
   private img: HTMLCanvasElement;
@@ -48,6 +48,7 @@ export class MapView {
     const dot = (k: { x: number; z: number }, col: string, r: number) => { const [x, y] = to(k.x, k.z); if (x > 0 && x < W && y > 0 && y < W) { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); } };
     for (const k of m.sights || []) dot(k, '#9b6bd6', 6);
     for (const k of m.stalls || []) dot(k, '#c62f2f', 5);
+    for (const k of m.rentals || []) dot(k, '#1f6f5c', 6);
     for (const k of m.others || []) dot(k, '#6ad1ff', 6);
     for (const k of m.kaam || []) dot(k, '#4aa3df', 7);
     for (const k of m.errand || []) dot(k, '#e8812f', 7);
@@ -78,6 +79,7 @@ export class MapView {
     const dot = (k: { x: number; z: number }, col: string, r: number) => { const [a, b] = P(k.x, k.z); c.fillStyle = col; c.beginPath(); c.arc(a, b, r, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); };
     for (const k of m.sights || []) dot(k, '#9b6bd6', 5);
     for (const k of m.stalls || []) dot(k, '#c62f2f', 4);
+    for (const k of m.rentals || []) dot(k, '#1f6f5c', 5);
     c.font = '600 11px "Hind Siliguri", sans-serif';
     for (const k of m.others || []) { dot(k, '#6ad1ff', 5); lb(k.name, k.x, k.z, '#1a4a6a', -9); }
     for (const k of m.kaam || []) dot(k, '#4aa3df', 6);

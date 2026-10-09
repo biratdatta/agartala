@@ -91,6 +91,8 @@ export interface GameState {
   garage: VehKey[];
   /** Passenger fares carried today, and when the last one was paid (real ms). */
   fares: { day: number; n: number; last: number };
+  /** A rented vehicle: what, from which rental point, and the game time the meter started. */
+  rental: { veh: VehKey; from: string; day: number; hour: number } | null;
 }
 
 export function newState(now: number, name = '', from = '', fromKm = 0): GameState {
@@ -108,7 +110,7 @@ export function newState(now: number, name = '', from = '', fromKm = 0): GameSta
     tea: TEA.map(() => ({ planted: false, growth: 0, picked: 0 })), agar: AGAR.map(() => ({ planted: false, growth: 0, picked: 0 })),
     pond: { stocked: false, growth: 0 }, boostUntil: 0, friends: {}, chats: [], phrases: [], chapters: [], fests: [], pithaGiven: [], trips: [], attended: [],
     week: { id: '', paddy: 0, deliveries: 0, kaam: 0, sights: 0, earned: 0 }, inbox: [],
-    garage: ['rickshaw'], fares: { day: 0, n: 0, last: 0 },
+    garage: ['rickshaw'], fares: { day: 0, n: 0, last: 0 }, rental: null,
   };
 }
 
@@ -155,6 +157,7 @@ export function normalize(raw: unknown, now: number): GameState {
   const keys = VEHICLES.map((v) => v.k);
   s.garage = [...new Set<VehKey>(['rickshaw', ...(Array.isArray(r.garage) ? r.garage.filter((k): k is VehKey => keys.includes(k as VehKey)) : []), ...(s.cycle ? ['cycle' as const] : []), ...(s.scooter ? ['scooter' as const] : [])])];
   s.fares = { day: num(r.fares?.day, 0, 0), n: num(r.fares?.n, 0, 0, 99), last: num(r.fares?.last, 0, 0) };
+  const rt = r.rental; s.rental = rt && typeof rt === 'object' && keys.includes(rt.veh) && typeof rt.from === 'string' ? { veh: rt.veh, from: rt.from.slice(0, 20), day: num(rt.day, s.day, 1), hour: num(rt.hour, 0, 0, 24) } : null;
   const rd = r.ride; s.ride = rd && typeof rd === 'object' && typeof rd.to === 'string' && STAND_KEYS.includes(rd.to as StandKey) && STAND_KEYS.includes(rd.from as StandKey) ? { from: String(rd.from), to: rd.to, start: num(rd.start, now), ms: num(rd.ms, 30000, 1000, 120000), hours: num(rd.hours, 0.2, 0, 3), done: num(rd.done, 0, 0, 3) } : null;
   return s;
 }

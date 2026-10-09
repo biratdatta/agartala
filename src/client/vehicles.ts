@@ -8,7 +8,9 @@ import * as THREE from 'three';
 import { clamp, lerp } from '../shared/rng.js';
 import type { GameState } from '../shared/save.js';
 import { standsFor, type Stand } from '../shared/stands.js';
-import { FARES_PER_DAY, VEHICLES, fareFor, owns, vehicleByKey, type VehKey } from '../shared/vehicles.js';
+import { FARES_PER_DAY, RENTALS, RENT_RATE, VEHICLES, fareFor, owns, rentalCost, vehicleByKey, type VehKey } from '../shared/vehicles.js';
+import { ROAD_W } from './map/data.js';
+import { canvasTexture } from './scene/kit.js';
 import { play } from './audio.js';
 import { blocked } from './collide.js';
 import { type CityMap, getH } from './map/data.js';
@@ -74,41 +76,96 @@ function model(k: VehKey): THREE.Group {
   }
 }
 
-interface Ride { k: VehKey; g: THREE.Group; x: number; z: number; h: number; v: number; parked: 'home' | 'away'; lean: number; wheels: THREE.Object3D[] }
+interface Ride { id: string; k: VehKey; g: THREE.Group; x: number; z: number; h: number; v: number; parked: 'home' | 'away'; lean: number; wheels: THREE.Object3D[]; rental?: string }
+/** A rental point beside a tomtom stand. */
+export interface RentalPoint { k: string; name: string; x: number; z: number; h: number }
 interface Passenger { from: Stand; to: Stand; p: Person; fare: number }
 
 export class Vehicles {
-  private list = new Map<VehKey, Ride>();
+  private list = new Map<string, Ride>();
+  /** Rental points round the paras, and the id of the vehicle you are renting (if any). */
+  readonly points: RentalPoint[] = [];
+  private rentedId: string | null = null;
   /** The vehicle you are on, if any. */
   riding: Ride | null = null;
   private passenger: Passenger | null = null;
   private savedCam = { dist: 5.5, pitch: 0.28 };
   private phase = 0; private lastBump = 0; private engineT = 0;
 
-  constructor(private scene: THREE.Scene, private map: CityMap, private player: Player, private parking: (i: number) => { x: number; z: number; face: number }) {
+  constructor(private scene: THREE.Scene, private map: CityMap, private player: Player, private parking: (i: number) => { x: number; z: number; face: number }, avoid: { x: number; z: number }[] = []) {
+    // a rental point beside every city tomtom stand, a row of vehicles along the road
+    for (const st of standsFor(null)) {
+      const kinds = RENTALS[st.k]; if (!kinds) continue;
+      const spot = this.pointSpot(st.x, st.z, avoid); if (!spot) continue;
+      const pt: RentalPoint = { k: st.k, name: st.name, ...spot }; this.points.push(pt);
+      const ax = Math.sin(spot.h), az = Math.cos(spot.h); let off = 0;
+      for (const k of kinds) {
+        const L = SPECS[k].len; const r = this.make(`rent:${st.k}:${k}`, k); r.rental = st.k;
+        r.x = spot.x + ax * (off + L / 2); r.z = spot.z + az * (off + L / 2); r.h = spot.h + Math.PI / 2; off += L + 1; this.place(r);
+      }
+      this.sign(pt);
+    }
+  }
+  /** Open ground a few metres off the road near a stand, long enough for a row of vehicles. */
+  private pointSpot(x: number, z: number, avoid: { x: number; z: number }[]): { x: number; z: number; h: number } | null {
+    const rn = this.map.roadNear(x, z); const ang = rn ? this.map.roadAngle(rn) : 0;
+    const ax = Math.sin(ang), az = Math.cos(ang), px = Math.cos(ang), pz = -Math.sin(ang);
+    for (const along of [-9, 9, -14, 14, -20, 20, -26, 26]) for (const side of [5, -5, 7, -7]) {
+      const cx = x + ax * along + px * side, cz = z + az * along + pz * side;
+      if (avoid.some((a) => Math.hypot(a.x - cx, a.z - cz) < 8)) continue;
+      let ok = true;
+      for (let t = -1; t <= 11 && ok; t += 2) { const qx = cx + ax * t, qz = cz + az * t; if (blocked(this.map, qx, qz) || this.map.nearBuilding(qx, qz, 1.2)) ok = false; const r = this.map.roadNear(qx, qz); if (r && r.d < ROAD_W[r.r.t] / 2 + 0.8) ok = false; }
+      if (ok) return { x: cx, z: cz, h: ang };
+    }
+    return null;
+  }
+  private sign(pt: RentalPoint): void {
+    const cv = document.createElement('canvas'); cv.width = 256; cv.height = 96; const c = cv.getContext('2d')!;
+    c.fillStyle = '#1f6f5c'; c.fillRect(0, 0, 256, 96); c.fillStyle = '#e9b23b'; c.fillRect(0, 84, 256, 12);
+    c.fillStyle = '#f6efe0'; c.textAlign = 'center'; c.font = '700 38px "Hind Siliguri", system-ui, sans-serif'; c.fillText('Rent a ride', 128, 46); c.font = '24px "Hind Siliguri", system-ui, sans-serif'; c.fillText('ভাড়া · by the hour', 128, 76);
+    const g = new THREE.Group(); cyl(g, 0.05, 0.05, 2.4, '#444', 0, 1.2, 0, 5);
+    const mat = new THREE.MeshLambertMaterial({ map: canvasTexture(cv) });
+    for (const ry of [0, Math.PI]) { const board = new THREE.Mesh(new THREE.PlaneGeometry(1.6, 0.6), mat); board.position.y = 2.3; board.rotation.y = ry; g.add(board); }
+    g.position.set(pt.x - Math.sin(pt.h) * 1.5, getH(pt.x, pt.z), pt.z - Math.cos(pt.h) * 1.5); g.rotation.y = pt.h + Math.PI / 2; this.scene.add(g);
+  }
+  private make(id: string, k: VehKey): Ride {
+    const g = model(k); g.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; }); this.scene.add(g);
+    const wheels: THREE.Object3D[] = []; g.traverse((o) => { if ((o as THREE.Mesh).geometry instanceof THREE.TorusGeometry) wheels.push(o); });
+    const r: Ride = { id, k, g, x: 0, z: 0, h: 0, v: 0, parked: 'home', lean: 0, wheels }; this.list.set(id, r); return r;
   }
 
   /** Makes sure every vehicle you own exists, parked by the house unless you left it somewhere. */
   sync(S: GameState, homeMoved = false): void {
     VEHICLES.forEach((d, i) => {
       if (!owns(S, d.k)) return;
-      let r = this.list.get(d.k);
-      if (!r) {
-        const g = model(d.k); g.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; }); this.scene.add(g);
-        const wheels: THREE.Object3D[] = []; g.traverse((o) => { if ((o as THREE.Mesh).geometry instanceof THREE.TorusGeometry) wheels.push(o); });
-        r = { k: d.k, g, x: 0, z: 0, h: 0, v: 0, parked: 'home', lean: 0, wheels }; this.list.set(d.k, r);
-      }
+      const r = this.list.get(`own:${d.k}`) || this.make(`own:${d.k}`, d.k);
       if (r.parked === 'home' && (homeMoved || r.x === 0) && this.riding !== r) { const p = this.parking(i); r.x = p.x; r.z = p.z; r.h = p.face; this.place(r); }
     });
+    // the rental: picked up again after a reload (it waits beside you), or let go if the server ended it
+    if (!S.rental && this.rentedId) this.rentedId = null;
+    if (S.rental && !this.rentedId) {
+      const free = [...this.list.values()].filter((r) => r.rental && r.k === S.rental!.veh);
+      const r = free.find((v) => v.rental === S.rental!.from) || free[0];
+      if (r) { this.rentedId = r.id; r.x = S.pos.x + 2.5; r.z = S.pos.z; r.h = S.pos.face; this.place(r); }
+    }
   }
   private place(r: Ride): void { r.g.position.set(r.x, getH(r.x, r.z), r.z); r.g.rotation.set(0, r.h, r.lean, 'YXZ'); }
   get name(): string { return this.riding ? vehicleByKey(this.riding.k)!.name : ''; }
 
   /** Prompts for the parked vehicles near you (when on foot). */
-  spots(): { x: number; z: number; r: number; get: () => { label: string; run: () => void } }[] {
+  spots(S: GameState): { x: number; z: number; r: number; get: () => { label: string; run?: () => void } }[] {
     if (this.riding) return [];
-    return [...this.list.values()].map((r) => ({ x: r.x, z: r.z, r: SPECS[r.k].len / 2 + 0.6, get: () => ({ label: `Ride your ${vehicleByKey(r.k)!.name.toLowerCase()}`, run: () => this.mount(r) }) }));
+    const px = this.player.x, pz = this.player.z;
+    return [...this.list.values()].filter((r) => Math.abs(r.x - px) + Math.abs(r.z - pz) < 40).map((r) => ({ x: r.x, z: r.z, r: SPECS[r.k].len / 2 + 0.6, get: () => {
+      const name = vehicleByKey(r.k)!.name.toLowerCase();
+      if (!r.rental) return { label: `Ride your ${name}`, run: () => this.mount(r) };
+      if (this.rentedId === r.id) return { label: `Ride your rented ${name} · ₹${rentalCost(S)} so far`, run: () => this.mount(r) };
+      if (S.rental) return { label: `For rent: ${name} · return your ${vehicleByKey(S.rental.veh)!.name.toLowerCase()} first` };
+      return { label: `Rent the ${name} · ₹${RENT_RATE[r.k]} an hour`, run: () => { if (this.onRent?.(r.k, r.rental!)) { this.rentedId = r.id; this.mount(r); } } };
+    } }));
   }
+  /** Rental points, for the map. */
+  get rentalMarks(): { x: number; z: number }[] { return this.points.map((p) => ({ x: p.x, z: p.z })); }
 
   mount(r: Ride): void {
     this.riding = r; r.v = 0; this.savedCam = { dist: this.player.dist, pitch: this.player.pitch };
@@ -133,7 +190,7 @@ export class Vehicles {
   /** Jumping across the map while riding takes the vehicle with you. */
   teleport(x: number, z: number, h: number): void { const r = this.riding; if (!r) return; r.x = x; r.z = z; r.h = h; r.v = 0; this.place(r); this.seatRider(); this.player.yaw = h + Math.PI; }
   /** Back by the house: used after loading a different farm. */
-  sendHome(): void { if (this.riding) this.dismount(); for (const r of this.list.values()) { r.parked = 'home'; r.x = 0; } }
+  sendHome(): void { if (this.riding) this.dismount(); for (const r of this.list.values()) if (!r.rental) { r.parked = 'home'; r.x = 0; } this.rentedId = null; }
 
   private seatRider(): void {
     const r = this.riding; if (!r) return; const s = SPECS[r.k];
@@ -185,7 +242,12 @@ export class Vehicles {
   /** What E does while riding, and the line on the prompt. */
   prompt(S: GameState): { label: string; run: () => void } {
     const r = this.riding!; const d = vehicleByKey(r.k)!; const kmh = Math.round(Math.abs(r.v) * 3.6);
-    const base = `${d.name} · ${kmh} km/h`;
+    const rented = this.rentedId === r.id;
+    const base = `${d.name} · ${kmh} km/h${rented ? ` · ₹${rentalCost(S)} on the meter` : ''}`;
+    if (rented && !this.passenger) {
+      const pt = this.points.find((p) => Math.hypot(p.x - r.x, p.z - r.z) < 16);
+      if (pt && Math.abs(r.v) < 2) return { label: `Return the ${d.name.toLowerCase()} at ${pt.name} · ₹${rentalCost(S)}`, run: () => { if (this.onReturn?.(pt.k)) { this.rentedId = null; r.rental = pt.k; this.dismount(); } } };
+    }
     if (d.fares) {
       const stands = standsFor(S.home); const near = stands.find((st) => Math.hypot(st.x - r.x, st.z - r.z) < 12);
       if (this.passenger) {
@@ -198,7 +260,7 @@ export class Vehicles {
       }
       return { label: `${base} · stop at a tomtom stand for passengers · E to get off`, run: () => this.dismount() };
     }
-    return { label: `${base} · E to get off`, run: () => this.dismount() };
+    return { label: `${base} · ${rented ? 'return it at any rental point · ' : ''}E to get off`, run: () => this.dismount() };
   }
   /** Where the passenger wants to go (for the gold marker), if anyone is aboard. */
   get target(): (Stand & { stand?: boolean }) | null { return this.passenger ? this.passenger.to : null; }
@@ -216,5 +278,8 @@ export class Vehicles {
   }
   /** Hooks the game sets: a fare to dispatch, and messages to show. */
   onFare?: (veh: VehKey, from: string, to: string) => void;
+  /** Rent and return: dispatch the move and say whether it went through. */
+  onRent?: (veh: VehKey, at: string) => boolean;
+  onReturn?: (at: string) => boolean;
   onMessage?: (text: string) => void;
 }
