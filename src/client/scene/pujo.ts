@@ -21,6 +21,9 @@ function deity(g: THREE.Group, x: number, z: number, h: number, robe: string, op
   box(g, 0.42 * h, 0.42 * h, 0.24 * h, robe, x, 1.12 * h, z);                                   // torso
   if (opts.ganesh) { sph(g, 0.24 * h, skin, x, 1.48 * h, z + 0.02, 10, 8); cyl(g, 0.05 * h, 0.03 * h, 0.35 * h, skin, x, 1.32 * h, z + 0.2 * h, 6).rotation.x = 0.6; for (const s of [-1, 1]) { const e = sph(g, 0.14 * h, skin, x + s * 0.25 * h, 1.5 * h, z, 8, 6); e.scale.set(0.4, 1, 1); } }
   else sph(g, 0.17 * h, skin, x, 1.48 * h, z + 0.02, 10, 8);                                   // face
+  // eyes, long and dark like a pratima's painted eyes; Ma Durga has a third eye on her forehead
+  for (const s2 of [-1, 1]) { const e = sph(g, 0.035 * h, '#f6efe6', x + s2 * 0.065 * h, 1.5 * h, z + (opts.ganesh ? 0.25 : 0.18) * h, 8, 6); e.scale.set(1.6, 0.8, 0.5); const p = sph(g, 0.02 * h, '#140c0a', x + s2 * 0.065 * h, 1.5 * h, z + (opts.ganesh ? 0.265 : 0.195) * h, 8, 6); p.scale.set(1, 1, 0.5); }
+  if ((opts.arms || 2) > 2) { const t = sph(g, 0.022 * h, '#c8102e', x, 1.57 * h, z + 0.172 * h, 8, 6); t.scale.set(0.7, 1.3, 0.5); }
   add(g, new THREE.ConeGeometry(0.15 * h, 0.32 * h, 8), opts.crown || GOLD, x, 1.78 * h, z);   // mukut
   const arms = opts.arms || 2;
   for (let i = 0; i < arms; i++) {

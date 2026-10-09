@@ -2,7 +2,38 @@
 import * as THREE from 'three';
 import { lerp, mulberry } from '../../shared/rng.js';
 import { type CityMap, type Road, ROAD_W, getH } from '../map/data.js';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { MAT, add, box, cyl, sph } from './kit.js';
+
+/* ---------- faces: eyes, brows, nose, mouth (the head is a 0.2 m sphere; the face looks along +z) ---------- */
+const pair = (geo: THREE.BufferGeometry, x: number): THREE.BufferGeometry => { const a = geo.clone(); a.translate(-x, 0, 0); const b = geo.clone(); b.translate(x, 0, 0); return mergeGeometries([a, b])!; };
+const squash = (geo: THREE.BufferGeometry, sx: number, sy: number, sz: number) => { geo.scale(sx, sy, sz); return geo; };
+const FACE = {
+  whites: pair(squash(new THREE.SphereGeometry(0.036, 8, 6), 1, 0.78, 0.55), 0.072),
+  pupils: pair(squash(new THREE.SphereGeometry(0.021, 8, 6), 1, 1, 0.55), 0.072),
+  brows: pair(new THREE.BoxGeometry(0.068, 0.014, 0.02), 0.074),
+  nose: squash(new THREE.SphereGeometry(0.03, 6, 5), 0.8, 1.1, 0.9),
+  mouth: (() => { const g = new THREE.TorusGeometry(0.042, 0.009, 4, 10, Math.PI * 0.8); g.rotateZ(Math.PI + Math.PI * 0.1); return g; })(), // a small smile
+  ears: pair(squash(new THREE.SphereGeometry(0.045, 6, 5), 0.55, 1, 0.8), 0.198),
+  tache: (() => { const g = new THREE.BoxGeometry(0.1, 0.022, 0.03); return g; })(),
+  bindi: new THREE.SphereGeometry(0.014, 6, 4),
+};
+const FACE_MAT = { white: new THREE.MeshLambertMaterial({ color: '#f4efe6' }), pupil: new THREE.MeshLambertMaterial({ color: '#1a1210' }), mouth: new THREE.MeshLambertMaterial({ color: '#6b2a26' }), bindi: new THREE.MeshLambertMaterial({ color: '#c8102e', emissive: '#5a0010' }) };
+/** Head centre y; face pieces are placed relative to it. */
+const HY = 1.92;
+/** Gives a head a face. `skin` tints the nose and ears; options add a bindi or a moustache. */
+export function addFace(g: THREE.Object3D, skin: string, o: { bindi?: boolean; tache?: string; hair?: string; y?: number; s?: number } = {}): void {
+  const y = o.y ?? HY, s = o.s ?? 1; const f = new THREE.Group(); f.position.set(0, y, 0); f.scale.setScalar(s); g.add(f);
+  const m = (geo: THREE.BufferGeometry, mat: THREE.Material | string, x: number, yy: number, z: number) => { const mesh = new THREE.Mesh(geo, typeof mat === 'string' ? new THREE.MeshLambertMaterial({ color: mat }) : mat); mesh.position.set(x, yy, z); f.add(mesh); return mesh; };
+  const darker = new THREE.Color(skin).multiplyScalar(0.82).getStyle();
+  m(FACE.whites, FACE_MAT.white, 0, 0.03, 0.19); m(FACE.pupils, FACE_MAT.pupil, 0, 0.028, 0.205);
+  m(FACE.brows, o.hair || '#1a1210', 0, 0.083, 0.178).rotation.x = -0.2;
+  m(FACE.nose, darker, 0, -0.02, 0.196); m(FACE.ears, darker, 0, 0, 0);
+  m(FACE.mouth, FACE_MAT.mouth, 0, -0.07, 0.19).rotation.x = -0.25;
+  if (o.tache) m(FACE.tache, o.tache, 0, -0.048, 0.19);
+  if (o.bindi) m(FACE.bindi, FACE_MAT.bindi, 0, 0.065, 0.196);
+}
+
 
 export interface PersonLook { female?: boolean; shirt?: string; lowerMat?: THREE.Material; skin?: string; hair?: string; bun?: boolean; wrap?: string; shawl?: boolean; gamcha?: boolean; basket?: boolean; umbrella?: string }
 export interface Rig { legL: THREE.Group; legR: THREE.Group; armL: THREE.Group; armR: THREE.Group; shawl: THREE.Mesh; phase: number }
@@ -21,6 +52,10 @@ export function person(o: PersonLook): Person {
   for (const a of [armL, armR]) { box(a, 0.14, 0.62, 0.16, o.shirt || skin, 0, -0.3, 0); sph(a, 0.07, skin, 0, -0.63, 0, 6, 4); }
   sph(g, 0.1, skin, 0, 1.7, 0, 6, 4); sph(g, 0.2, skin, 0, 1.92, 0, 12, 10);
   sph(g, 0.205, o.hair || '#141012', 0, 1.97, -0.03, 12, 10).scale.set(1, 0.82, 1);
+  // a face; some women wear a bindi, some men a moustache (grey or white hair, a grey or white one)
+  const seed = Array.from(`${o.shirt}${o.hair}${o.skin}`).reduce((a, c) => a + c.charCodeAt(0), 0);
+  const grey = /^#(?:b|c|d|e|f)/i.test(o.hair || '');
+  addFace(g, skin, { bindi: !!o.female && seed % 3 !== 0, tache: !o.female && (grey || seed % 2 === 0) ? (grey ? '#e6e2d8' : '#1a1210') : undefined, hair: o.hair && !grey ? o.hair : grey ? '#bdb8b0' : undefined });
   if (o.bun) sph(g, 0.1, o.hair || '#141012', 0, 1.98, -0.2, 8, 6);
   if (o.wrap) cyl(g, 0.22, 0.21, 0.14, o.wrap, 0, 2.06, 0, 12);
   const shawl = add(g, new THREE.BoxGeometry(0.66, 0.2, 0.38), MAT.rignai2, 0, 1.58, 0); shawl.visible = !!o.shawl;
@@ -126,6 +161,14 @@ export class Crowd {
     mk(arm, T(-0.37, 1.6, 0), 'armL', shirt); mk(arm, T(0.37, 1.6, 0), 'armR', shirt);
     mk(new THREE.SphereGeometry(0.2, 8, 6), T(0, 1.9, 0), null, skin);
     mk(new THREE.SphereGeometry(0.21, 8, 5, 0, Math.PI * 2, 0, Math.PI * 0.55), T(0, 1.93, -0.02), null, (i) => (i % 11 === 0 ? '#bdb8b0' : '#161214'));
+    const CY = 1.9; // the crowd's heads sit a little lower
+    // faces for the crowd too: eyes, brows, nose, mouth (and a bindi for some of the women)
+    const darker = (i: number) => new THREE.Color(skin(i)).multiplyScalar(0.82).getStyle();
+    mk(FACE.whites, T(0, CY + 0.03, 0.19), null, () => '#f4efe6'); mk(FACE.pupils, T(0, CY + 0.028, 0.205), null, () => '#1a1210');
+    mk(FACE.brows, T(0, CY + 0.083, 0.178), null, (i) => (i % 11 === 0 ? '#bdb8b0' : '#1a1210'));
+    mk(FACE.nose, T(0, CY - 0.02, 0.196), null, darker); mk(FACE.ears, T(0, CY, 0), null, darker);
+    mk(FACE.mouth, new THREE.Matrix4().makeRotationX(-0.25).premultiply(T(0, CY - 0.07, 0.19)), null, () => '#6b2a26');
+    mk(FACE.bindi, T(0, CY + 0.065, 0.196), null, (i) => (i % 3 ? '#c8102e' : '#9c6b45'), { femaleOnly: true });
     for (let i = 0; i < count; i++) this.w.push({ r: map.roads[0], s: 0, t: 0, dir: 1, speed: 1.2, side: 2, phase: this.rng() * 6, pause: 0, faceTo: 0, female: i % 2 === 0, idle: false, x: 1e6, z: 1e6, rot: 0 });
   }
   private respawn(w: Walker, px: number, pz: number, near: boolean): void {
