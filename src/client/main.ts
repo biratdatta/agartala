@@ -284,6 +284,7 @@ async function boot(): Promise<void> {
   let mapMode: 'jump' | 'home' = 'jump';
   const openMap = (mode: 'jump' | 'home') => {
     mapMode = mode; const el = $('#bigmap'); el.hidden = false; mapView.drawBig(marks());
+    document.querySelectorAll<HTMLElement>('#mapKey .pujo-only').forEach((li) => { li.hidden = !pujoSeason(net.now()); });
     $('#mapTitle').textContent = mode === 'home' ? 'Where is home?' : 'Agartala';
     $('#jumpHint').textContent = mode === 'home' ? 'Click the spot in Agartala where your home is. Your house, Grandpa and a tomtom stand will move there.' : 'Click anywhere on the map to jump there.';
     ($('.jumprow') as HTMLElement).hidden = mode === 'home'; $('#reqBtns').hidden = mode === 'home' || !net.online || net.needsSignin; reqClose();
@@ -383,6 +384,10 @@ async function boot(): Promise<void> {
     const up = (e: PointerEvent) => { pts.delete(e.pointerId); if (!pts.size) cv.classList.remove('dragging'); };
     cv.addEventListener('pointerup', up); cv.addEventListener('pointercancel', up);
     cv.addEventListener('click', (e) => { if (moved > 6 || pinch) { e.stopImmediatePropagation(); moved = 0; pinch = 0; } }, true);
+    // the map key: open on big screens, folded away on phones; the choice is remembered on this device
+    const keyOpen = (() => { try { const v = localStorage.getItem('amar-agartala.mapkey'); return v === null ? innerWidth > 700 : v === '1'; } catch { return innerWidth > 700; } })();
+    const setKey = (open: boolean) => { $('#mapKey').hidden = !open; $('#mapKeyBtn').setAttribute('aria-expanded', String(open)); try { localStorage.setItem('amar-agartala.mapkey', open ? '1' : '0'); } catch { /* fine */ } };
+    setKey(keyOpen); $('#mapKeyBtn').onclick = () => setKey($('#mapKey').hidden);
     $('#mapIn').onclick = () => mapView.zoomBy(1.6); $('#mapOut').onclick = () => mapView.zoomBy(1 / 1.6); $('#mapReset').onclick = () => mapView.resetView();
   }
   /* missing a place? players pick a spot (or use where they stand), name it and send it */

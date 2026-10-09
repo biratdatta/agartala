@@ -291,3 +291,16 @@ html[data-motion="reduce"] :is(#fade,#tourFade,#tourCap){transition:none}
 .reqform label{display:grid;gap:4px;font-size:13px;color:var(--ink-dim)}
 .reqform input,.reqform select,.reqform textarea{background:rgba(14,11,18,.8);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:inherit;font-size:14px}
 #mapCv.picking{cursor:crosshair}
+
+/* the big map's key */
+.mapkey{position:absolute;left:10px;bottom:10px;max-width:min(300px,calc(100% - 70px));max-height:calc(100% - 20px);overflow:auto;background:rgba(28,22,36,.92);border:1px solid var(--line);border-radius:8px;padding:8px 10px 6px;font-size:12px;color:var(--ink);pointer-events:auto}
+.mapkey[hidden]{display:none}
+.mapkey b{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.mapkey ul{list-style:none;margin:6px 0 0;padding:0;display:grid;gap:4px}
+.mapkey li{display:flex;align-items:center;gap:8px;line-height:1.25}
+.mapkey svg{width:16px;height:16px;flex:none}
+.mapkey .dot{width:11px;height:11px;border-radius:50%;border:2px solid #fff;flex:none;margin:0 2px;box-sizing:content-box}
+.mapkey .dot.sm{width:8px;height:8px;margin:0 4px}
+.mapkey .sq{width:7px;height:7px;flex:none;margin:0 5px}
+.mapkey .swatch{display:inline-block;width:12px;height:10px;border-radius:2px;vertical-align:middle}
+#mapKeyBtn[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
