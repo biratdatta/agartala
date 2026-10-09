@@ -52,9 +52,9 @@ export class Palace {
     const g = new THREE.Group(); const y0 = getH(cx, cz);
     const PL = 1.4, ST = 4.6, BODY = ST * 2; // plinth, storey, two storeys
     const arc = arcadeTexture(), por = arcadeTexture(true);
-    const facadeMat = (w: number, h: number, t = arc, bayW = 4.5) => {
+    const facadeMat = (w: number, h: number, t = arc, bayW = 4.5, rows = 0) => {
       const map = t.map.clone(), glow = t.glow.clone(); map.needsUpdate = glow.needsUpdate = true;
-      map.repeat.set(Math.max(1, Math.round(w / bayW)), Math.max(1, Math.round(h / ST))); glow.repeat.copy(map.repeat);
+      map.repeat.set(Math.max(1, Math.round(w / bayW)), rows || Math.max(1, Math.round(h / ST))); glow.repeat.copy(map.repeat);
       const mat = new THREE.MeshLambertMaterial({ map, emissive: '#ffc874', emissiveMap: glow, emissiveIntensity: 0 }); this.glowMats.push(mat); return mat;
     };
     const plane = (w: number, h: number, mat: THREE.Material, x: number, y: number, z: number, ry = 0) => {
@@ -104,7 +104,7 @@ export class Palace {
     // the central tower: a great arched gateway, an upper arcade, kiosks on its corners and the big dome
     const TW = Math.min(22, W * 0.18), TD = Math.min(18, D * 0.5), TH = BODY + 8.5, tz = D / 2 - TD / 2 + 2.5;
     const tower = box(g, TW, TH, TD, plain, 0, PL + TH / 2, tz); tower.castShadow = true;
-    plane(TW, BODY + 2.4, facadeMat(TW, BODY + 2.4, por, TW), 0, PL + (BODY + 2.4) / 2, tz + TD / 2 + 0.03);
+    plane(TW, BODY + 2.4, facadeMat(TW, BODY + 2.4, por, TW, 1), 0, PL + (BODY + 2.4) / 2, tz + TD / 2 + 0.03); // one great gateway arch
     plane(TW, TH - BODY - 2.4, facadeMat(TW, ST, arc, TW / 3), 0, PL + BODY + 2.4 + (TH - BODY - 2.4) / 2, tz + TD / 2 + 0.03);
     box(g, TW + 1, 0.6, TD + 1, CREAM, 0, PL + TH + 0.3, tz);
     for (const [ox, oz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) chhatri(ox * (TW / 2 - 1.2), tz + oz * (TD / 2 - 1.2), PL + TH + 0.6, 1.3);

@@ -2,7 +2,7 @@
  * Amar Agartala service worker: keeps the game, the city map and the 3D models on the device so the
  * game opens offline (it then saves in the browser until the server is back). The API is never cached.
  */
-const CACHE = 'haora-v3';
+const CACHE = 'haora-v4';
 // The map and models are fetched with ?v=<content hash>, so each new version is a new cache entry.
 const CORE = ['/', '/manifest.webmanifest', '/icons/icon-192.png'];
 
@@ -15,9 +15,9 @@ self.addEventListener('activate', (e) => {
 self.addEventListener('fetch', (e) => {
   const req = e.request; const url = new URL(req.url);
   if (req.method !== 'GET' || url.pathname.startsWith('/api/')) return;
-  // the page itself: network first, so updates arrive; fall back to the cached copy offline
+  // the page itself: network first and always revalidated (never the browser's stale copy), so updates arrive; cached copy offline
   if (req.mode === 'navigate') {
-    e.respondWith(fetch(req).then((r) => { const copy = r.clone(); caches.open(CACHE).then((c) => c.put('/', copy)); return r; }).catch(() => caches.match('/')));
+    e.respondWith(fetch(req, { cache: 'no-cache' }).then((r) => { const copy = r.clone(); caches.open(CACHE).then((c) => c.put('/', copy)); return r; }).catch(() => caches.match('/')));
     return;
   }
   // hashed build assets, the versioned map and models, and fonts: cache first
