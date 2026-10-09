@@ -47,7 +47,7 @@ On phones there's a joystick and an Act button.
 ## How it works
 
 ```
-browser (Three.js)                                   Pages Functions (api/)             Cloudflare D1 (SQLite)
+browser (Three.js)                                   Worker (worker/ → api/)           Cloudflare D1 (SQLite)
 ┌──────────────────────────────┐  actions (batched)  ┌──────────────────────────┐     ┌──────────────────┐
 │ render · walking · UI        │ ──────────────────▶ │ re-check every action    │ ──▶ │ kv: saves (json, │
 │ applies moves instantly      │ ◀────────────────── │ with the SAME rules code │     │ versioned, CAS)  │
@@ -165,7 +165,7 @@ The crowd and the 70 tomtoms follow you around the city: anyone who falls far be
 
 ### `api/`: the server
 
-Each one is a Web `Request → Response` handler, so the same files run on Cloudflare Pages (through `functions/api/[[path]].ts`), on Vercel, and inside `npm run dev`.
+Each one is a Web `Request → Response` handler, so the same files run on the Cloudflare Worker (through `worker/index.ts`), on Vercel, and inside `npm run dev`.
 
 - `session.ts`: create a guest, return a farm for its token, or restore one by farm code. A new farm's hometown and distance come from Cloudflare's `request.cf` (or Vercel's `x-vercel-ip-*` headers).
 - `state.ts`: load a save.
@@ -200,7 +200,7 @@ Secrets (`AUTH_SECRET`, Google client secret, Resend key) live only on the serve
 
 ## Deploy on Cloudflare (agartala.biratdatta.tech)
 
-Everything runs on Cloudflare: the static game on Pages, the API as Pages Functions, saves in D1. The free plan is enough.
+Everything runs on one Cloudflare Worker: the static game as Workers Static Assets, the API in `worker/index.ts`, saves in D1. The free plan is enough.
 
 1. **Sign in to Cloudflare from this folder:**
 
@@ -216,32 +216,31 @@ Everything runs on Cloudflare: the static game on Pages, the API as Pages Functi
    npm run cf:db            # creates the tables (cloudflare/schema.sql)
    ```
 
-3. **Create the Pages project and deploy:**
+3. **Deploy the Worker:**
 
    ```bash
-   npx wrangler pages project create agartala --production-branch main
    npm run cf:deploy
    ```
 
-   You get a `https://agartala.pages.dev` URL, and the D1 binding comes from `wrangler.toml`.
+   You get a `https://agartala.<your-subdomain>.workers.dev` URL, and the D1 binding comes from `wrangler.toml`.
 
-4. **Subdomain:** in the Cloudflare dashboard, go to Workers & Pages → agartala → Custom domains → Set up a custom domain, and enter `agartala.biratdatta.tech`. Because `biratdatta.tech` is already on Cloudflare, it adds the DNS record and certificate for you.
+4. **Subdomain:** in the Cloudflare dashboard, go to Workers & Pages → agartala → Settings → Domains & Routes → Add → Custom domain, and enter `agartala.biratdatta.tech`. Because `biratdatta.tech` is already on Cloudflare, it adds the DNS record and certificate for you.
 
 5. **Secret for sign-in:**
 
    ```bash
-   openssl rand -base64 48 | npx wrangler pages secret put AUTH_SECRET
+   openssl rand -base64 48 | npx wrangler secret put AUTH_SECRET
    ```
 
 6. **Google sign-in:**
    - In [Google Cloud Console](https://console.cloud.google.com/apis/credentials), go to Create credentials → OAuth client ID → Web application.
-   - Authorized redirect URI: `https://agartala.biratdatta.tech/api/auth-google-callback`. Add `https://agartala.pages.dev/api/auth-google-callback` too if you want sign-in on that URL.
+   - Authorized redirect URI: `https://agartala.biratdatta.tech/api/auth-google-callback`. Add your `workers.dev` URL + `/api/auth-google-callback` too if you want sign-in on that URL.
    - On the OAuth consent screen, set the app name and your email, and publish it so anyone can sign in.
    - Then set the two secrets:
 
      ```bash
-     npx wrangler pages secret put GOOGLE_CLIENT_ID
-     npx wrangler pages secret put GOOGLE_CLIENT_SECRET
+     npx wrangler secret put GOOGLE_CLIENT_ID
+     npx wrangler secret put GOOGLE_CLIENT_SECRET
      ```
 
 7. **Email links (optional):**
@@ -249,15 +248,15 @@ Everything runs on Cloudflare: the static game on Pages, the API as Pages Functi
    - Then:
 
      ```bash
-     npx wrangler pages secret put RESEND_API_KEY
-     npx wrangler pages secret put EMAIL_FROM     # e.g. Haora Bari <login@biratdatta.tech>
+     npx wrangler secret put RESEND_API_KEY
+     npx wrangler secret put EMAIL_FROM     # e.g. Haora Bari <login@biratdatta.tech>
      ```
 
 8. **Redeploy** (`npm run cf:deploy`) so the secrets take effect, then open `https://agartala.biratdatta.tech/api/health`. It should say `"store":"D1Store"`. `/api/auth-config` shows which sign-in methods are on.
 
-**Auto-deploy from GitHub instead:** connect the repo under Workers & Pages → Create → Pages → Connect to Git, with build command `npm run build` and output `dist`. Then add the D1 binding (`DB` → `agartala`) and the secrets under the project's Settings.
+**Auto-deploy from GitHub instead:** under Workers & Pages → Create application → Import a repository, pick this repo, with build command `npm run build` and deploy command `npx wrangler deploy`, and add `NODE_VERSION` = `22` as a build variable. The D1 binding comes from `wrangler.toml`; add the secrets under the Worker's Settings → Variables and Secrets.
 
-**Test the Cloudflare build locally:** copy `.env.example` to `.dev.vars`, fill in `AUTH_SECRET`, run `npm run cf:db:local` once, then `npm run cf:dev` (→ http://localhost:8788). For Google sign-in locally, add `http://localhost:8788/api/auth-google-callback` as a redirect URI.
+**Test the Cloudflare build locally:** copy `.env.example` to `.dev.vars`, fill in `AUTH_SECRET`, run `npm run cf:db:local` once, then `npm run cf:dev` (→ http://localhost:8787). For Google sign-in locally, add `http://localhost:8787/api/auth-google-callback` as a redirect URI.
 
 ### Or on Vercel
 
@@ -272,7 +271,7 @@ Deployed without a database, the API refuses to run instead of silently losing s
 
 ```
 api/            the server: one file per endpoint + _lib (store, sessions, auth, http)
-functions/      Cloudflare Pages entry that routes /api/* to api/
+worker/         Cloudflare Worker entry that routes /api/* to api/
 src/shared/     game rules shared by client and server
 src/client/     the browser game
 public/         agartala-map.json (baked OSM data)
