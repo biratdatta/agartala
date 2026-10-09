@@ -152,6 +152,19 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 /* the action buttons stack on the right so they never cover the inventory */
 #btns{flex-direction:column;align-items:stretch}
 #btns .hbtn{justify-content:flex-start}
+/* Phones and touch screens: the HUD buttons fold into a hamburger menu */
+#bMenu{display:none;justify-content:center;padding:8px 10px}
+#game.touch #bMenu{display:flex;align-self:flex-end}
+#game.touch #btns>.hbtn:not(#bMenu){display:none}
+#game.touch #btns.open>.hbtn{display:flex}
+#game.touch #btns .key{display:none}
+#game.touch #btns.open #bMenu{border-color:var(--gold);color:var(--gold)}
+@media (max-width:560px){
+  #bMenu{display:flex;align-self:flex-end}
+  #btns>.hbtn:not(#bMenu){display:none}
+  #btns.open>.hbtn{display:flex}
+  #btns.open #bMenu{border-color:var(--gold);color:var(--gold)}
+}
 @media (max-width:760px){#inv{max-width:calc(100vw - 150px)}}
 #lbList li.sm{display:block;border:0}
 

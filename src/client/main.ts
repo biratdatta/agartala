@@ -323,6 +323,12 @@ async function boot(): Promise<void> {
   ($('#homeIn') as HTMLInputElement).addEventListener('input', () => { pendingSite = undefined; $('#homeNote').textContent = ''; });
   $('#bHelp').onclick = () => ($('#help').hidden = false); $('#helpClose').onclick = () => ($('#help').hidden = true);
   $('#bBoard').onclick = board; $('#boardClose').onclick = () => ($('#board').hidden = true);
+  // Hamburger menu for the HUD buttons on phones: tap to open, and any choice (or a tap elsewhere) closes it.
+  const btns = $('#btns'), menuBtn = $('#bMenu');
+  const setMenu = (open: boolean) => { btns.classList.toggle('open', open); menuBtn.setAttribute('aria-expanded', String(open)); };
+  menuBtn.onclick = (e) => { e.stopPropagation(); setMenu(!btns.classList.contains('open')); };
+  btns.addEventListener('click', (e) => { if (e.target !== menuBtn && !menuBtn.contains(e.target as Node)) setMenu(false); });
+  document.addEventListener('pointerdown', (e) => { if (btns.classList.contains('open') && !btns.contains(e.target as Node)) setMenu(false); });
   $('#bSound').onclick = () => ($('#bSound').textContent = toggleSound() ? 'Sound on' : 'Sound off');
   $('#dlgNext').onclick = nextPage; $('#endClose').onclick = () => ($('#endcard').hidden = true);
   for (const s of ['#bigmap', '#help', '#shop', '#ride', '#endcard', '#board', '#stall', '#trips']) $(s).addEventListener('click', (e) => { if (e.target === $(s)) $(s).hidden = true; });
