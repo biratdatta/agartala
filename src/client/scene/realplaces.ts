@@ -12,6 +12,7 @@ import { colliders } from '../collide.js';
 import { type CityMap, type Poly, ROAD_W, getH, pip } from '../map/data.js';
 import type { Kit, Plan } from './buildings.js';
 import { add, box, canvasTexture, cyl, place, sph } from './kit.js';
+import { Palace } from './palace.js';
 
 /* ---------- textures ---------- */
 type Style = 'arch' | 'plain' | 'school' | 'gallery' | 'shop';
@@ -88,6 +89,7 @@ function spec(id: string, isMain: boolean, area: number): { floors: number; styl
 export class RealPlaces {
   private glows: THREE.MeshLambertMaterial[] = [];
   private rng = mulberry(404);
+  private palaceModel: Palace | null = null;
 
   constructor(scene: THREE.Scene, private map: CityMap, kit: Kit, plans: Plan[]) {
     void kit;
@@ -98,6 +100,7 @@ export class RealPlaces {
     const main = campus.reduce<{ p: Plan; i: number } | null>((a, b) => (!a || b.p.w * b.p.d - Math.hypot(b.p.cx - 1542, b.p.cz - 1003) * 4 > a.p.w * a.p.d - Math.hypot(a.p.cx - 1542, a.p.cz - 1003) * 4 ? b : a), null);
     plans.forEach((p, i) => {
       if (!p.place || p.place === 'shivmandir') return;
+      if (p.place === 'palace') { this.palace(scene, p); return; }
       const poly = map.buildings[i]; if (!poly) return;
       const sp = spec(p.place, i === main?.i, p.w * p.d); const H = sp.floors * 3.2 + 0.4; const y0 = getH(p.cx, p.cz);
       const g = extrude(poly, H, y0); const t = texFor(sp.style);
@@ -109,7 +112,6 @@ export class RealPlaces {
       if (i === main?.i) this.portico(scene, p, H);
       if (p.place === 'masjid') this.dome(scene, p, y0 + H);
       if (p.place === 'stadium' && p.w * p.d > 400) this.canopy(scene, p, y0 + H);
-      if (p.place === 'palace') this.palace(scene, p, y0, H);
       if (p.place === 'prm' || p.place === 'citycentre') this.mall(scene, p, y0 + H, p.place === 'prm' ? 'PRM Centrepoint' : 'City Centre', p.place === 'prm' ? '#0f4c75' : '#7a1f3d');
     });
     // name boards on the real buildings
@@ -127,7 +129,7 @@ export class RealPlaces {
   }
 
   /** Lit windows after dark, like the rest of the city. */
-  setNight(f: number): void { for (const m of this.glows) m.emissiveIntensity = f * 0.9; }
+  setNight(f: number): void { for (const m of this.glows) m.emissiveIntensity = f * 0.9; this.palaceModel?.setNight(f); }
 
   private sign(scene: THREE.Scene, pl: RealPlace, p: Plan, y: number): void {
     const fx = Math.sin(p.ang), fz = Math.cos(p.ang);
@@ -146,47 +148,14 @@ export class RealPlaces {
     const fx = Math.sin(p.ang), fz = Math.cos(p.ang); g.position.set(p.cx + fx * (p.d / 2), getH(p.cx, p.cz), p.cz + fz * (p.d / 2)); g.rotation.y = p.ang; scene.add(g);
   }
 
-  /**
-   * Ujjayanta Palace: the real footprint, dressed white with its three Mughal domes (the tall one
-   * over the centre), corner chhatris, broad steps, and the lawn with two long pools and fountains
-   * in front, facing the lakes.
-   */
-  private palace(scene: THREE.Scene, p: Plan, y0: number, H: number): void {
-    const ang = Math.cos(p.ang) >= 0 ? p.ang : p.ang + Math.PI; // the front faces south, to the lakes
-    const W = p.w, D = p.d; const g = new THREE.Group(); const white = '#f6f3ec', cream = '#ece2cf', gold = '#e0b04a';
-    const domeAt = (x: number, z: number, r: number, drum: number, y: number) => {
-      cyl(g, r * 0.95, r * 0.95, drum, cream, x, y + drum / 2, z, 20);
-      const d = add(g, new THREE.SphereGeometry(r, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), white, x, y + drum, z); d.scale.y = 1.25;
-      add(g, new THREE.ConeGeometry(r * 0.12, r * 0.7, 8), gold, x, y + drum + r * 1.25 + r * 0.3, z); sph(g, r * 0.1, gold, x, y + drum + r * 1.25 + r * 0.05, z, 8, 6);
-    };
-    // the central tower and its big dome, two smaller domes on the wings
-    box(g, Math.min(22, W * 0.2), 7, Math.min(20, D * 0.45), white, 0, H + 3.5, 0);
-    domeAt(0, 0, Math.min(9, W * 0.08), 4, H + 7);
-    for (const s of [-1, 1]) { box(g, 11, 4, 11, white, s * (W / 2 - 9), H + 2, 0); domeAt(s * (W / 2 - 9), 0, 5, 2.5, H + 4); }
-    // chhatris on the corners and along the roofline
-    for (const sx of [-1, 1]) for (const sz of [-1, 1]) {
-      const x = sx * (W / 2 - 2), z = sz * (D / 2 - 2); for (const [ox, oz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) cyl(g, 0.18, 0.18, 2.6, cream, x + ox * 1.1, H + 2.2, z + oz * 1.1, 6);
-      domeAt(x, z, 1.7, 0.4, H + 3.5);
-    }
-    // a gallery of arches across the front, and the steps
-    const arches = Math.max(6, Math.floor(W / 6));
-    for (let i = 0; i <= arches; i++) cyl(g, 0.45, 0.5, H - 1, cream, -W / 2 + 2 + (i * (W - 4)) / arches, (H - 1) / 2 + 0.6, D / 2 + 1.6, 10);
-    box(g, W - 2, 0.8, 3.2, white, 0, H - 0.2, D / 2 + 1.6);
-    for (let i = 0; i < 4; i++) box(g, 26 - i * 2, 0.3, 4 - i * 0.8, '#e2d9c8', 0, 0.15 + i * 0.3, D / 2 + 5 - i * 0.6);
-    // the garden in front: lawn, a path down the middle, two long pools with fountains
-    const lawnD = 60; const lawn = box(g, W + 10, 0.06, lawnD, '#6fa84a', 0, 0.05, D / 2 + 6 + lawnD / 2); lawn.receiveShadow = true;
-    box(g, 7, 0.08, lawnD, '#d9cfbf', 0, 0.08, D / 2 + 6 + lawnD / 2);
-    for (const s of [-1, 1]) {
-      const px = s * (W * 0.22), pz = D / 2 + 6 + lawnD / 2;
-      box(g, 14, 0.5, lawnD - 12, '#d9cfbf', px, 0.25, pz); box(g, 12.6, 0.52, lawnD - 13.4, '#4f8fb3', px, 0.27, pz);
-      for (const k of [-1, 0, 1]) { const fz = pz + k * (lawnD - 20) / 2; cyl(g, 0.9, 1.1, 0.6, white, px, 0.6, fz, 12); cyl(g, 0.12, 0.12, 1.6, white, px, 1.5, fz, 6); sph(g, 0.45, '#cfe6f2', px, 2.4, fz, 10, 8); }
-    }
-    g.position.set(p.cx, y0, p.cz); g.rotation.y = ang; scene.add(g);
-    const fx = Math.sin(ang), fz = Math.cos(ang), ux = Math.cos(ang), uz = -Math.sin(ang);
-    for (const s of [-1, 1]) { const off = D / 2 + 6 + 30; colliders.push({ x: p.cx + fx * off + ux * s * W * 0.22, z: p.cz + fz * off + uz * s * W * 0.22, r: 5 }); }
-    // the gate board at the bottom of the garden
+  /** Ujjayanta Palace: its own model (palace.ts) on the real footprint, front to the lakes, with the gate board. */
+  private palace(scene: THREE.Scene, p: Plan): void {
+    // the long side is the front, and it faces south, to the lakes
+    let ang = p.ang + (p.w >= p.d ? 0 : Math.PI / 2); if (Math.cos(ang) < 0) ang += Math.PI;
+    const W = Math.max(p.w, p.d), D = Math.min(p.w, p.d);
+    const pal = new Palace(scene, p.cx, p.cz, ang, W, D); this.palaceModel = pal;
+    const { x: gx, z: gz, ux, uz } = pal.gate; const white = '#f6f3ec';
     const b = board('Ujjayanta Palace · Tripura State Museum', 'উজ্জয়ন্ত প্রাসাদ', '#5a3a1c', 9);
-    const gx = p.cx + fx * (D / 2 + 6 + lawnD + 3), gz = p.cz + fz * (D / 2 + 6 + lawnD + 3);
     const gate = new THREE.Group(); for (const s of [-1, 1]) { box(gate, 1.4, 6, 1.4, white, s * 6, 3, 0); sph(gate, 0.8, white, s * 6, 6.6, 0, 10, 8); } b.position.y = 4.6; gate.add(b);
     gate.position.set(gx, getH(gx, gz), gz); gate.rotation.y = ang; scene.add(gate); for (const s of [-1, 1]) colliders.push({ x: gx + ux * s * 6, z: gz + uz * s * 6, r: 1 });
   }

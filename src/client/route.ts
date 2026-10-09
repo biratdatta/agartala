@@ -67,3 +67,27 @@ export function along(r: Route, d: number, side = 0): { x: number; z: number; an
   const dx = b[0] - a[0], dz = b[1] - a[1], l = Math.hypot(dx, dz) || 1;
   return { x: a[0] + dx * t + (dz / l) * side, z: a[1] + dz * t - (dx / l) * side, ang: Math.atan2(dx, dz) };
 }
+
+/** How many corners (and the middle) of a vehicle `half` metres wide and `len` long, at distance d along the route and `side` to the left, are inside a building. */
+function bodyHits(map: CityMap, r: Route, d: number, side: number, half = 0.8, len = 1.6): number {
+  let n = 0;
+  for (const dd of [d - len, d, d + len]) {
+    const p = along(r, dd, side); const lx = Math.cos(p.ang), lz = -Math.sin(p.ang);
+    for (const u of [-half, 0, half]) if (map.inBuilding(p.x + lx * u, p.z + lz * u)) n++;
+  }
+  return n;
+}
+/**
+ * Where across the street a vehicle should be at distance d: keep left (`prefer` metres) when
+ * there's room, squeeze toward the middle (or past it) where walls come close, and look a few
+ * metres ahead so it moves over in time.
+ */
+export function clearSide(map: CityMap, r: Route, d: number, prefer = 1.4): number {
+  let best = prefer, bestHits = Infinity;
+  for (const sd of [prefer, prefer * 0.6, prefer * 0.25, 0, -prefer * 0.3, -prefer * 0.6]) {
+    const h = bodyHits(map, r, d, sd) + bodyHits(map, r, Math.min(r.length, d + 4), sd);
+    if (h === 0) return sd;
+    if (h < bestHits) { bestHits = h; best = sd; }
+  }
+  return best;
+}

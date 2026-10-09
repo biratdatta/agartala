@@ -73,19 +73,25 @@ for (const [k, [x, z, opt]] of Object.entries(TARGETS)) { spots[k] = freeSpot(x,
 
 const centre = (p) => [p.reduce((a, q) => a + q[0], 0) / p.length, p.reduce((a, q) => a + q[1], 0) / p.length];
 const skip = new Set([...blds.flatMap((b, i) => (pip(...centre(b.p), FARM_ZONE) || !(centre(b.p)[0] > AREA.x0 && centre(b.p)[0] < AREA.x1 && centre(b.p)[1] > AREA.z0 && centre(b.p)[1] < AREA.z1) ? [i] : [])), ...bldNear(spots.pandal[0], spots.pandal[1], 10)]);
-/* Some OSM footprints sit right across a street (gates, overhangs, mapping slips). Tomtoms and
- * walkers follow the street, so drop any footprint that a road's centre line runs through. */
+/* Some OSM footprints sit right across a street or bite into it (gates, overhangs, mapping slips).
+ * Tomtoms and walkers follow the street, so drop any footprint that reaches into the carriageway:
+ * sampled along the centre line and along both edges of the drawn road. */
 let acrossRoad = 0;
+// landmark buildings (named in OSM, or a real place the game puts on an unnamed one) always stay
+const KEEP = [[22, 768]]; // PRM Centrepoint, Motor Stand (src/shared/places.ts)
 blds.forEach((b, i) => {
-  if (skip.has(i)) return;
+  if (skip.has(i) || b.name >= 0 || KEEP.some(([x, z]) => pip(x, z, b.p))) return;
   const xs = b.p.map((q) => q[0]), zs = b.p.map((q) => q[1]); const x0 = Math.min(...xs), x1 = Math.max(...xs), z0 = Math.min(...zs), z1 = Math.max(...zs);
   let inside = 0; const seen = new Set();
   for (let gx = Math.floor(x0 / G); gx <= Math.floor(x1 / G); gx++) for (let gz = Math.floor(z0 / G); gz <= Math.floor(z1 / G); gz++) for (const [ri, k] of rgrid.get(key(gx, gz)) || []) {
     const sk = ri * 100000 + k; if (seen.has(sk) || roads[ri].t > 5) continue; seen.add(sk);
     const [ax, az] = roads[ri].p[k], [bx, bz] = roads[ri].p[k + 1]; const L = Math.hypot(bx - ax, bz - az);
-    for (let t = 0; t <= L; t += 1) { const x = ax + ((bx - ax) * t) / (L || 1), z = az + ((bz - az) * t) / (L || 1); if (x > x0 && x < x1 && z > z0 && z < z1 && pip(x, z, b.p)) inside++; }
+    const ux = (bx - ax) / (L || 1), uz = (bz - az) / (L || 1); const edge = Math.max(0, WID[roads[ri].t] / 2 - 1.6);
+    for (let t = 0; t <= L; t += 1) for (const o of [0, edge, -edge]) {
+      const x = ax + ux * t + uz * o, z = az + uz * t - ux * o; if (x > x0 && x < x1 && z > z0 && z < z1 && pip(x, z, b.p)) inside++;
+    }
   }
-  if (inside >= 2) { skip.add(i); acrossRoad++; }
+  if (inside >= 4) { skip.add(i); acrossRoad++; }
 });
 console.log(`Dropped ${acrossRoad} footprints that sit across a road.`);
 const enc = (p) => p.flatMap(([x, z]) => [Math.round(x * 2), Math.round(z * 2)]);

@@ -7,7 +7,7 @@ import * as THREE from 'three';
 import type { Stand } from '../shared/stands.js';
 import type { KitFleet } from './scene/buildings.js';
 import { LOOKS, type Person, person, sit } from './scene/people.js';
-import { along, type RoadGraph, type Route } from './route.js';
+import { along, clearSide, type RoadGraph, type Route } from './route.js';
 import type { CityMap } from './map/data.js';
 
 export interface RideInfo { to: Stand; left: number; total: number }
@@ -42,8 +42,8 @@ export class RideView {
     if (f >= 1) return null;
     const d = Math.max(0, f) * this.route.length;
     // keep left, but squeeze toward the middle of narrow lanes so the tomtom never brushes a wall
-    let want = 1.4; for (const sd of [1.4, 0.7, 0]) { want = sd; const t = along(this.route, d, sd), t2 = along(this.route, Math.min(this.route.length, d + 3), sd); if (!this.map.inBuilding(t.x, t.z) && !this.map.inBuilding(t2.x, t2.z)) break; }
-    this.side += (want - this.side) * 0.15;
+    const want = clearSide(this.map, this.route, d);
+    this.side += (want - this.side) * 0.35;
     const p = along(this.route, d, this.side), ahead = along(this.route, Math.min(this.route.length, d + 6), this.side);
     const ang = Math.atan2(ahead.x - p.x, ahead.z - p.z) || p.ang;
     this.fleet.set(this.slot, p.x, 0, p.z, ang);
