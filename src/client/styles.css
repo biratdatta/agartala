@@ -415,3 +415,29 @@ html[data-motion="reduce"] :is(#fade,#tourFade,#tourCap){transition:none}
   .overlay:not(#title)>.panel{max-height:calc(100dvh - 12px)}
   #title p{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 }
+
+/* ---------- small screens: a one-line mission bar (tap to open) and a one-line clock over a square minimap ---------- */
+#statLine{display:none}
+@media (max-width:820px){
+  #goal{width:auto;max-width:calc(100vw - 150px);cursor:pointer}
+  #goal .stripe{height:3px}
+  #goal:not(.open) .in{display:flex;align-items:center;gap:8px;padding:7px 10px;flex-wrap:nowrap;min-width:0}
+  #goal:not(.open) #goalEyebrow,#goal:not(.open) #goalText{display:none}
+  #goal:not(.open) h2{font-size:14px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1 1 auto}
+  #goal:not(.open) #goalProg,#goal:not(.open) #goalDir{flex:none;white-space:nowrap;font-size:12px}
+  #goal:not(.open) #goalDir svg{width:11px;height:11px}
+  #goal .in::after{content:'▾';flex:none;color:var(--ink-dim);font-size:12px;margin-left:2px}
+  #goal.open .in::after{content:'▴ tap to fold';display:block;font-size:11px;text-align:right}
+  #goal.open{width:min(340px,calc(100vw - 150px))}
+  #goal.open p{display:block}
+  #goalProg:empty{display:none}
+
+  #status{width:auto}
+  #status .in{padding:5px 7px 7px;gap:4px;justify-items:stretch}
+  #statLine{display:block;font-size:12.5px;font-weight:600;white-space:nowrap;font-variant-numeric:tabular-nums;letter-spacing:.01em}
+  #clock,#date,#place,#money,#others{display:none}
+  #fest{font-size:10.5px;max-width:112px}
+  #energy{height:9px}
+  #energy span{display:none}
+  #mini{width:112px;height:112px}
+}

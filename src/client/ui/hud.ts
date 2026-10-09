@@ -40,6 +40,7 @@ export function updateHud(h: HudInput, force = false): void {
   const o = $('#others'); o.hidden = !h.others; o.textContent = h.others ? `${h.others} other farmer${h.others > 1 ? 's' : ''} in the city` : '';
   $('#place').textContent = h.place;
   $('#money').textContent = rupees(S.money);
+  $('#statLine').textContent = `${fmtH(S.hour)} · Day ${S.day} · ${rupees(S.money)}`; // the one-line clock on small screens
   const net = $('#net'); net.hidden = h.online && !h.lost; net.textContent = h.lost ? 'Offline · moves will sync when the server is back' : 'No server · saved in this browser only';
   const inv = INV.map(([k, n, c]) => (k === 'water' || S.inv[k] ? `<div class="chip"><i style="background:${c}"></i>${n} <b>${k === 'water' ? `${S.inv.water}/${S.canMax}` : S.inv[k]}</b></div>` : '')).join('');
   if (inv !== lastInv || force) {
