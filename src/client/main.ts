@@ -51,7 +51,7 @@ async function boot(): Promise<void> {
   const net = new Net();
   const authResult = takeAuthResult();
   if (authResult?.token) net.adopt(authResult.token);
-  void loadAuthConfig();
+  const authReady = loadAuthConfig();
   const [map, kit, first] = await Promise.all([
     loadMap('/agartala-map.json', (f) => (loading.textContent = `Loading the streets of Agartala… ${Math.round(f * 100)}%`)),
     loadKit('/models/kit.glb'),
@@ -408,6 +408,16 @@ async function boot(): Promise<void> {
   $('#bNew').textContent = progressed ? 'New farm' : 'Start';
   $('#bNew').onclick = async () => { if (progressed) { const s = await net.reset(); game.replace(s); } start(); };
   $('#offline').hidden = net.online;
+  // Sign in with Google right on the title screen (it's also in the Farm panel, L, for later).
+  await authReady;
+  $('#titleSignin').hidden = !auth.config.google || !net.online || net.signedIn;
+  $('#titleWho').hidden = !net.signedIn;
+  $('#titleWho').textContent = net.signedIn ? `Signed in${net.email ? ` as ${net.email}` : ''}. This farm follows your account.` : '';
+  $('#tgIn').onclick = async () => {
+    const btn = $('#tgIn') as HTMLButtonElement; btn.disabled = true;
+    try { applyFrom(); await net.flush(); toast(await signIn(net.session, 'google')); }
+    catch (e) { btn.disabled = false; toast((e as Error).message); }
+  };
   if (authResult?.error) toast(authResult.error);
   else if (authResult?.token && net.signedIn) toast(`Signed in${net.email ? ` as ${net.email}` : ''}. Your farm now follows your account.`);
   refresh(); resize(); loading.hidden = true; $('#title').hidden = false;
