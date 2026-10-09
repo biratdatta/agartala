@@ -1,5 +1,10 @@
 import { defineConfig, type Plugin, type ViteDevServer } from 'vite';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
+
+/** A short content hash, so a new map or model gets a new URL and no cache can serve the old one. */
+const hashOf = (f: string): string => { try { return createHash('sha1').update(readFileSync(f)).digest('hex').slice(0, 10); } catch { return 'dev'; } };
 
 /**
  * Runs the server functions in api/*.ts inside the Vite dev server, so `npm run dev`
@@ -45,6 +50,7 @@ function apiPlugin(): Plugin {
 
 export default defineConfig({
   plugins: [apiPlugin()],
+  define: { __MAP_V__: JSON.stringify(hashOf('public/agartala-map.json')), __KIT_V__: JSON.stringify(hashOf('public/models/kit.glb')) },
   server: { port: 5191 },
   build: { target: 'es2022', chunkSizeWarningLimit: 900 },
   test: { environment: 'node', include: ['tests/**/*.test.ts'] },

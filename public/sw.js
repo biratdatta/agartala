@@ -2,8 +2,9 @@
  * Haora Bari service worker: keeps the game, the city map and the 3D models on the device so the
  * game opens offline (it then saves in the browser until the server is back). The API is never cached.
  */
-const CACHE = 'haora-v2';
-const CORE = ['/', '/agartala-map.json', '/models/kit.glb', '/manifest.webmanifest', '/icons/icon-192.png'];
+const CACHE = 'haora-v3';
+// The map and models are fetched with ?v=<content hash>, so each new version is a new cache entry.
+const CORE = ['/', '/manifest.webmanifest', '/icons/icon-192.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
@@ -19,7 +20,7 @@ self.addEventListener('fetch', (e) => {
     e.respondWith(fetch(req).then((r) => { const copy = r.clone(); caches.open(CACHE).then((c) => c.put('/', copy)); return r; }).catch(() => caches.match('/')));
     return;
   }
-  // hashed build assets, the map, models and fonts: cache first
+  // hashed build assets, the versioned map and models, and fonts: cache first
   const cacheable = url.origin === self.location.origin || url.hostname.endsWith('fonts.googleapis.com') || url.hostname.endsWith('fonts.gstatic.com');
   if (!cacheable) return;
   e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((r) => {

@@ -47,6 +47,8 @@ import { dialog, nextPage, openBoard, renderShop, showEnd, wireBoard, wireShop }
 
 const TOMTOM_COLOURS = ['#2f8f4e', '#3a9a5a', '#e3b23c', '#2f8f4e', '#2a7fb0', '#c94a3a', '#3a9a5a'];
 
+declare const __MAP_V__: string, __KIT_V__: string;
+
 async function boot(): Promise<void> {
   const loading = $('#loading');
   const net = new Net();
@@ -56,8 +58,8 @@ async function boot(): Promise<void> {
   if (authResult?.token) net.adopt(authResult.token);
   const authReady = loadAuthConfig();
   const [map, kit, first] = await Promise.all([
-    loadMap('/agartala-map.json', (f) => (loading.textContent = `Loading the streets of Agartala… ${Math.round(f * 100)}%`)),
-    loadKit('/models/kit.glb'),
+    loadMap(`/agartala-map.json?v=${__MAP_V__}`, (f) => (loading.textContent = `Loading the streets of Agartala… ${Math.round(f * 100)}%`)),
+    loadKit(`/models/kit.glb?v=${__KIT_V__}`),
     net.start(),
   ]);
   map.places.push(
@@ -443,7 +445,8 @@ async function boot(): Promise<void> {
   else if (authResult?.token && net.signedIn) toast(`Signed in${net.email ? ` as ${net.email}` : ''}. Your farm now follows your account.`);
   refresh(); resize(); loading.hidden = true; $('#title').hidden = false;
   // test hooks for scripted play-throughs and screenshots (only when a test page asks for them)
-  if ((window as unknown as { __HAORA_DEBUG__?: boolean }).__HAORA_DEBUG__) {
+  // test hooks: a scripted test page sets __HAORA_DEBUG__, or open the game with ?debug=1 (play is then local only)
+  if ((window as unknown as { __HAORA_DEBUG__?: boolean }).__HAORA_DEBUG__ || new URLSearchParams(location.search).has('debug')) {
     (window as unknown as Record<string, unknown>).__haora = {
       start, game, player, map, vehicles, ride: (a: string, b: string) => startRide(standByKey(a)!, standByKey(b)!),
       teleport: (x: number, z: number, face = 0) => player.teleport(x, z, face), view: (yaw: number, pitch: number, dist: number) => { player.yaw = yaw; player.pitch = pitch; player.dist = dist; },

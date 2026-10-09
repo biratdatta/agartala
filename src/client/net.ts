@@ -82,6 +82,7 @@ export class Net {
   /** Queues a move that has already been applied locally. */
   send(a: Action, local: GameState): void {
     if (!this.online) { ls.set(LOCAL_KEY, JSON.stringify(local)); return; }
+    if (this.needsSignin) return; // not signed in (debug play): nothing reaches the server
     this.pending.push(a); this.schedule(250);
   }
   private schedule(ms: number): void { if (this.timer) clearTimeout(this.timer); this.timer = setTimeout(() => void this.flush(), ms); }
