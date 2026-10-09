@@ -5,6 +5,7 @@ import { STANDS } from '../../shared/stands.js';
 import { type CityMap, type Poly, ROAD_W, X0, X1, Z0, Z1 } from '../map/data.js';
 import { STADIUM } from '../scene/landmarks.js';
 import { PARAS } from '../../shared/area.js';
+import { REAL_PLACES } from '../../shared/places.js';
 import { $ } from './dom.js';
 
 const PX = 1800, SIZE = Math.max(X1 - X0, Z1 - Z0);
@@ -74,7 +75,9 @@ export class MapView {
     for (const s of STANDS) { const [a, b] = P(s.x, s.z); c.fillStyle = '#2f8f4e'; c.beginPath(); c.arc(a, b, 5, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.9)'; }
     c.font = '700 14px "Hind Siliguri", sans-serif';
     lb('MBB Stadium', STADIUM.x, STADIUM.z); lb('Family fields', 1700, 1130); lb('Haora river', 1830, 1060, '#2a5f7a'); lb('Math Chowmuhani Bazar', SPOTS.gopal[0], SPOTS.gopal[1] + 26);
-    lb('Joynagar bus stop', SPOTS.busTerminus[0], SPOTS.busTerminus[1] - 20); lb('Modern Club', SPOTS.pandal[0], SPOTS.pandal[1] - 18); lb('Shibnagar lakes', 1180, 1110, '#2a5f7a');
+    lb('Joynagar bus stop', SPOTS.busTerminus[0], SPOTS.busTerminus[1] - 20); lb('Modern Club', SPOTS.pandal[0], SPOTS.pandal[1] - 18); lb('College Tilla Lake', 1252, 1122, '#2a5f7a'); lb('College Lake', 962, 1060, '#2a5f7a');
+    c.font = '600 11px "Hind Siliguri", sans-serif'; for (const p of REAL_PLACES) if (p.kind !== 'lake' && p.id !== 'stadium') { const [a, b] = P(p.x, p.z); c.fillStyle = '#7d1d3f'; c.fillRect(a - 2, b - 2, 4, 4); lb(p.name, p.x, p.z, '#5a2a3a', 14); }
+    c.font = '700 14px "Hind Siliguri", sans-serif';
     c.font = '700 16px "Hind Siliguri", sans-serif'; for (const p of PARAS) if (!/Stadium|Math/.test(p.name)) lb(p.name, p.x, p.z, '#6b2a22');
     const dot = (k: { x: number; z: number }, col: string, r: number) => { const [a, b] = P(k.x, k.z); c.fillStyle = col; c.beginPath(); c.arc(a, b, r, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); };
     for (const k of m.sights || []) dot(k, '#9b6bd6', 5);

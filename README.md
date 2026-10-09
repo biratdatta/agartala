@@ -99,7 +99,7 @@ The family fields stay by the Haora with their own stand, so farming becomes a c
 
 - **Kaam:** five neighbours ask for goods each day.
 - **Parcels:** three a day to carry across town. You pick one up from one neighbour and deliver it to another, carrying one at a time. Pay depends on the distance.
-- **Sights:** 10 places round the paras, from MBB Stadium and the Modern Club Shiv Mandir to the Shibnagar lakes and the Haora bridge, each with a little history. Your first visit to each pays ₹25.
+- **Real places and sights:** the area's real buildings and places from OpenStreetMap and Wikipedia (`src/shared/places.ts`): MBB College in its yellow and brown with its gate, MBB Stadium with galleries, Tripura Government Law College, Mahatma Gandhi Memorial School, the Modern Club Shiv Mandir, Modern Club Park, College Tilla Lake and College Lake, and more, each named on its own building. Eleven are sights, each with a little history. Your first visit to each pays ₹25.
 - **Tracking:** the Farm panel lists everything for the day. The minimap marks kaam in blue, parcels in orange, unseen sights in purple and your house with a house icon.
 
 ### Life in the paras

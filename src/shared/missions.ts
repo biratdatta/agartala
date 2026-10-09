@@ -33,7 +33,7 @@ export const MISSIONS: Mission[] = [
     progress: (s) => `Paddy ${Math.min(s.inv.paddy, 3)} / 3 · pineapple ${Math.min(s.inv.pineapple, 2)} / 2`, done: (s) => !!s.flags.kharchi, reward: { money: 500 }, msg: '+₹500 in gifts. Your crops now grow 20% faster.' },
   { id: 'grow', title: 'Grow the bari', text: 'Buy 2 more lunga plots from Gopal and save ₹3,000.',
     progress: (s) => `Lunga plots ${Math.min(ownedLunga(s), 8)} / 8 · ₹${s.money.toLocaleString('en-IN')} / ₹3,000`, done: (s) => ownedLunga(s) >= 8 && s.money >= GROW_TARGET, reward: {}, msg: 'The bari is growing' },
-  { id: 'durga', title: 'Durga Puja at Modern Club', text: 'Durga Puja is on. After 18:00, go to the Modern Club pandal by the Shibnagar lakes and join the puja.',
+  { id: 'durga', title: 'Durga Puja at Modern Club', text: 'Durga Puja is on. After 18:00, go to the Modern Club pandal by College Lake and join the puja.',
     done: (s) => !!s.flags.durga, reward: {}, msg: 'Shubho Bijoya' },
 ];
 

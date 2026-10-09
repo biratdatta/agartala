@@ -14,6 +14,8 @@ import { tripOpen, type Trip } from '../shared/trips.js';
 import type { ItemKey } from '../shared/constants.js';
 import { Ambience, play, toggleSound, unlockAudio } from './audio.js';
 import { OtherPlayers } from './social.js';
+import { RealPlaces } from './scene/realplaces.js';
+import { REAL_PLACES } from '../shared/places.js';
 import { Vehicles } from './vehicles.js';
 import { PhotoMode } from './photo.js';
 import { StreetLamps, buildDiyas, buildKer, buildStalls, updateStalls } from './scene/citylife.js';
@@ -56,7 +58,7 @@ async function boot(): Promise<void> {
   ]);
   map.places.push(
     { x: STADIUM.x, z: STADIUM.z, name: 'MBB Stadium', kind: 'landmark' }, { x: 1660, z: 1190, name: 'The fields by the Haora', kind: 'landmark' },
-    { x: 1180, z: 1095, name: 'The Shibnagar lakes', kind: 'landmark' }, { x: SPOTS.gopal[0], z: SPOTS.gopal[1], name: 'Math Chowmuhani Bazar', kind: 'landmark' },
+    ...REAL_PLACES.map((p) => ({ x: p.x, z: p.z, name: p.name, kind: 'landmark' })), { x: SPOTS.gopal[0], z: SPOTS.gopal[1], name: 'Math Chowmuhani Bazar', kind: 'landmark' },
     { x: 920, z: 975, name: 'Modern Club', kind: 'landmark' }, { x: 1470, z: 1640, name: 'The Haora bridge', kind: 'landmark' },
   );
   loading.textContent = `Raising ${map.buildings.length.toLocaleString('en-IN')} buildings…`;
@@ -73,7 +75,7 @@ async function boot(): Promise<void> {
   addEventListener('resize', resize);
 
   buildGround(scene, map); buildRoads(scene, map); buildHills(scene);
-  const city = new City(scene, kit, planBuildings(map));
+  const plans = planBuildings(map); const city = new City(scene, kit, plans); new RealPlaces(scene, map, kit, plans);
   const palaceLights = buildStadiumLights(scene); const pandal = buildPandal(scene, map); buildStall(scene, map);
   const standFleet = new KitFleet(scene, kit, 'tomtom', 10, TOMTOM_COLOURS);
   const standsView = new StandsView(scene, map, standFleet, 10); buildBus(scene, map);
@@ -101,7 +103,7 @@ async function boot(): Promise<void> {
     labels.add('Math Chowmuhani Bazar', 'মঠ চৌমুহনী বাজার', SPOTS.gopal[0], 14, SPOTS.gopal[1], 1.4, 1200);
     labels.add('Modern Club', 'মডার্ন ক্লাব', SPOTS.pandal[0], 16, SPOTS.pandal[1], 1.2, 900);
     labels.add('Joynagar bus stop', 'জয়নগর বাস স্টপ', SPOTS.busTerminus[0], 12, SPOTS.busTerminus[1], 1.2, 900);
-    labels.add('Shibnagar lakes', 'শিবনগর', 1180, 8, 1095, 1.2, 900);
+    for (const p of REAL_PLACES) if (!['stadium', 'shivmandir', 'bhaumik', 'carshringaar', 'pathshala', 'masjid', 'bijoy'].includes(p.id)) labels.add(p.name, p.bn || null, p.x, p.kind === 'lake' || p.kind === 'park' ? 8 : 16, p.z, p.kind === 'college' ? 1.5 : 1.1, p.kind === 'college' ? 1400 : 800);
     for (const p of PARAS) if (!/Stadium|Math/.test(p.name)) labels.add(p.name, null, p.x, 14, p.z, 1.3, 1400);
     labels.add('Haora river', 'হাওড়া নদী', 1760, 6, 1300, 1.6, 1200);
     homeLabel = labels.add('Your bari', 'বাড়ি', -720, 12, -1472, 1, 900); placeHome();

@@ -8,6 +8,8 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 import { rnd2 } from '../../shared/rng.js';
 import type { CityMap } from '../map/data.js';
+import { REAL_PLACES, inCampus } from '../../shared/places.js';
+import { pip } from '../map/data.js';
 
 export interface Arch { name: string; geo: THREE.BufferGeometry; W: number; D: number; h: number; roof: string }
 export interface Kit { arch: Map<string, Arch>; material: THREE.MeshLambertMaterial }
@@ -42,14 +44,14 @@ export async function loadKit(url = '/models/kit.glb'): Promise<Kit> {
 
 /* ---------------- choosing a building for a footprint ---------------- */
 const PAINT = ['#f3ead6', '#efe0c2', '#e6d0b0', '#dfe9d4', '#d4e2ec', '#f2d4cc', '#f6f2ea', '#e2d6ec', '#f0e2a8', '#cfe0c6', '#f4e6c8', '#dbe8ee', '#f1c9a5', '#c8dce6'];
-export interface Plan { cx: number; cz: number; w: number; d: number; ang: number; arch: string; tint: string }
+export interface Plan { cx: number; cz: number; w: number; d: number; ang: number; arch: string; tint: string; /** A real place this building is (see places.ts). */ place?: string }
 
 export function planBuildings(map: CityMap): Plan[] {
   const bo = map.raw.bo; if (!bo) return [];
-  return bo.map((a, i) => {
+  const plans = bo.map((a, i) => {
     const cx = a[0] / 2, cz = a[1] / 2, w = Math.max(2.5, a[2] / 2), d = Math.max(2.5, a[3] / 2), ang = a[4] / 1000, roadT = a[5], roadD = a[6];
     const A = w * d, r = rnd2(cx * 0.13, cz * 0.17), r2 = rnd2(cz * 0.11, cx * 0.07), lv = map.buildings[i]?.lv || 0;
-    const main = roadT <= 2 && roadD < 12, central = Math.hypot(cx + 250, cz - 450) < 900, pick = <T,>(l: T[], v: number) => l[Math.floor(v * l.length) % l.length];
+    const main = roadT <= 2 && roadD < 12, central = Math.hypot(cx - 1150, cz - 650) < 650, pick = <T,>(l: T[], v: number) => l[Math.floor(v * l.length) % l.length];
     const shop2 = pick(['shop2_a', 'shop2_b', 'shop2_c'], r2), shop3 = pick(['shop3_a', 'shop3_b', 'shop3_c'], r2);
     let arch: string;
     if (lv >= 4) arch = 'rcc4';
@@ -60,8 +62,37 @@ export function planBuildings(map: CityMap): Plan[] {
     else if (A < 300) arch = main ? pick([shop2, shop3], r) : central ? pick(['rcc2', 'rcc3', 'rcc3', 'rcc4'], r) : pick(['rcc2', 'rcc2', 'assam_green', 'rcc3', 'assam_rust'], r);
     else if (A < 700) arch = main ? shop3 : r < 0.25 ? 'godown' : pick(['rcc3', 'rcc4', 'rcc4'], r2);
     else arch = r < 0.55 ? 'block' : 'godown';
-    return { cx, cz, w, d, ang, arch, tint: PAINT[Math.floor(r2 * 997) % PAINT.length] };
+    return { cx, cz, w, d, ang, arch, tint: PAINT[Math.floor(r2 * 997) % PAINT.length] } as Plan;
   });
+  return realBuildings(map, plans);
+}
+
+/**
+ * The real places: MBB College's halls in its yellow and brown, and the buildings OpenStreetMap
+ * names (the law college, the schools, the clinic…) in their own colours and shapes. The Shiv
+ * Mandir's footprint is left empty because the game puts a temple model there.
+ */
+function realBuildings(map: CityMap, plans: Plan[]): Plan[] {
+  const osm = map.raw.bs ?? plans.length;
+  for (let i = 0; i < osm; i++) {
+    const p = plans[i]; if (!inCampus(p.cx, p.cz)) continue;
+    const A = p.w * p.d; p.arch = A > 600 ? 'block' : A > 160 ? 'rcc3' : A > 60 ? 'rcc2' : 'rcc1'; p.tint = i % 3 ? '#e8c25a' : '#d9a441'; p.place = 'mbbcollege';
+  }
+  for (const pl of REAL_PLACES) {
+    if (!pl.paint) continue;
+    let best = -1, bd = 12;
+    for (let i = 0; i < osm; i++) {
+      const b = map.buildings[i]; if (!b || pl.x < b.minx - 12 || pl.x > b.maxx + 12 || pl.z < b.minz - 12 || pl.z > b.maxz + 12) continue;
+      const d = pip(pl.x, pl.z, b) ? 0 : Math.hypot(plans[i].cx - pl.x, plans[i].cz - pl.z); if (d < bd) { bd = d; best = i; }
+    }
+    if (best < 0) continue;
+    const p = plans[best]; const A = p.w * p.d; p.tint = pl.paint; p.place = pl.id;
+    if (pl.kind === 'temple') p.arch = '';
+    else if (pl.kind === 'college' || pl.kind === 'school') p.arch = A > 700 ? 'block' : A > 200 ? 'rcc3' : 'rcc2';
+    else if (pl.kind === 'apartment') p.arch = 'rcc4';
+    else if (pl.kind === 'clinic') p.arch = A > 150 ? 'rcc3' : 'rcc2';
+  }
+  return plans;
 }
 
 /* ---------------- drawing the city ---------------- */

@@ -1,6 +1,6 @@
 /**
  * The city between farm jobs: food stalls by the tomtom stands, street lamps along the main roads,
- * Diwali lamps on the Shibnagar lakes and the Ker Puja shrine at the stadium gate.
+ * Diwali lamps on College Lake and College Tilla Lake, and the Ker Puja shrine at the stadium gate.
  */
 import * as THREE from 'three';
 import { STALLS, type Stall } from '../../shared/food.js';
@@ -88,7 +88,7 @@ export class StreetLamps {
   update(nightFactor: number): void { this.head.color.set(nightFactor > 0.35 ? '#ffd88a' : '#5a5a54'); }
 }
 
-/** Floating diyas on the Shibnagar lakes for Diwali nights. */
+/** Floating diyas on College Lake and College Tilla Lake for Diwali nights. */
 export function buildDiyas(scene: THREE.Scene, map: CityMap): THREE.Points {
   const rng = mulberry(31); const p: number[] = [];
   for (let k = 0; k < 8000 && p.length < 800 * 3; k++) { const x = 1150 + (rng() - 0.5) * 400, z = 1130 + (rng() - 0.5) * 260; if (map.inWaterPoly(x, z)) p.push(x, 0.25, z); }

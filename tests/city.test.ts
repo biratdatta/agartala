@@ -48,6 +48,15 @@ describe('the baked city', () => {
     }
   });
 
+  it('puts the real places on their real buildings, and no invented houses on the college campus', async () => {
+    const { REAL_PLACES, inCampus } = await import('../src/shared/places.js');
+    const plans = planBuildings(map);
+    for (const pl of REAL_PLACES.filter((p) => p.paint)) expect(plans.some((p) => p.place === pl.id), pl.name).toBe(true);
+    expect(plans.filter((p) => p.place === 'mbbcollege').length).toBeGreaterThan(10);
+    const bs = map.raw.bs!; expect(plans.slice(bs).filter((p) => inCampus(p.cx, p.cz)).length).toBe(0);
+    const { SIGHTS } = await import('../src/shared/errands.js'); expect(SIGHTS).toHaveLength(11);
+  });
+
   it('places every neighbour on open ground', () => {
     for (const n of NEIGHBOURS) {
       const [x, z] = neighbourSpot(map, n.id);

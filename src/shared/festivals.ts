@@ -20,9 +20,9 @@ export const FESTIVALS: Festival[] = [
   { id: 'ker', name: 'Ker Puja', month: 3, days: [3], reward: 150,
     how: 'The city boundary is closed for the guardian deity: no tomtoms run from 06:00 to 18:00. Keep the Ker by joining the prayer at the shrine by the MBB Stadium gate.' },
   { id: 'durga', name: 'Durga Puja', month: 5, days: [2, 3, 4], reward: 100,
-    how: 'The Modern Club pandal by the Shibnagar lakes is lit. Join the puja after 18:00.' },
+    how: 'The Modern Club pandal by College Lake is lit. Join the puja after 18:00.' },
   { id: 'diwali', name: 'Diwali', month: 6, days: [3, 4], reward: 80,
-    how: 'Float a lamp on the Shibnagar lakes after dark (₹20 for a clay diya).' },
+    how: 'Float a lamp on College Lake after dark (₹20 for a clay diya).' },
   { id: 'sankranti', name: 'Pous Sankranti', month: 8, days: [3, 4], reward: 200,
     how: 'Cook pitha in the kitchen at home (1 paddy and ₹10 of jaggery make 4) and give a plate to three neighbours.' },
 ];

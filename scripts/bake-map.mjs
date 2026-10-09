@@ -162,6 +162,8 @@ for (const r of roads) {
   }
 }
 markPoly(FARM_ZONE.map(([x, z]) => [x, z]), 6);
+// the MBB College campus (src/shared/places.ts CAMPUS): only its real buildings, no invented houses
+markPoly([[1520, 975], [1725, 975], [1725, 1118], [1520, 1118]], 0);
 const keepOpen = [...Object.values(spots).map(([x, z]) => [x, z, 14])];
 for (const [x, z, r] of keepOpen) for (let dz = -r; dz <= r; dz += CELL) for (let dx = -r; dx <= r; dx += CELL) if (dx * dx + dz * dz <= r * r) { const c = cellOf(x + dx, z + dz); if (c >= 0) occ[c] = 1; }
 // how built-up is each neighbourhood? (existing buildings per 100 m cell)

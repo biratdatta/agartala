@@ -9,7 +9,7 @@ import { clamp, lerp, smooth } from '../../shared/rng.js';
 
 export interface RawMap {
   v: number; origin: [number, number]; names: string[];
-  b: number[][]; bo?: number[][]; r: number[][]; w: number[][]; l: number[][]; rv: number[][]; p: [number, number, string, number][];
+  b: number[][]; bo?: number[][]; bs?: number; r: number[][]; w: number[][]; l: number[][]; rv: number[][]; p: [number, number, string, number][];
   spots: Record<string, [number, number]>; attribution: string;
 }
 export interface Poly { xs: Float32Array; zs: Float32Array; n: number; minx: number; maxx: number; minz: number; maxz: number }
