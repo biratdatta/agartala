@@ -42,7 +42,10 @@ export function updateHud(h: HudInput, force = false): void {
   $('#money').textContent = rupees(S.money);
   const net = $('#net'); net.hidden = h.online && !h.lost; net.textContent = h.lost ? 'Offline · moves will sync when the server is back' : 'No server · saved in this browser only';
   const inv = INV.map(([k, n, c]) => (k === 'water' || S.inv[k] ? `<div class="chip"><i style="background:${c}"></i>${n} <b>${k === 'water' ? `${S.inv.water}/${S.canMax}` : S.inv[k]}</b></div>` : '')).join('');
-  if (inv !== lastInv || force) { $('#inv').innerHTML = inv; lastInv = inv; }
+  if (inv !== lastInv || force) {
+    $('#inv').innerHTML = inv; lastInv = inv;
+    const n = (inv.match(/class="chip"/g) || []).length; $('#invBtn').textContent = `Bag · ${n}`; // phones show the bag as one button
+  }
 }
 
 export function setPrompt(p: { label: string; run?: () => void } | null, touch: boolean): void {

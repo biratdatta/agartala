@@ -442,6 +442,13 @@ async function boot(): Promise<void> {
   menuBtn.onclick = (e) => { e.stopPropagation(); setMenu(!btns.classList.contains('open')); };
   btns.addEventListener('click', (e) => { if (e.target !== menuBtn && !menuBtn.contains(e.target as Node)) setMenu(false); });
   document.addEventListener('pointerdown', (e) => { if (btns.classList.contains('open') && !btns.contains(e.target as Node)) setMenu(false); });
+  // phones: the inventory folds into a Bag button; tap to open, tap anywhere else to close
+  const invEl = $('#inv'), invBtn = $('#invBtn');
+  const setInv = (open: boolean) => { invEl.classList.toggle('open', open); invBtn.setAttribute('aria-expanded', String(open)); };
+  invBtn.onclick = (e) => { e.stopPropagation(); setInv(!invEl.classList.contains('open')); };
+  document.addEventListener('pointerdown', (e) => { if (invEl.classList.contains('open') && !invEl.contains(e.target as Node) && e.target !== invBtn) setInv(false); });
+  // phones: the mission card shows three lines; tap it for the rest
+  $('#goal').addEventListener('click', () => $('#goal').classList.toggle('open'));
   function toggleLantern(): void {
     lanternWanted = !lanternWanted; toast(lanternWanted ? 'Lantern lit.' : 'Lantern out.');
     $('#bLantern').lastChild!.textContent = lanternWanted ? 'Lantern on' : 'Lantern off';

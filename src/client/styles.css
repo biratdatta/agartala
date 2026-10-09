@@ -304,3 +304,58 @@ html[data-motion="reduce"] :is(#fade,#tourFade,#tourCap){transition:none}
 .mapkey .sq{width:7px;height:7px;flex:none;margin:0 5px}
 .mapkey .swatch{display:inline-block;width:12px;height:10px;border-radius:2px;vertical-align:middle}
 #mapKeyBtn[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
+
+/* ---------- phones ---------- */
+#invBtn{display:none}
+@media (max-width:600px){
+  /* title screen: caption as one small line at the top, shorter intro, no keyboard keys */
+  #title{padding:16px 16px calc(18px + env(safe-area-inset-bottom,0px))}
+  #title .wrap{gap:10px}
+  #title h1{font-size:clamp(40px,12vw,56px)}
+  #title p{font-size:14px;line-height:1.45;display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+  #title .ctrl>span:not(.setlink){display:none}
+  #title .eyebrow{font-size:10.5px}
+  #tourCap{top:calc(10px + env(safe-area-inset-top,0px));left:16px;right:16px;max-width:none;text-align:left;display:flex;gap:8px;align-items:baseline;white-space:nowrap;overflow:hidden}
+  #tourCap .eyebrow{font-size:10px;flex:none}
+  #tourName{font-size:14px;margin:0;overflow:hidden;text-overflow:ellipsis}
+  #tourBn{display:none}
+  #homeNote{font-size:12px!important}
+  .fromrow{font-size:13px}
+  .fromrow input{font-size:14px;padding:7px 9px}
+  #title .btn{padding:8px 14px}
+  .titlesign{font-size:12px}
+
+  /* in the game: compact cards, a short mission card you can tap open */
+  #goal{left:8px;top:calc(8px + env(safe-area-inset-top,0px));width:calc(100vw - 136px)}
+  #goal .in{padding:8px 10px 9px;gap:3px}
+  #goal h2{font-size:16px}
+  #goal p{font-size:12px;line-height:1.4;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;cursor:pointer}
+  #goal.open p{display:block}
+  #goal .eyebrow{font-size:9.5px}
+  #goalProg,#goalDir{font-size:12px}
+  #status{right:8px;top:calc(8px + env(safe-area-inset-top,0px));width:112px}
+  #status .in{padding:6px 8px 8px;gap:4px}
+  #clock{font-size:20px}
+  #date,#place,#fest,#others,#net{font-size:11px;line-height:1.3}
+  #money{font-size:16px}
+  #energy span{font-size:9px}
+  #mini{width:94px;height:94px}
+
+  /* the inventory folds into a Bag button at the bottom left */
+  #invBtn{display:flex;position:absolute;left:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px));padding:8px 12px;font-weight:600}
+  #invBtn[aria-expanded="true"]{border-color:var(--gold);color:var(--gold)}
+  #inv{display:none;left:8px;right:auto;transform:none;bottom:calc(52px + env(safe-area-inset-bottom,0px));max-width:min(320px,calc(100vw - 16px));max-height:45vh;overflow:auto;
+    grid-template-columns:1fr 1fr;gap:6px;padding:8px;background:var(--panel-solid);border:1px solid var(--line);border-radius:8px;box-shadow:0 8px 28px rgba(0,0,0,.4)}
+  #inv.open{display:grid}
+  #inv .chip{font-size:12px;padding:5px 8px;justify-content:space-between}
+  #prompt{bottom:calc(56px + env(safe-area-inset-bottom,0px));font-size:13px;padding:7px 12px;max-width:calc(100vw - 24px)}
+  #btns{right:8px;bottom:calc(10px + env(safe-area-inset-bottom,0px))}
+  #toasts{top:calc(150px + env(safe-area-inset-top,0px))}
+  .toast{font-size:12.5px}
+}
+/* phones held for touch: the joystick sits bottom-left, so the bag and prompt move above it */
+@media (max-width:600px){
+  #game.touch #invBtn{bottom:auto;top:calc(var(--hud-top,190px) + env(safe-area-inset-top,0px))}
+  #game.touch #inv{bottom:auto;top:calc(var(--hud-top,190px) + 44px + env(safe-area-inset-top,0px))}
+  #game.touch #prompt{bottom:calc(170px + env(safe-area-inset-bottom,0px))}
+}
