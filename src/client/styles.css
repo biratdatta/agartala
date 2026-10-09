@@ -283,3 +283,11 @@ html[data-motion="reduce"] :is(#fade,#tourFade,#tourCap){transition:none}
 #bigmap .panel{max-height:calc(100% - 16px)}
 .credits{text-align:center;font-size:12px}
 .credits a{color:var(--ink-dim)}
+
+/* missing a place? */
+.reqbtns{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.reqbtns .btn{padding:6px 10px;font-size:13px}
+.reqform{display:grid;gap:8px;border:1px solid var(--gold);border-radius:8px;padding:12px;background:rgba(26,20,32,.7)}
+.reqform label{display:grid;gap:4px;font-size:13px;color:var(--ink-dim)}
+.reqform input,.reqform select,.reqform textarea{background:rgba(14,11,18,.8);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:8px 10px;font:inherit;font-size:14px}
+#mapCv.picking{cursor:crosshair}

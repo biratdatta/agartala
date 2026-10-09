@@ -260,6 +260,16 @@ Everything runs on one Cloudflare Worker: the static game as Workers Static Asse
 
 **Test the Cloudflare build locally:** copy `.env.example` to `.dev.vars`, fill in `AUTH_SECRET`, run `npm run cf:db:local` once, then `npm run cf:dev` (→ http://localhost:8787). For Google sign-in locally, add `http://localhost:8787/api/auth-google-callback` as a redirect URI.
 
+### Place requests
+
+Players can ask for a missing place from the map ("Missing a place?"). Each request is a row in D1 with its name, type, note, spot (game metres and latitude/longitude), farm and email. To read them:
+
+```bash
+npx wrangler d1 execute agartala --remote --command "SELECT updated_at, value FROM kv WHERE key LIKE 'placereq:%' ORDER BY key DESC LIMIT 50"
+```
+
+Each farm can send five a day.
+
 ### Or on Vercel
 
 The same `api/` files run as Vercel functions:

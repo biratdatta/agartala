@@ -282,7 +282,7 @@ async function boot(): Promise<void> {
     mapMode = mode; const el = $('#bigmap'); el.hidden = false; mapView.drawBig(marks());
     $('#mapTitle').textContent = mode === 'home' ? 'Where is home?' : 'Agartala';
     $('#jumpHint').textContent = mode === 'home' ? 'Click the spot in Agartala where your home is. Your house, Grandpa and a tomtom stand will move there.' : 'Click anywhere on the map to jump there.';
-    ($('.jumprow') as HTMLElement).hidden = mode === 'home';
+    ($('.jumprow') as HTMLElement).hidden = mode === 'home'; $('#reqBtns').hidden = mode === 'home' || !net.online || net.needsSignin; reqClose();
   };
   addEventListener('resize', () => { if (!$('#bigmap').hidden) mapView.drawBig(marks()); });
   const toggleMap = () => { if ($('#bigmap').hidden) openMap('jump'); else $('#bigmap').hidden = true; };
@@ -380,6 +380,28 @@ async function boot(): Promise<void> {
     cv.addEventListener('click', (e) => { if (moved > 6 || pinch) { e.stopImmediatePropagation(); moved = 0; pinch = 0; } }, true);
     $('#mapIn').onclick = () => mapView.zoomBy(1.6); $('#mapOut').onclick = () => mapView.zoomBy(1 / 1.6); $('#mapReset').onclick = () => mapView.resetView();
   }
+  /* missing a place? players pick a spot (or use where they stand), name it and send it */
+  let reqPicking = false, reqAt: { x: number; z: number } | null = null;
+  const reqOpen = (x: number, z: number) => {
+    reqPicking = false; $('#mapCv').classList.remove('picking'); reqAt = { x, z };
+    const near = map.placeName(x, z); $('#reqWhere').textContent = `At ${near || 'this spot'} (marked on the map).`;
+    $('#reqForm').hidden = false; ($('#reqName') as HTMLInputElement).focus(); mapView.setPin(reqAt); mapView.drawBig(marks());
+  };
+  const reqClose = () => { reqPicking = false; reqAt = null; $('#reqForm').hidden = true; $('#mapCv').classList.remove('picking'); mapView.setPin(null); if (!$('#bigmap').hidden) mapView.drawBig(marks()); $('#jumpHint').textContent = mapMode === 'home' ? $('#jumpHint').textContent : 'Click anywhere on the map to jump there.'; };
+  $('#reqPick').onclick = () => { reqPicking = true; $('#reqForm').hidden = true; $('#mapCv').classList.add('picking'); $('#jumpHint').textContent = 'Click the spot where the missing place is. Zoom in to be exact.'; };
+  $('#reqHere').onclick = () => reqOpen(player.x, player.z);
+  $('#reqCancel').onclick = reqClose;
+  ($('#reqForm') as HTMLFormElement).onsubmit = async (e) => {
+    e.preventDefault(); if (!reqAt) return;
+    const btn = $('#reqSend') as HTMLButtonElement; btn.disabled = true;
+    try {
+      const msg = await net.requestPlace({ name: ($('#reqName') as HTMLInputElement).value, kind: ($('#reqKind') as HTMLSelectElement).value, note: ($('#reqNote') as HTMLTextAreaElement).value, ...reqAt });
+      toast(msg, 'Request sent'); ($('#reqName') as HTMLInputElement).value = ''; ($('#reqNote') as HTMLTextAreaElement).value = ''; reqClose();
+    } catch (err) { toast((err as Error).message); } finally { btn.disabled = false; }
+  };
+  $('#mapCv').addEventListener('click', (e) => {
+    if (reqPicking) { const w = mapView.worldAt(e.clientX, e.clientY); reqOpen(w.x, w.z); e.stopImmediatePropagation(); }
+  });
   $('#mapCv').addEventListener('click', (e) => {
     const w = mapView.worldAt(e.clientX, e.clientY);
     if (mapMode === 'home') {

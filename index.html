@@ -199,7 +199,23 @@
             <button type="button" id="mapReset" aria-label="Show the whole city">⤢</button>
           </div>
         </div>
-        <span class="sm" id="jumpHint">Click anywhere on the map to jump there.</span>
+        <div class="row" style="justify-content:space-between;align-items:center;gap:8px">
+          <span class="sm" id="jumpHint">Click anywhere on the map to jump there.</span>
+          <span class="reqbtns" id="reqBtns"><span class="sm">Missing a place?</span>
+            <button class="btn ghost" id="reqPick" type="button">Request it on the map</button>
+            <button class="btn ghost" id="reqHere" type="button">Request one where I'm standing</button></span>
+        </div>
+        <form id="reqForm" class="reqform" hidden>
+          <h4 style="margin:0">Request a place</h4>
+          <p class="sm" id="reqWhere" style="margin:0"></p>
+          <label>Name of the place<input id="reqName" maxlength="80" required placeholder="e.g. Battala Kali Mandir, PRM Centrepoint, Sweet Home bakery"></label>
+          <label>What is it?<select id="reqKind">
+            <option value="shop">Shop</option><option value="market">Market or bazar</option><option value="restaurant">Restaurant or tea stall</option><option value="temple">Temple</option><option value="mosque">Mosque</option><option value="church">Church</option>
+            <option value="school">School</option><option value="college">College</option><option value="hospital">Hospital or clinic</option><option value="office">Office</option><option value="park">Park or ground</option><option value="landmark">Landmark</option><option value="home">A home or para</option><option value="other">Something else</option>
+          </select></label>
+          <label>Anything we should know? (optional)<textarea id="reqNote" maxlength="400" rows="2" placeholder="What it looks like, which building, its Bangla name…"></textarea></label>
+          <div class="row" style="justify-content:flex-end;gap:8px"><button type="button" class="btn ghost" id="reqCancel">Cancel</button><button type="submit" class="btn" id="reqSend">Send request</button></div>
+        </form>
       </div>
     </div>
   </div>

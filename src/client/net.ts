@@ -141,6 +141,13 @@ export class Net {
     const r = await fetch(`/api/players?me=${encodeURIComponent(this.pid)}`); if (!r.ok) throw new Error('No players');
     return ((await r.json()) as { players: OtherPlayer[] }).players;
   }
+  /** Asks for a real place that's missing from the game. Returns the thank-you message. */
+  async requestPlace(r: { name: string; kind: string; note: string; x: number; z: number }): Promise<string> {
+    const res = await fetch('/api/place-request', { method: 'POST', headers: this.headers(), body: JSON.stringify(r) });
+    const v = (await res.json().catch(() => ({}))) as { message?: string; error?: string };
+    if (!res.ok) throw new Error(v.error || 'Could not send the request');
+    return v.message || 'Thanks! Your request is on the list.';
+  }
   async farm(code: string): Promise<FarmSummary> {
     const r = await fetch(`/api/farm?code=${encodeURIComponent(code)}`); const v = await r.json();
     if (!r.ok) throw new Error((v as { error?: string }).error || 'No such farm'); return v as FarmSummary;

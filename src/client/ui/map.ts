@@ -70,6 +70,9 @@ export class MapView {
   }
 
   /** The big map's window onto the city: zoom 1 shows everything; centre in world metres. */
+  private pin: { x: number; z: number } | null = null;
+  /** A pin for the spot being requested. */
+  setPin(p: { x: number; z: number } | null): void { this.pin = p; }
   private zoom = 1; private cx = (X0 + X1) / 2; private cz = (Z0 + Z1) / 2; private last: MapMarks | null = null; private queued = false;
   static readonly MAX_ZOOM = 10;
   private view(): View {
@@ -140,5 +143,6 @@ export class MapView {
     if (m.home) { const [a, b] = P(m.home.x, m.home.z); c.fillStyle = '#f6efe0'; c.strokeStyle = '#1c1624'; c.lineWidth = 2; c.beginPath(); c.moveTo(a, b - 10); c.lineTo(a + 9, b - 1); c.lineTo(a + 7, b - 1); c.lineTo(a + 7, b + 8); c.lineTo(a - 7, b + 8); c.lineTo(a - 7, b - 1); c.lineTo(a - 9, b - 1); c.closePath(); c.fill(); c.stroke(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.9)'; lb('Home', m.home.x, m.home.z, '#1c1624', -14); }
     if (m.target) { const [a, b] = P(m.target.x, m.target.z); MapView.marker(c, a, b, 7); }
     const [a, b] = P(m.player.x, m.player.z); MapView.arrow(c, a, b, 9, m.player.face);
+    if (this.pin) { const [px, py] = P(this.pin.x, this.pin.z); c.fillStyle = '#e9b23b'; c.strokeStyle = '#1c1624'; c.lineWidth = 2; c.beginPath(); c.arc(px, py - 16, 8, Math.PI * 0.85, Math.PI * 0.15); c.lineTo(px, py); c.closePath(); c.fill(); c.stroke(); c.fillStyle = '#1c1624'; c.beginPath(); c.arc(px, py - 16, 3, 0, 7); c.fill(); }
   }
 }
