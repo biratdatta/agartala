@@ -58,7 +58,7 @@ function extrude(poly: Poly, H: number, y0: number): { walls: THREE.BufferGeomet
 }
 
 /** A painted name board: English on top, Bangla below. */
-function board(name: string, bn: string | undefined, colour = '#1c3d5a', w = 0): THREE.Mesh {
+export function board(name: string, bn: string | undefined, colour = '#1c3d5a', w = 0): THREE.Mesh {
   const cv = document.createElement('canvas'); const big = name.length > 26;
   cv.width = 1024; cv.height = bn ? 256 : 160; const c = cv.getContext('2d')!;
   c.fillStyle = colour; c.fillRect(0, 0, cv.width, cv.height); c.fillStyle = '#e9b23b'; c.fillRect(0, cv.height - 14, cv.width, 14);

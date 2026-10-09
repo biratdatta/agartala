@@ -7,6 +7,7 @@ import { colliders } from '../collide.js';
 import { type CityMap, getH } from '../map/data.js';
 import { MAT, add, box, cyl, place, pyramid, sph } from './kit.js';
 import { LOOKS, type Person, person, sit } from './people.js';
+import { board } from './realplaces.js';
 
 export function stiltHouse(scene: THREE.Scene, x: number, z: number, rot = 0, W = 7, D = 5): THREE.Group {
   const g = new THREE.Group(); const P = 1.7;
@@ -63,6 +64,7 @@ export function buildStall(scene: THREE.Scene, map: CityMap): void {
   box(s, 4.2, 0.06, 3.4, '#2f6fb0', 0, 2.65, -0.1).rotation.x = -0.18; box(s, 3.4, 0.8, 1.4, '#8a6a42', 0, 0.4, -0.5);
   const goods = ['#e9a23b', '#7fae45', '#d8b64a', '#c0532f', '#9bb446', '#a9733b'];
   for (let k = 0; k < 9; k++) sph(s, 0.2, goods[k % 6], -1.2 + (k % 3) * 1.2, 0.95, -0.85 + Math.floor(k / 3) * 0.4, 6, 5);
+  const b = board("Gopal Saha's Bazar", 'গোপাল সাহার বাজার', '#2f6fb0', 3.8); b.position.set(0, 3.2, 1.4); s.add(b);
   place(scene, s, x, z, rn ? Math.atan2(rn.px - x, rn.pz - z) : 0); colliders.push({ x, z, r: 1.6 });
 }
 

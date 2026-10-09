@@ -3,50 +3,69 @@
  * Diwali lamps on College Lake and College Tilla Lake, and the Ker Puja shrine at the stadium gate.
  */
 import * as THREE from 'three';
-import { STALLS, type Stall } from '../../shared/food.js';
+import { STALLS, dishById, type Stall } from '../../shared/food.js';
 import { mulberry } from '../../shared/rng.js';
 import { SPOTS } from '../../shared/spots.js';
 import { standByKey } from '../../shared/stands.js';
 import { colliders } from '../collide.js';
 import { type CityMap, ROAD_W, getH } from '../map/data.js';
-import { MAT, add, box, cyl, place, sph } from './kit.js';
+import { MAT, add, box, canvasTexture, cyl, place, sph } from './kit.js';
+import { board } from './realplaces.js';
+import { stallSpot } from '../map/stallspot.js';
 import { type Person, person } from './people.js';
 
 export interface StallView extends Stall { x: number; z: number; vendor: Person; shutter: THREE.Mesh; lamp: THREE.Mesh }
 
-/** Finds dry, open ground near a point, a few metres off the road. */
-function sideSpot(map: CityMap, x: number, z: number): { x: number; z: number; rot: number } {
-  const rn = map.roadNear(x, z); const ang = rn ? map.roadAngle(rn) : 0;
-  const ax = Math.sin(ang), az = Math.cos(ang), px = Math.cos(ang), pz = -Math.sin(ang);
-  for (const along of [5, -5, 9, -9, 13, -13]) for (const side of [5, -5, 7, -7, 9, -9]) {
-    const cx = x + ax * along + px * side, cz = z + az * along + pz * side;
-    if (map.nearBuilding(cx, cz, 1.6) || map.inWaterPoly(cx, cz)) continue;
-    const r = map.roadNear(cx, cz); if (r && r.d < ROAD_W[r.r.t] / 2 + 1.2) continue;
-    return { x: cx, z: cz, rot: Math.atan2(x - cx, z - cz) };
-  }
-  return { x: x + px * 5, z: z + pz * 5, rot: Math.atan2(-px, -pz) };
+/** A painted menu board: the stall's dishes and prices. */
+function menuBoard(items: { name: string; price: number }[]): THREE.Mesh {
+  const cv = document.createElement('canvas'); cv.width = 256; cv.height = 320; const c = cv.getContext('2d')!;
+  c.fillStyle = '#1f2a22'; c.fillRect(0, 0, 256, 320); c.strokeStyle = '#c9a24a'; c.lineWidth = 8; c.strokeRect(4, 4, 248, 312);
+  c.fillStyle = '#ffd84a'; c.font = '700 30px "Hind Siliguri", sans-serif'; c.textAlign = 'center'; c.fillText('MENU · মেনু', 128, 46);
+  c.textAlign = 'left'; c.font = '600 22px "Hind Siliguri", sans-serif';
+  items.slice(0, 5).forEach((it, i) => { c.fillStyle = '#f6efe0'; c.fillText(it.name.length > 15 ? it.name.slice(0, 14) + '…' : it.name, 18, 96 + i * 46); c.fillStyle = '#9fe08a'; c.textAlign = 'right'; c.fillText(`₹${it.price}`, 238, 96 + i * 46); c.textAlign = 'left'; });
+  return new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.0), new THREE.MeshLambertMaterial({ map: canvasTexture(cv) }));
 }
 
 const VENDORS = [
   { female: true, shirt: '#c0532f', bun: true, lowerMat: MAT.rignai }, { shirt: '#e8e1d0', lowerMat: MAT.lungi, gamcha: true },
   { female: true, shirt: '#24336f', bun: true, lowerMat: MAT.rignai2 }, { shirt: '#3e6b3a', lowerMat: MAT.lungi2 }, { shirt: '#f2f2f2', lowerMat: MAT.lungi },
 ];
+const PAINT = ['#c62f2f', '#2f6fb0', '#1f6f5c', '#d9a43b', '#8c2346', '#3f6f2a', '#6b3fa0', '#2f7f8f', '#b5532a'];
 
+/**
+ * A street food stall: tin back and sides, a painted counter with a glass case of sweets, a stove
+ * and kettle, a shelf of jars, a sloping tin roof on bamboo poles, the name board over the front
+ * (English and Bangla), a menu board, a hanging bulb and a bench for customers. A rolling shutter
+ * comes down at night.
+ */
 export function buildStalls(scene: THREE.Scene, map: CityMap): StallView[] {
   return STALLS.map((st, i) => {
-    const s = standByKey(st.stand)!; const p = sideSpot(map, s.x, s.z);
+    const s = standByKey(st.stand)!; const p = stallSpot(map, s.x, s.z); const paint = PAINT[i % PAINT.length];
     const g = new THREE.Group();
-    for (const [x, z] of [[-1.5, -1], [1.5, -1], [-1.5, 1], [1.5, 1]]) cyl(g, 0.06, 0.06, 2.5, '#6b5432', x, 1.25, z, 5);
-    box(g, 3.6, 0.06, 2.6, ['#c62f2f', '#2f6fb0', '#1f6f5c', '#e9b23b', '#8c2346'][i % 5], 0, 2.55, 0).rotation.x = -0.12;
-    box(g, 3, 0.9, 1, '#8a6a42', 0, 0.45, 0.5); cyl(g, 0.35, 0.3, 0.3, '#9aa0a6', -0.8, 1.05, 0.5, 12); cyl(g, 0.3, 0.3, 0.06, '#3a3a36', 0.6, 0.93, 0.5, 12);
-    sph(g, 0.12, '#f2e6c8', 0.3, 1, 0.4, 6, 4); sph(g, 0.12, '#f2e6c8', 0.55, 1, 0.6, 6, 4);
-    const shutter = box(g, 3.1, 1.6, 0.06, '#6f777d', 0, 1.7, 1.02); shutter.visible = false;
-    const lamp = add(g, new THREE.SphereGeometry(0.12, 8, 6), MAT.bulb, 0, 2.35, 0.3, false);
+    box(g, 4.6, 0.16, 3.6, '#b9b3a6', 0, 0.08, -0.1);                                   // concrete plinth
+    box(g, 4.2, 2.6, 0.08, '#8f9aa3', 0, 1.46, -1.85); for (const sx of [-1, 1]) box(g, 0.08, 2.6, 2.0, '#8f9aa3', sx * 2.06, 1.46, -0.85); // tin back and sides
+    for (let k = 0; k < 4; k++) box(g, 4.2, 0.04, 0.1, '#7a858e', 0, 0.5 + k * 0.6, -1.8);  // ribs on the tin
+    box(g, 3.6, 0.08, 0.35, '#7a5a3a', 0, 1.75, -1.6); for (let k = 0; k < 6; k++) cyl(g, 0.11, 0.11, 0.3, ['#e9a23b', '#c62f2f', '#7fae45', '#f2e6c8'][k % 4], -1.4 + k * 0.56, 1.94, -1.6, 8); // shelf of jars
+    box(g, 3.8, 1.0, 0.7, '#8a6a42', 0, 0.66, 0.85); box(g, 3.82, 0.6, 0.02, paint, 0, 0.62, 1.21); box(g, 3.9, 0.06, 0.8, '#d9cfbf', 0, 1.19, 0.85); // counter, painted front, top
+    const glass = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.45, 0.55), new THREE.MeshLambertMaterial({ color: '#cfe6f2', transparent: true, opacity: 0.35 })); glass.position.set(-1.1, 1.45, 0.85); g.add(glass);
+    for (let k = 0; k < 6; k++) sph(g, 0.09, k % 2 ? '#f2e6c8' : '#e3a84a', -1.5 + (k % 3) * 0.35, 1.32, 0.72 + Math.floor(k / 3) * 0.25, 6, 5); // rasgulla and sandesh in the case
+    cyl(g, 0.2, 0.2, 0.55, '#c62f2f', 1.45, 0.43, -0.6, 10); box(g, 0.6, 0.12, 0.45, '#2a2a2a', 1.2, 0.95, -0.2); cyl(g, 0.22, 0.16, 0.22, '#9aa0a6', 1.2, 1.12, -0.2, 12); cyl(g, 0.03, 0.03, 0.2, '#9aa0a6', 1.38, 1.18, -0.2, 4); // gas, stove, kettle
+    for (const [x, z] of [[-2.1, -1.8], [2.1, -1.8], [-2.1, 1.35], [2.1, 1.35]]) cyl(g, 0.07, 0.08, 2.9, '#a08350', x, 1.45, z, 6); // bamboo poles
+    const roof = box(g, 4.9, 0.06, 4.0, paint, 0, 2.95, -0.2); roof.rotation.x = 0.12; roof.castShadow = true;
+    box(g, 4.9, 0.25, 0.04, '#e9e1cf', 0, 2.78, 1.78);                                    // the roof's frill
+    const b = board(st.name, st.bn, paint, 4.2); b.position.set(0, 3.45, 1.55); b.rotation.x = -0.08; g.add(b); // name board over the front
+    const dishes = st.menu.map((id) => dishById(id)).filter((d): d is NonNullable<typeof d> => !!d);
+    const mb = menuBoard(dishes); mb.position.set(2.15, 1.9, 1.3); mb.rotation.y = 0.35; g.add(mb);
+    cyl(g, 0.01, 0.01, 0.4, '#333', 0, 2.55, 0.6, 4); const lamp = add(g, new THREE.SphereGeometry(0.12, 8, 6), MAT.bulb, 0, 2.3, 0.6, false);
+    box(g, 2.6, 0.08, 0.4, '#7a5a3a', 0, 0.45, 2.85); for (const sx of [-1.1, 1.1]) box(g, 0.08, 0.42, 0.36, '#4a4a4a', sx, 0.21, 2.85); // customers' bench
+    const shutter = box(g, 3.9, 1.9, 0.06, '#6f777d', 0, 1.3, 1.25); shutter.visible = false;
     place(scene, g, p.x, p.z, p.rot);
-    const vendor = person(VENDORS[i % VENDORS.length]); const bx = p.x - Math.sin(p.rot) * 0.9, bz = p.z - Math.cos(p.rot) * 0.9; vendor.position.set(bx, getH(bx, bz), bz); vendor.rotation.y = p.rot; scene.add(vendor);
-    colliders.push({ x: p.x, z: p.z, r: 1.9 });
-    // the player talks to the stall from its front
-    return { ...st, x: p.x + Math.sin(p.rot) * 1.8, z: p.z + Math.cos(p.rot) * 1.8, vendor, shutter, lamp };
+    const vendor = person(VENDORS[i % VENDORS.length]); const bx = p.x + Math.sin(p.rot) * 0.05, bz = p.z + Math.cos(p.rot) * 0.05; vendor.position.set(bx, getH(bx, bz), bz); vendor.rotation.y = p.rot; scene.add(vendor);
+    const fx = Math.sin(p.rot), fz = Math.cos(p.rot), ux = Math.cos(p.rot), uz = -Math.sin(p.rot);
+    for (const u of [-1.2, 1.2]) colliders.push({ x: p.x + ux * u - fx * 0.4, z: p.z + uz * u - fz * 0.4, r: 1.5 });
+    for (const u of [-1.1, 1.1]) colliders.push({ x: p.x + ux * u + fx * 2.85, z: p.z + uz * u + fz * 2.85, r: 0.35 });
+    // the player talks to the stall from its front, by the bench
+    return { ...st, x: p.x + fx * 2.1, z: p.z + fz * 2.1, vendor, shutter, lamp };
   });
 }
 export function updateStalls(list: StallView[], open: boolean): void { for (const s of list) { s.shutter.visible = !open; s.vendor.visible = open; } }
