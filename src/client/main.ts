@@ -284,6 +284,7 @@ async function boot(): Promise<void> {
     $('#jumpHint').textContent = mode === 'home' ? 'Click the spot in Agartala where your home is. Your house, Grandpa and a tomtom stand will move there.' : 'Click anywhere on the map to jump there.';
     ($('.jumprow') as HTMLElement).hidden = mode === 'home';
   };
+  addEventListener('resize', () => { if (!$('#bigmap').hidden) mapView.drawBig(marks()); });
   const toggleMap = () => { if ($('#bigmap').hidden) openMap('jump'); else $('#bigmap').hidden = true; };
   const board = () => openBoard({ game, net, auth, readChapter: (id) => readChapter(ctx, id), onState: (s) => game.replace(s) });
   wireBoard();

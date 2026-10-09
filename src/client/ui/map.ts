@@ -100,8 +100,11 @@ export class MapView {
 
   drawBig(m: MapMarks): void {
     this.last = m;
-    const cv = $('#mapCv') as HTMLCanvasElement, W = cv.width, H = Math.round((W * PXH) / PXW); if (cv.height !== H) cv.height = H;
-    const c = cv.getContext('2d')!; const v = this.view(); const k = W / v.w;
+    // drawn at the size it shows on screen (times the screen's pixel density), so labels stay readable and sharp
+    const cv = $('#mapCv') as HTMLCanvasElement; const dpr = Math.min(devicePixelRatio || 1, 2);
+    const W = cv.clientWidth || 900, H = (W * PXH) / PXW; const pw = Math.round(W * dpr), ph = Math.round(H * dpr);
+    if (cv.width !== pw || cv.height !== ph) { cv.width = pw; cv.height = ph; }
+    const c = cv.getContext('2d')!; c.setTransform(dpr, 0, 0, dpr, 0, 0); const v = this.view(); const k = W / v.w;
     if (this.zoom <= 1.3) { const s0 = PXW / (X1 - X0); c.drawImage(this.img, (v.x0 - X0) * s0, (v.z0 - Z0) * s0, v.w * s0, v.h * s0, 0, 0, W, H); }
     else this.paintView(c, v, W, H);
     const P = (x: number, z: number): [number, number] => [(x - v.x0) * k, (z - v.z0) * k];
@@ -119,11 +122,11 @@ export class MapView {
     for (const p of REAL_PLACES) if (p.kind !== 'lake' && p.id !== 'stadium') { const [a, b] = P(p.x, p.z); c.fillStyle = '#7d1d3f'; c.fillRect(a - 2, b - 2, 4, 4); }
     for (const s of STANDS) { const [a, b] = P(s.x, s.z); c.fillStyle = '#2f8f4e'; c.beginPath(); c.arc(a, b, 5, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.9)'; }
     const big = this.zoom >= 2.5 ? 1.15 : 1; const f = (w: number, px: number) => `${w} ${Math.round(px * big)}px "Hind Siliguri", sans-serif`;
-    c.font = f(700, 16); for (const p of PARAS) if (!/Stadium|Math/.test(p.name)) lb(p.name, p.x, p.z, '#6b2a22');
+    c.font = f(600, 12); for (const p of REAL_PLACES) if (p.kind !== 'lake' && p.id !== 'stadium') lb(p.name, p.x, p.z, '#5a2a3a', 14);
+    c.font = f(700, 16); for (const p of PARAS) if (!/Stadium|Math/.test(p.name)) lb(p.name, p.x, p.z, '#6b2a22', -14);
     c.font = f(700, 14);
     lb('MBB Stadium', STADIUM.x, STADIUM.z); lb('Haora river', 1830, 1060, '#2a5f7a'); lb('Math Chowmuhani Bazar', SPOTS.gopal[0], SPOTS.gopal[1] + 26);
     lb('Modern Club', SPOTS.pandal[0], SPOTS.pandal[1] - 18); lb('College Tilla Lake', 1252, 1122, '#2a5f7a'); lb('College Lake', 962, 1060, '#2a5f7a'); lb('Family fields', 1700, 1130); lb('Joynagar bus stop', SPOTS.busTerminus[0], SPOTS.busTerminus[1] - 20);
-    c.font = f(600, 11); for (const p of REAL_PLACES) if (p.kind !== 'lake' && p.id !== 'stadium') lb(p.name, p.x, p.z, '#5a2a3a', 14);
     c.font = f(600, 12); for (const p of this.map.chowmuhanis) lb(p.name.replace(' Chowmuhani', ''), p.x, p.z, '#6b2a22');
     if (this.zoom >= 2.5) { c.font = f(600, 10); for (const s of STANDS) lb(`Tomtom · ${s.name}`, s.x, s.z, '#1f5a3a', 16); }
     const dot = (k: { x: number; z: number }, col: string, r: number) => { const [a, b] = P(k.x, k.z); c.fillStyle = col; c.beginPath(); c.arc(a, b, r, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); };
