@@ -32,6 +32,8 @@ export interface Store {
   /** Each para's total earnings this week, best first. */
   paraTop(week: string, n: number): Promise<ParaRow[]>;
   presenceUpsert(p: Presence): Promise<void>;
+  /** Saves a player's request for a missing place (table place_requests). */
+  placeRequestAdd(r: PlaceRequest): Promise<void>;
   /** Players seen since `since` (ms), most recent first. */
   presenceRecent(since: number, n: number): Promise<Presence[]>;
 }
@@ -45,6 +47,9 @@ export function paraTopOf(a: WeekEntry[], week: string, n: number): ParaRow[] {
 }
 export const recentOf = (a: Presence[], since: number, n: number) => a.filter((p) => p.t >= since).sort((x, y) => y.t - x.t).slice(0, n);
 const clampN = (n: number) => Math.max(1, Math.min(100, Math.floor(n) || 1));
+
+/** A player's request for a place that's missing from the game. */
+export interface PlaceRequest { id: string; name: string; kind: string; note: string; x: number; z: number; lat: number; lon: number; farm: string; email: string; created_at: string; status: string }
 
 export class MemoryStore implements Store {
   readonly name = 'MemoryStore';
@@ -66,6 +71,8 @@ export class MemoryStore implements Store {
   async weekTop(week: string, cat: WeekCat, n: number) { return weekTopOf([...this.wk.values()], week, cat, clampN(n)); }
   async paraTop(week: string, n: number) { return paraTopOf([...this.wk.values()], week, clampN(n)); }
   async presenceUpsert(p: Presence) { this.pres.set(p.id, { ...p }); }
+  readonly requests: PlaceRequest[] = [];
+  async placeRequestAdd(r: PlaceRequest) { this.requests.push({ ...r }); }
   async presenceRecent(since: number, n: number) { return recentOf([...this.pres.values()], since, clampN(n)); }
 }
 
@@ -115,6 +122,11 @@ export class D1Store implements Store {
     const r = await this.db.prepare("SELECT para, SUM(earned) AS total, COUNT(*) AS players FROM weekly WHERE week = ? AND para <> '' GROUP BY para ORDER BY total DESC LIMIT ?").bind(week, clampN(n)).all<ParaRow>();
     return r.results.map((p) => ({ para: p.para, total: Number(p.total), players: Number(p.players) }));
   }
+  async placeRequestAdd(r: PlaceRequest) {
+    await this.ensure();
+    await this.db.prepare('INSERT INTO place_requests (id, name, kind, note, x, z, lat, lon, farm, email, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
+      .bind(r.id, r.name, r.kind, r.note, r.x, r.z, r.lat, r.lon, r.farm, r.email, r.status, r.created_at).run();
+  }
   async presenceUpsert(p: Presence) {
     await this.ensure();
     await this.db.prepare('INSERT INTO presence (id, name, para, x, z, face, t) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, para = excluded.para, x = excluded.x, z = excluded.z, face = excluded.face, t = excluded.t')
@@ -133,6 +145,8 @@ export const D1_TABLES = [
   'CREATE INDEX IF NOT EXISTS weekly_week_idx ON weekly (week)',
   'CREATE TABLE IF NOT EXISTS presence (id TEXT PRIMARY KEY, name TEXT NOT NULL, para TEXT NOT NULL, x REAL NOT NULL, z REAL NOT NULL, face REAL NOT NULL, t INTEGER NOT NULL)',
   'CREATE INDEX IF NOT EXISTS presence_t_idx ON presence (t)',
+  'CREATE TABLE IF NOT EXISTS place_requests (id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, note TEXT NOT NULL DEFAULT \'\', x INTEGER NOT NULL, z INTEGER NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, farm TEXT NOT NULL, email TEXT NOT NULL DEFAULT \'\', status TEXT NOT NULL DEFAULT \'new\', created_at TEXT NOT NULL)',
+  'CREATE INDEX IF NOT EXISTS place_requests_created_idx ON place_requests (created_at)',
 ];
 
 /** Production store: Supabase Postgres over its REST API, with the service key (server side only). */
@@ -180,6 +194,9 @@ export class SupabaseStore implements Store {
   async paraTop(week: string, n: number) {
     const r = await this.req(`para_week?select=para,total,players&week=eq.${encodeURIComponent(week)}&order=total.desc&limit=${clampN(n)}`, { headers: this.h() });
     return ((await r.json()) as ParaRow[]).map((p) => ({ para: p.para, total: Number(p.total), players: Number(p.players) }));
+  }
+  async placeRequestAdd(r: PlaceRequest) {
+    await this.req('place_requests', { method: 'POST', headers: this.h({ Prefer: 'return=minimal' }), body: JSON.stringify(r) });
   }
   async presenceUpsert(p: Presence) {
     await this.req('presence?on_conflict=id', { method: 'POST', headers: this.h({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(p) });

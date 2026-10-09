@@ -262,11 +262,13 @@ Everything runs on one Cloudflare Worker: the static game as Workers Static Asse
 
 ### Place requests
 
-Players can ask for a missing place from the map ("Missing a place?"). Each request is a row in D1 with its name, type, note, spot (game metres and latitude/longitude), farm and email. To read them:
+Players can ask for a missing place from the map ("Missing a place?"). Each request is a row in the D1 table `place_requests`: name, kind, note, the spot (game `x`/`z` and `lat`/`lon`), the farm's public id, email, `status` and `created_at`. The table is created on first use. To read them:
 
 ```bash
-npx wrangler d1 execute agartala --remote --command "SELECT updated_at, value FROM kv WHERE key LIKE 'placereq:%' ORDER BY key DESC LIMIT 50"
+npx wrangler d1 execute agartala --remote --command "SELECT created_at, name, kind, note, lat, lon, email, status FROM place_requests ORDER BY created_at DESC LIMIT 50"
 ```
+
+Mark one done with `UPDATE place_requests SET status = 'added' WHERE id = '…'`. You can also browse the table in the Cloudflare dashboard: Storage & Databases → D1 → agartala → place_requests.
 
 Each farm can send five a day.
 

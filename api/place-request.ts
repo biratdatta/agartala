@@ -10,7 +10,7 @@ const ORIGIN = { lat: 23.8368, lon: 91.2826 }; const KX = Math.cos((ORIGIN.lat *
 
 /**
  * POST /api/place-request { name, kind, note?, x, z } with Authorization: Bearer <session>
- * A player asks for a real place that's missing from the game. Saved as kv rows `placereq:<time>:<id>`
+ * A player asks for a real place that's missing from the game. Saved in the place_requests table
  * for the owner to review (see README: "Place requests"). Five a day per farm.
  */
 export const POST = guard(async (req) => {
@@ -26,12 +26,10 @@ export const POST = guard(async (req) => {
   const day = Math.floor(now / 86400e3); const ck = `placereqcount:${l.saveId}:${day}`; const c = await store.get<{ n: number }>(ck);
   if ((c?.value.n || 0) >= PER_DAY) return fail(`That's ${PER_DAY} requests today. Thank you! Send more tomorrow.`, 429);
   await store.put(ck, { n: (c?.value.n || 0) + 1 }, c ? c.rev : null);
-  const id = crypto.randomUUID().slice(0, 8);
-  const row = {
-    name, kind, note, x: Math.round(x), z: Math.round(z),
+  await store.placeRequestAdd({
+    id: crypto.randomUUID(), name, kind, note, x: Math.round(x), z: Math.round(z),
     lat: +(ORIGIN.lat - z / KZ).toFixed(6), lon: +(ORIGIN.lon + x / KX).toFixed(6),
-    farm: publicId(l.saveId), email: l.doc.email || '', at: new Date(now).toISOString(), status: 'new',
-  };
-  await store.put(`placereq:${now}:${id}`, row, null);
+    farm: publicId(l.saveId), email: l.doc.email || '', status: 'new', created_at: new Date(now).toISOString(),
+  });
   return json({ ok: true, message: `Thanks! "${name}" is on the list. We'll add it in a coming update.` });
 });

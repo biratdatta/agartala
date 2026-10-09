@@ -48,3 +48,20 @@ create table if not exists public.presence (
 );
 create index if not exists presence_t_idx on public.presence (t);
 alter table public.presence enable row level security;
+
+create table if not exists public.place_requests (
+  id         text primary key,
+  name       text not null,
+  kind       text not null,
+  note       text not null default '',
+  x          integer not null,
+  z          integer not null,
+  lat        double precision not null,
+  lon        double precision not null,
+  farm       text not null,
+  email      text not null default '',
+  status     text not null default 'new',
+  created_at timestamptz not null default now()
+);
+create index if not exists place_requests_created_idx on public.place_requests (created_at desc);
+alter table public.place_requests enable row level security;

@@ -43,3 +43,20 @@ CREATE TABLE IF NOT EXISTS presence (
   t    INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS presence_t_idx ON presence (t);
+
+-- Places players asked for from the map ("Missing a place?"). status: new → added / declined, by hand.
+CREATE TABLE IF NOT EXISTS place_requests (
+  id         TEXT PRIMARY KEY,
+  name       TEXT NOT NULL,
+  kind       TEXT NOT NULL,
+  note       TEXT NOT NULL DEFAULT '',
+  x          INTEGER NOT NULL,   -- game metres east of the origin
+  z          INTEGER NOT NULL,   -- game metres south of the origin
+  lat        REAL NOT NULL,
+  lon        REAL NOT NULL,
+  farm       TEXT NOT NULL,      -- the farm's public id
+  email      TEXT NOT NULL DEFAULT '',
+  status     TEXT NOT NULL DEFAULT 'new',
+  created_at TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS place_requests_created_idx ON place_requests (created_at);
