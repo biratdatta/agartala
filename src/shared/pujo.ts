@@ -16,6 +16,8 @@ export const PANDALS: Pandal[] = [
     about: 'The old Durga temple by Ujjayanta Palace. The puja here began with the Maharajas of Tripura, and the state still keeps it.' },
   { id: 'modern', name: 'Modern Club', bn: 'মডার্ন ক্লাব', x: SPOTS.pandal[0], z: SPOTS.pandal[1], theme: ['#7d1d3f', '#e9b23b'],
     about: 'The Modern Club pandal by College Lake, the one all of Agartala comes to see.' },
+  { id: 'shibnagar', name: 'Shibnagar Mahila Puja Committee', bn: 'শিবনগর মহিলা পূজা কমিটি', x: SPOTS.pdShibnagar[0], z: SPOTS.pdShibnagar[1], theme: ['#c2185b', '#f2c14a'],
+    about: 'The puja the women of Shibnagar run themselves, from the pandal to the bhog.' },
   { id: 'palace', name: 'Palace Compound Sarbojanin', bn: 'প্যালেস কম্পাউন্ড সার্বজনীন', x: SPOTS.pdPalace[0], z: SPOTS.pdPalace[1], theme: ['#f4f1ea', '#d9a43b'],
     about: 'A white-and-gold pandal built like a little Ujjayanta, right by the palace.' },
   { id: 'kaman', name: 'Kaman Chowmuhani Sarbojanin', bn: 'কামান চৌমুহনী সার্বজনীন', x: SPOTS.pdKaman[0], z: SPOTS.pdKaman[1], theme: ['#1f6f5c', '#f2c14a'],

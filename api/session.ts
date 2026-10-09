@@ -29,7 +29,7 @@ export const POST = guard(async (req) => {
     // New farm for the same account: point the account at it.
     const userKey = l.doc.userId;
     const acct = await store.get<{ saveId: string }>(userKey);
-    const nl = await createFarm(store, now, geo, { userId: userKey, email: l.doc.email || '' });
+    const nl = await createFarm(store, now, geo, { userId: userKey, email: l.doc.email || '', realName: l.doc.realName });
     if (acct && (await store.put(userKey, { saveId: nl.saveId }, acct.rev)) === null) return fail('Try again', 409);
     const t = await createSession(store, nl.saveId); await ensureVisitCode(store, nl.saveId);
     return json(view(t, nl, store, now, geo), 201);

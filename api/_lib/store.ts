@@ -139,6 +139,8 @@ export class D1Store implements Store {
   }
 }
 const numify = (e: WeekEntry): WeekEntry => ({ ...e, paddy: Number(e.paddy), deliveries: Number(e.deliveries), kaam: Number(e.kaam), sights: Number(e.sights), earned: Number(e.earned) });
+/** Read-only admin view: one row per farm, unpacked from the save:<id> JSON in kv. Also in cloudflare/schema.sql. */
+const PLAYERS_VIEW = "CREATE VIEW players AS SELECT substr(key, 6) AS save_id, json_extract(value, '$.email') AS email, json_extract(value, '$.code') AS farm_code, json_extract(value, '$.realName') AS real_name, json_extract(value, '$.state.name') AS farm_name, json_extract(value, '$.state.day') AS day, json_extract(value, '$.userId') AS user_id, CASE WHEN json_extract(value, '$.userId') IS NOT NULL THEN 1 ELSE 0 END AS signed_in, datetime(json_extract(value, '$.created') / 1000, 'unixepoch') AS created, updated_at AS last_saved FROM kv WHERE key LIKE 'save:%'";
 /** Tables added after the first release; also in cloudflare/schema.sql. */
 export const D1_TABLES = [
   'CREATE TABLE IF NOT EXISTS weekly (id TEXT NOT NULL, week TEXT NOT NULL, name TEXT NOT NULL, para TEXT NOT NULL, paddy INTEGER NOT NULL DEFAULT 0, deliveries INTEGER NOT NULL DEFAULT 0, kaam INTEGER NOT NULL DEFAULT 0, sights INTEGER NOT NULL DEFAULT 0, earned INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL, PRIMARY KEY (id, week))',
@@ -147,6 +149,8 @@ export const D1_TABLES = [
   'CREATE INDEX IF NOT EXISTS presence_t_idx ON presence (t)',
   'CREATE TABLE IF NOT EXISTS place_requests (id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, note TEXT NOT NULL DEFAULT \'\', x INTEGER NOT NULL, z INTEGER NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, farm TEXT NOT NULL, email TEXT NOT NULL DEFAULT \'\', status TEXT NOT NULL DEFAULT \'new\', created_at TEXT NOT NULL)',
   'CREATE INDEX IF NOT EXISTS place_requests_created_idx ON place_requests (created_at)',
+  'DROP VIEW IF EXISTS players', // recreated each start so new columns land
+  PLAYERS_VIEW,
 ];
 
 /** Production store: Supabase Postgres over its REST API, with the service key (server side only). */

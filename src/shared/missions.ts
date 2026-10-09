@@ -43,7 +43,7 @@ export const MISSIONS: Mission[] = [
  * interrupts wherever you are in the story), then the story carries on where it was.
  */
 export const PUJO_MISSIONS: Mission[] = [
-  { id: 'pujoPandals', title: 'Pujo in Agartala', text: 'Dhak are beating all over town: Durga Puja is here. Grandpa says it isn\'t Pujo until you\'ve seen Ma Durga in five pandals. Go pandal hopping: Durgabari by the palace, Modern Club, Palace Compound, Kaman Chowmuhani, Paradise Chowmuhani, Joynagar and Ramnagar. Tomtoms run late all week.',
+  { id: 'pujoPandals', title: 'Pujo in Agartala', text: 'Dhak are beating all over town: Durga Puja is here. Grandpa says it isn\'t Pujo until you\'ve seen Ma Durga in five pandals. Go pandal hopping: Durgabari by the palace, Modern Club, Shibnagar Mahila Puja Committee, Palace Compound, Kaman Chowmuhani, Paradise Chowmuhani, Joynagar and Ramnagar. Tomtoms run late all week.',
     progress: (s) => `Pandals ${Math.min(s.pandals.length, PANDAL_GOAL)} / ${PANDAL_GOAL}`, done: (s) => s.pandals.length >= PANDAL_GOAL, reward: { money: 200 }, msg: '+₹200 of Pujo money from Grandpa, for new clothes' },
   { id: 'pujoAnjali', title: 'Ashtami anjali at Durgabari', text: 'On Ashtami morning the whole city offers pushpanjali. Go to Durgabari, by Ujjayanta Palace, between 06:00 and 12:00, fast till then, and offer flowers to Ma with the priest.',
     done: (s) => !!s.flags.pujoAnjali, reward: { money: 150 }, msg: '+₹150. Grandma used to stand in exactly that spot, Grandpa says.' },

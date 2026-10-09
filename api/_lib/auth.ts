@@ -52,11 +52,17 @@ export function authConfig() {
  * Ties an account to a farm. If the account already owns a farm, that one wins and the device
  * gets a session for it; otherwise the farm being played becomes the account's.
  */
-export async function linkAccount(store: Store, userKey: string, email: string, saveId: string | null, now: number, geo: Geo | null = null): Promise<{ token: string; l: Loaded }> {
+export async function linkAccount(store: Store, userKey: string, email: string, saveId: string | null, now: number, geo: Geo | null = null, realName = ''): Promise<{ token: string; l: Loaded }> {
+  realName = realName.trim().slice(0, 80);
   const existing = await store.get<{ saveId: string }>(userKey);
   if (existing) {
     const l = await loadSave(store, existing.value.saveId, now); if (!l) throw new Error('Your farm is missing');
-    if (email && l.doc.email !== email) { l.doc.email = email; const r = await store.put(`save:${l.saveId}`, l.doc, l.rev); if (r) l.rev = r; }
+    const newEmail = !!email && l.doc.email !== email, newName = !!realName && l.doc.realName !== realName;
+    if (newEmail || newName) {
+      if (newEmail) l.doc.email = email;
+      if (newName) l.doc.realName = realName;
+      const r = await store.put(`save:${l.saveId}`, l.doc, l.rev); if (r) l.rev = r;
+    }
     return { token: await createSession(store, l.saveId), l };
   }
   let l = saveId ? await loadSave(store, saveId, now) : null;
@@ -64,9 +70,10 @@ export async function linkAccount(store: Store, userKey: string, email: string, 
   // Signing in with no farm yet (sign-in required): this account gets a brand-new farm.
   if (!l) l = await createFarm(store, now, geo);
   if (l.doc.userId && l.doc.userId !== userKey) throw new Error('This farm already belongs to another account');
-  if (!(await store.put(userKey, { saveId: l.saveId }, null))) return linkAccount(store, userKey, email, saveId, now, geo); // raced: someone just created it
+  if (!(await store.put(userKey, { saveId: l.saveId }, null))) return linkAccount(store, userKey, email, saveId, now, geo, realName); // raced: someone just created it
   for (let i = 0; i < 4; i++) {
     l.doc.userId = userKey; l.doc.email = email || l.doc.email;
+    if (realName) l.doc.realName = realName;
     const rev = await store.put(`save:${l.saveId}`, l.doc, l.rev);
     if (rev !== null) { l.rev = rev; break; }
     const fresh = await loadSave(store, l.saveId, now); if (!fresh) break; Object.assign(l, fresh);
@@ -104,11 +111,11 @@ export const googleRedirectUri = (req: Request) => new URL('/api/auth-google-cal
 
 export function googleAuthUrl(req: Request, state: string): string {
   const u = new URL('https://accounts.google.com/o/oauth2/v2/auth');
-  u.search = new URLSearchParams({ client_id: getEnv().GOOGLE_CLIENT_ID!, redirect_uri: googleRedirectUri(req), response_type: 'code', scope: 'openid email', state, prompt: 'select_account' }).toString();
+  u.search = new URLSearchParams({ client_id: getEnv().GOOGLE_CLIENT_ID!, redirect_uri: googleRedirectUri(req), response_type: 'code', scope: 'openid email profile', state, prompt: 'select_account' }).toString();
   return u.href;
 }
 
-export interface GoogleUser { sub: string; email: string }
+export interface GoogleUser { sub: string; email: string; name: string }
 /**
  * Swaps the code for tokens. The id_token comes straight from Google over TLS, so (per OpenID
  * Connect) checking its claims is enough without re-verifying the signature.
@@ -122,9 +129,9 @@ export async function googleExchange(req: Request, code: string, fetcher: typeof
   if (!r.ok) throw new Error('Google did not accept the sign-in');
   const { id_token } = (await r.json()) as { id_token?: string };
   const part = id_token?.split('.')[1]; if (!part) throw new Error('Google sent no identity');
-  const c = JSON.parse(new TextDecoder().decode(fromB64url(part))) as { sub?: string; email?: string; email_verified?: boolean; aud?: string; iss?: string; exp?: number };
+  const c = JSON.parse(new TextDecoder().decode(fromB64url(part))) as { sub?: string; email?: string; email_verified?: boolean; name?: string; aud?: string; iss?: string; exp?: number };
   if (c.aud !== e.GOOGLE_CLIENT_ID || !['accounts.google.com', 'https://accounts.google.com'].includes(c.iss || '') || !c.exp || c.exp < Date.now() / 1000 || !c.sub) throw new Error('Google identity did not check out');
-  return { sub: c.sub, email: c.email_verified ? c.email || '' : '' };
+  return { sub: c.sub, email: c.email_verified ? c.email || '' : '', name: typeof c.name === 'string' ? c.name : '' };
 }
 
 /* ---------- Email ---------- */

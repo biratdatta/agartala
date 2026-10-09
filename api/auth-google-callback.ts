@@ -12,7 +12,7 @@ export const GET = guard(async (req) => {
   const code = u.searchParams.get('code'); if (!code) return backWithError(req, 'Google sent no code');
   try {
     const g = await googleExchange(req, code);
-    const r = await linkAccount(await getStore(), `user:google:${g.sub}`, g.email, st.sid || null, Date.now(), geoFrom(req));
+    const r = await linkAccount(await getStore(), `user:google:${g.sub}`, g.email, st.sid || null, Date.now(), geoFrom(req), g.name);
     return backToGame(req, r.token, g.email);
   } catch (e) { return backWithError(req, (e as Error).message); }
 });

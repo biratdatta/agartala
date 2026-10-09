@@ -20,6 +20,7 @@ export const SPOTS = {
   "pdParadise": [-695.9, 901.9],
   "pdJoynagar": [1276.9, 591.6],
   "pdRamnagar": [1040, 1450],
+  "pdShibnagar": [900, 1180],
   "nShiva": [910, 1060],
   "nRadhanagar": [770.4, 656],
   "nKrishnanagar": [1156.2, 538.9],

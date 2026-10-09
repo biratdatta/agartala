@@ -37,7 +37,7 @@ import { City, KitFleet, loadKit, planBuildings } from './scene/buildings.js';
 import { FarmView } from './scene/farm.js';
 import { shuffledTour } from './scene/tour.js';
 import { Pandals } from './scene/pujo.js';
-import { pujoSeason } from '../shared/pujo.js';
+import { PANDALS, pujoSeason } from '../shared/pujo.js';
 import { STADIUM, StandsView, buildBus, buildCrowds, buildNPCs, buildPandal, buildStadiumLights, buildStall } from './scene/landmarks.js';
 import { PARAS } from '../shared/area.js';
 import { Crowd, animPerson, sit, Traffic } from './scene/people.js';
@@ -274,7 +274,8 @@ async function boot(): Promise<void> {
     return dailyDeliveries(S.day).filter((d) => !S.delivered.includes(d.id)).map((d) => npcPos(d.from)).filter((n): n is NonNullable<typeof n> => !!n).map((n) => ({ x: n.x, z: n.z }));
   };
   const sightMarks = () => SIGHTS.filter((x) => !game.S.visited.includes(x.id)).map((x) => ({ x: x.x, z: x.z }));
-  const marks = () => ({ player: { x: player.x, z: player.z, face: player.face }, target, kaam: kaamMarks(), errand: errandMarks(), sights: sightMarks(), home: home.front, others: others.marks(), stalls, rentals: vehicles.rentalMarks });
+  const marks = () => ({ player: { x: player.x, z: player.z, face: player.face }, target, kaam: kaamMarks(), errand: errandMarks(), sights: sightMarks(), home: home.front, others: others.marks(), stalls, rentals: vehicles.rentalMarks,
+    pandals: pujoSeason(net.now()) ? PANDALS.map((p) => ({ x: p.x, z: p.z, name: p.name, seen: game.S.pandals.includes(p.id) })) : [] });
   function hudTick(force = false) {
     target = rideView.active ? null : vehicles.target || missionTarget(game.S, { x: player.x, z: player.z }, spots, { x: npc.grandpa.x, z: npc.grandpa.z });
     updateHud({ S: game.S, place: map.placeName(player.x, player.z), target, px: player.x, pz: player.z, yaw: player.yaw, online: net.online, lost: net.lost, others: others.count }, force);
@@ -323,6 +324,7 @@ async function boot(): Promise<void> {
   const jumps = (): { name: string; x: number; z: number }[] => [
     { name: `Home · ${homeLabelText()}`, ...home.front },
     { name: 'Family fields · by the Haora', x: 1664, z: 1175 },
+    ...(pujoSeason(net.now()) ? PANDALS.map((p) => ({ name: `Durga Puja pandal · ${p.name}`, x: p.x, z: p.z })) : []),
     ...standsFor(game.S.home).map((st) => ({ name: `Tomtom stand · ${st.name}`, x: st.x, z: st.z })),
     ...neighbours.map((n) => ({ name: `${n.name} · ${n.role}`, x: n.x, z: n.z })),
     ...SIGHTS.map((x) => ({ name: `${x.name} · sight`, x: x.x, z: x.z })),
@@ -393,6 +395,9 @@ async function boot(): Promise<void> {
   const reqClose = () => { reqPicking = false; reqAt = null; $('#reqForm').hidden = true; $('#mapCv').classList.remove('picking'); mapView.setPin(null); if (!$('#bigmap').hidden) mapView.drawBig(marks()); $('#jumpHint').textContent = mapMode === 'home' ? $('#jumpHint').textContent : 'Click anywhere on the map to jump there.'; };
   $('#reqPick').onclick = () => { reqPicking = true; $('#reqForm').hidden = true; $('#mapCv').classList.add('picking'); $('#jumpHint').textContent = 'Click the spot where the missing place is. Zoom in to be exact.'; };
   $('#reqHere').onclick = () => reqOpen(player.x, player.z);
+  // during the Puja season, the request is about pandals first
+  const pujoAsk = () => { const on = pujoSeason(net.now()); $('#reqAsk').textContent = on ? "Your para's pandal missing? Or another place?" : 'Missing a place?'; if (on && !($('#reqName') as HTMLInputElement).value) ($('#reqKind') as HTMLSelectElement).value = 'pandal'; };
+  $('#reqPick').addEventListener('click', pujoAsk); $('#reqHere').addEventListener('click', pujoAsk); pujoAsk();
   $('#reqCancel').onclick = reqClose;
   ($('#reqForm') as HTMLFormElement).onsubmit = async (e) => {
     e.preventDefault(); if (!reqAt) return;

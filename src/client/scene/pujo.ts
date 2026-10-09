@@ -65,6 +65,9 @@ function pandal(p: Pandal, i: number): { g: THREE.Group; fairy: THREE.Object3D[]
   // Lakshmi and Ganesh on her right, Saraswati and Kartik on her left
   deity(y0, 2.3, dz + 0.2, 1.05, '#e86fa0'); deity(y0, 3.6, dz + 0.3, 1.0, '#f08a24', { ganesh: true, skin: '#f2e0c8' });
   deity(y0, -2.6, dz + 0.2, 1.05, '#f6f6f0'); deity(y0, -3.8, dz + 0.3, 1.0, '#2f6fb0', { crown: '#1f6f5c' });
+  // the idols are lit by the pandal's lamps: their own glow, so Ma is bright even at night (no extra lights)
+  y0.scale.setScalar(1.25); y0.position.z = dz * -0.25;
+  y0.traverse((o) => { const m = o as THREE.Mesh; if (!m.isMesh) return; const mat = (m.material as THREE.MeshLambertMaterial).clone(); mat.emissive = mat.color.clone(); mat.emissiveIntensity = 0.55; m.material = mat; });
   // dhakis at the front, with big dhak drums
   for (const s of [-1, 1]) {
     const d = person(LOOKS[(i + (s > 0 ? 1 : 3)) % LOOKS.length]); d.position.set(s * 3.6, 0.4, D / 2 - 1.2); d.rotation.y = s * 0.4; g.add(d);

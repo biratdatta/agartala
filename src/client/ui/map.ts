@@ -13,7 +13,7 @@ const PX = 1800, SIZE = Math.max(X1 - X0, Z1 - Z0);
 /** The painted map's size in pixels: as wide and tall as the area really is (it is wider than it is tall). */
 const PXW = Math.round((PX * (X1 - X0)) / SIZE), PXH = Math.round((PX * (Z1 - Z0)) / SIZE);
 const m2p = (v: number, o: number) => ((v - o) / SIZE) * PX;
-export interface MapMarks { player: { x: number; z: number; face: number }; target: { x: number; z: number } | null; others?: { x: number; z: number; name: string }[]; stalls?: { x: number; z: number }[]; rentals?: { x: number; z: number }[]; kaam?: { x: number; z: number }[]; errand?: { x: number; z: number }[]; sights?: { x: number; z: number }[]; home?: { x: number; z: number } }
+export interface MapMarks { player: { x: number; z: number; face: number }; target: { x: number; z: number } | null; others?: { x: number; z: number; name: string }[]; stalls?: { x: number; z: number }[]; rentals?: { x: number; z: number }[]; kaam?: { x: number; z: number }[]; errand?: { x: number; z: number }[]; sights?: { x: number; z: number }[]; home?: { x: number; z: number }; pandals?: { x: number; z: number; name: string; seen: boolean }[] }
 
 export class MapView {
   private img: HTMLCanvasElement;
@@ -45,6 +45,17 @@ export class MapView {
     }
   }
 
+  /** A Durga Puja pandal on the map: a red tent with a gold top, ticked once you've had darshan there. */
+  private static pandalIcon(c: CanvasRenderingContext2D, x: number, y: number, s: number, seen: boolean): void {
+    c.save(); c.translate(x, y);
+    c.fillStyle = 'rgba(255,207,90,.35)'; c.beginPath(); c.arc(0, -s * 0.2, s * 1.35, 0, 7); c.fill();             // a glow round it
+    c.fillStyle = seen ? '#9a8a7a' : '#c62f2f'; c.strokeStyle = '#1c1624'; c.lineWidth = 1.5;
+    c.beginPath(); c.moveTo(-s, s * 0.7); c.lineTo(-s, -s * 0.1); c.lineTo(0, -s); c.lineTo(s, -s * 0.1); c.lineTo(s, s * 0.7); c.closePath(); c.fill(); c.stroke();
+    c.fillStyle = '#ffcf5a'; c.beginPath(); c.arc(0, s * 0.15, s * 0.38, 0, 7); c.fill();                          // Ma, lit inside
+    c.fillStyle = '#e9b23b'; c.beginPath(); c.arc(0, -s * 1.1, s * 0.2, 0, 7); c.fill();
+    if (seen) { c.strokeStyle = '#2f8f4e'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(s * 0.4, s * 0.55); c.lineTo(s * 0.8, s * 0.95); c.lineTo(s * 1.5, s * 0.1); c.stroke(); }
+    c.restore();
+  }
   private static marker(c: CanvasRenderingContext2D, x: number, y: number, s: number) { c.save(); c.translate(x, y); c.rotate(Math.PI / 4); c.fillStyle = '#e9b23b'; c.strokeStyle = '#1c1624'; c.lineWidth = 1.5; c.fillRect(-s, -s, s * 2, s * 2); c.strokeRect(-s, -s, s * 2, s * 2); c.restore(); }
   private static arrow(c: CanvasRenderingContext2D, x: number, y: number, s: number, face: number) {
     c.save(); c.translate(x, y); c.rotate(-face + Math.PI); c.beginPath(); c.moveTo(0, -s); c.lineTo(s * 0.7, s * 0.8); c.lineTo(0, s * 0.4); c.lineTo(-s * 0.7, s * 0.8); c.closePath();
@@ -58,6 +69,7 @@ export class MapView {
     const to = (x: number, z: number): [number, number] => [W / 2 + (x - m.player.x) * k, W / 2 + (z - m.player.z) * k];
     for (const s of STANDS) { const [x, y] = to(s.x, s.z); if (x > 0 && x < W && y > 0 && y < W) { c.fillStyle = '#2f8f4e'; c.beginPath(); c.arc(x, y, 6, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); } }
     const dot = (k: { x: number; z: number }, col: string, r: number) => { const [x, y] = to(k.x, k.z); if (x > 0 && x < W && y > 0 && y < W) { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); } };
+    for (const p of m.pandals || []) { const [x, y] = to(p.x, p.z); if (x > -10 && x < W + 10 && y > -10 && y < W + 10) MapView.pandalIcon(c, x, y, 7, p.seen); }
     for (const k of m.sights || []) dot(k, '#9b6bd6', 6);
     for (const k of m.stalls || []) dot(k, '#c62f2f', 5);
     for (const k of m.rentals || []) dot(k, '#1f6f5c', 6);
@@ -125,6 +137,9 @@ export class MapView {
     for (const p of REAL_PLACES) if (p.kind !== 'lake' && p.id !== 'stadium') { const [a, b] = P(p.x, p.z); c.fillStyle = '#7d1d3f'; c.fillRect(a - 2, b - 2, 4, 4); }
     for (const s of STANDS) { const [a, b] = P(s.x, s.z); c.fillStyle = '#2f8f4e'; c.beginPath(); c.arc(a, b, 5, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.9)'; }
     const big = this.zoom >= 2.5 ? 1.15 : 1; const f = (w: number, px: number) => `${w} ${Math.round(px * big)}px "Hind Siliguri", sans-serif`;
+    // Durga Puja pandals come first: they are what everyone is looking for this week
+    for (const p of m.pandals || []) { const [a, b] = P(p.x, p.z); MapView.pandalIcon(c, a, b, 9, p.seen); }
+    c.font = f(700, 13); for (const p of m.pandals || []) lb(p.name.replace(' Sarbojanin', ''), p.x, p.z, p.seen ? '#6b5a4a' : '#b5232f', 26);
     c.font = f(600, 12); for (const p of REAL_PLACES) if (p.kind !== 'lake' && p.id !== 'stadium') lb(p.name, p.x, p.z, '#5a2a3a', 14);
     c.font = f(700, 16); for (const p of PARAS) if (!/Stadium|Math/.test(p.name)) lb(p.name, p.x, p.z, '#6b2a22', -14);
     c.font = f(700, 14);

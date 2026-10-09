@@ -4,7 +4,7 @@ import { bearer, fail, guard, json, readJson } from './_lib/http.js';
 import { getStore } from './_lib/store.js';
 
 /** Kinds of place a player can ask for. */
-const PLACE_KINDS = ['shop', 'market', 'temple', 'mosque', 'church', 'school', 'college', 'hospital', 'office', 'restaurant', 'park', 'landmark', 'home', 'other'] as const;
+const PLACE_KINDS = ['pandal', 'shop', 'market', 'temple', 'mosque', 'church', 'school', 'college', 'hospital', 'office', 'restaurant', 'park', 'landmark', 'home', 'other'] as const;
 const PER_DAY = 5;
 const ORIGIN = { lat: 23.8368, lon: 91.2826 }; const KX = Math.cos((ORIGIN.lat * Math.PI) / 180) * 111320, KZ = 110574;
 

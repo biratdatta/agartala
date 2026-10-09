@@ -8,7 +8,7 @@ import type { Store } from './store.js';
 import { signinRequired } from './env.js';
 
 /** What is stored under save:<id>. The game state plus account bookkeeping. */
-export interface SaveDoc { state: GameState; code: string; userId?: string; email?: string; created: number }
+export interface SaveDoc { state: GameState; code: string; userId?: string; email?: string; realName?: string; created: number }
 export interface Loaded { saveId: string; doc: SaveDoc; rev: number }
 
 const CODE_ALPHABET = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
@@ -32,11 +32,11 @@ export async function createSession(store: Store, saveId: string): Promise<strin
 export interface Geo { city: string; country: string; km: number }
 
 /** A brand-new farm (no session yet). */
-export async function createFarm(store: Store, now: number, geo?: Geo | null, owner?: { userId: string; email: string }): Promise<Loaded> {
+export async function createFarm(store: Store, now: number, geo?: Geo | null, owner?: { userId: string; email: string; realName?: string }): Promise<Loaded> {
   const saveId = randomUUID();
   let code = newCode();
   for (let i = 0; i < 5 && !(await store.put(`code:${code}`, { saveId }, null)); i++) code = newCode();
-  const doc: SaveDoc = { state: newState(now, '', geo?.city || '', geo?.km || 0), code, created: now, ...(owner ? { userId: owner.userId, email: owner.email } : {}) };
+  const doc: SaveDoc = { state: newState(now, '', geo?.city || '', geo?.km || 0), code, created: now, ...(owner ? { userId: owner.userId, email: owner.email, ...(owner.realName ? { realName: owner.realName } : {}) } : {}) };
   await store.put(`save:${saveId}`, doc, null);
   return { saveId, doc, rev: 1 };
 }
