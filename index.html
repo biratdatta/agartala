@@ -6,6 +6,10 @@
 <title>Haora Bari · Agartala</title>
 <meta name="description" content="A 3D farming game set in the real streets of Agartala, Tripura, built from OpenStreetMap.">
 <meta name="theme-color" content="#1c1624">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&family=Tiro+Bangla&display=swap">
@@ -35,6 +39,9 @@
         <div id="date"></div>
         <div id="place"></div>
         <div id="money">₹0</div>
+        <div id="energy" title="Energy: work tires you; eat at a stall, rest or sleep"><i></i><span></span></div>
+        <div id="fest" hidden></div>
+        <div id="others" hidden></div>
         <div id="net" hidden></div>
         <canvas id="mini" width="288" height="288" aria-label="Minimap, click for the full map"></canvas>
       </div>
@@ -45,6 +52,7 @@
     <div id="btns">
       <button class="hbtn" id="bMap"><span class="key">M</span>Map</button>
       <button class="hbtn" id="bBoard"><span class="key">L</span>Farm</button>
+      <button class="hbtn" id="bPhoto"><span class="key">P</span>Photo</button>
       <button class="hbtn" id="bHelp"><span class="key">H</span>Help</button>
       <button class="hbtn" id="bSound">Sound on</button>
     </div>
@@ -55,19 +63,20 @@
     <div id="joy"><div id="joyKnob"></div></div>
     <button id="tAct">Act</button>
     <button id="tSleep" class="hbtn">Sleep</button>
+    <button id="tRun" class="hbtn" aria-pressed="false">Run</button>
   </div>
 
   <div id="title" class="overlay" hidden>
     <div class="wrap">
       <div class="eyebrow">Agartala · Tripura · real streets from OpenStreetMap</div>
       <h1>Haora Bari<span>হাওড়া বাড়ি</span></h1>
-      <p>You come home to Agartala, to your grandfather's house in whichever para you call home, and the family fields at Bhati Abhoynagar. Every road, lane and pond of the city centre is where it really is, and its 30,000 houses follow the real streets. Grow paddy and Queen pineapple, tap rubber at dawn, ride tomtoms through the real streets, help the neighbours, and keep the festivals from Garia Puja to Durga Puja at Ujjayanta Palace.</p>
+      <p>You come home to Agartala, to your grandfather's bari on the bank of the Haora, behind Maharaja Bir Bikram Stadium. Shibnagar, Math Chowmuhani, Ramnagar and Joynagar are all around you, every road, lane and pond where it really is. Grow paddy and Queen pineapple, tap rubber at dawn, ride tomtoms round the paras, help the neighbours, and keep the festivals from Garia Puja to Durga Puja at Modern Club.</p>
       <label class="fromrow" for="fromIn"><span>Coming home from</span><input id="fromIn" list="cityList" maxlength="40" autocomplete="address-level2" placeholder="Bengaluru"></label>
       <datalist id="cityList"></datalist>
       <div id="geoNote"></div>
-      <label class="fromrow" for="homeIn"><span>Your home in Agartala</span><input id="homeIn" list="homeList" maxlength="60" autocomplete="off" placeholder="Krishnanagar, Banamalipur, Kalibari…"><button class="btn ghost" id="homePick" type="button">Pick on map</button></label>
+      <label class="fromrow" for="homeIn"><span>Your home in Agartala</span><input id="homeIn" list="homeList" maxlength="60" autocomplete="off" placeholder="Shibnagar, Ramnagar, Joynagar…"><button class="btn ghost" id="homePick" type="button">Pick on map</button></label>
       <datalist id="homeList"></datalist>
-      <div id="homeNote" class="sm" style="color:var(--ink-dim);font-size:12.5px">Type a neighbourhood or chowmuhani, or pick a spot on the map. Your house and Grandpa will be there; the family fields stay at Bhati Abhoynagar.</div>
+      <div id="homeNote" class="sm" style="color:var(--ink-dim);font-size:12.5px">Type a neighbourhood or chowmuhani, or pick a spot on the map. Your house and Grandpa will be there; the family fields stay by the Haora.</div>
       <div class="row">
         <button class="btn" id="bContinue" hidden>Continue</button>
         <button class="btn" id="bNew">Start</button>
@@ -100,13 +109,51 @@
       <div class="stripe"></div>
       <div class="in">
         <div class="row" style="justify-content:space-between">
-          <div><h3>Lake Chowmuhani Bazar</h3><div class="eyebrow" id="shopSub">Gopal Saha · today's rates</div></div>
+          <div><h3>Math Chowmuhani Bazar</h3><div class="eyebrow" id="shopSub">Gopal Saha · today's rates</div></div>
           <button class="btn ghost" id="shopClose">Close · Esc</button>
         </div>
         <div class="tblwrap"><table id="sellTbl"></table></div>
         <div class="tblwrap"><table id="buyTbl"></table></div>
       </div>
     </div>
+  </div>
+
+  <div id="stall" class="overlay" hidden>
+    <div class="panel card">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="row" style="justify-content:space-between">
+          <div><h3 id="stallName">Food stall</h3><div class="eyebrow" id="stallSub"></div></div>
+          <button class="btn ghost" id="stallClose">Close · Esc</button>
+        </div>
+        <div id="stallList" class="ridelist"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="trips" class="overlay" hidden>
+    <div class="panel card" style="width:min(640px,100%)">
+      <div class="stripe"></div>
+      <div class="in">
+        <div class="row" style="justify-content:space-between">
+          <div><h3>Bus trips</h3><div class="eyebrow">Joynagar bus stop · day trips out of the city</div></div>
+          <button class="btn ghost" id="tripsClose">Close · Esc</button>
+        </div>
+        <div id="tripList" class="ridelist"></div>
+        <div id="haatBox" hidden>
+          <h4>What will you take to the haat?</h4>
+          <div id="haatList" class="ridelist"></div>
+          <div class="row"><button class="btn" id="haatGo">Catch the haat bus</button><span class="sm" id="haatTotal"></span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="photobar" hidden>
+    <span class="eyebrow">Photo mode · drag to frame · scroll to zoom</span>
+    <button class="btn" id="phSave">Save postcard</button>
+    <button class="btn ghost" id="phShare" hidden>Share</button>
+    <button class="btn ghost" id="phExit">Done · P</button>
   </div>
 
   <div id="ride" class="overlay" hidden>
@@ -128,7 +175,7 @@
       <div class="in">
         <div class="row" style="justify-content:space-between"><h3 id="mapTitle">Agartala</h3><button class="btn ghost" id="mapClose">Close · M</button></div>
         <div class="row jumprow">
-          <input id="jumpIn" list="placeList" placeholder="Jump to a place: Lake Chowmuhani, Kalibari, home…" autocomplete="off" aria-label="Jump to a place">
+          <input id="jumpIn" list="placeList" placeholder="Jump to a place: Math Chowmuhani, Shibnagar, home…" autocomplete="off" aria-label="Jump to a place">
           <button class="btn" id="jumpGo">Jump</button>
         </div>
         <datalist id="placeList"></datalist>
@@ -151,9 +198,10 @@
           <dt><span class="key">E</span></dt><dd>Do the thing in front of you: till, sow, water, harvest, tap, cut, talk, trade, take a tomtom. The prompt at the bottom says what E will do.</dd>
           <dt><span class="key">Z</span></dt><dd>Sleep till 06:00. Only after 19:00 or before 05:00.</dd>
           <dt><span class="key">M</span></dt><dd>Map of the city.</dd>
-          <dt><span class="key">L</span></dt><dd>Your farm: leaderboard, farm name, farm code and sign-in.</dd>
+          <dt><span class="key">L</span></dt><dd>Your farm: farm code and sign-in, neighbours and phrasebook, Grandpa's album, festivals, and the boards.</dd>
+          <dt><span class="key">P</span></dt><dd>Photo mode: hide the HUD, frame a shot and save a postcard.</dd>
         </dl>
-        <p style="margin:0;color:var(--ink-dim);font-size:14px;line-height:1.55">The city is real: streets, ponds and buildings come from OpenStreetMap. Tomtom stands (the green e-rickshaws) take you across town for ₹20. Paddy grows in the low <b style="color:var(--ink)">lunga</b>, pineapple on the <b style="color:var(--ink)">tilla</b>. Crops grow only on days they are watered; rain waters everything. Rubber gives latex once a day between 05:00 and 11:00, and 3 cups roll into one sheet. The game saves on its own in this browser.</p>
+        <p style="margin:0;color:var(--ink-dim);font-size:14px;line-height:1.55">The city is real: streets, ponds and buildings come from OpenStreetMap. Tomtom stands (the green e-rickshaws) take you across town for ₹20. Paddy grows in the low <b style="color:var(--ink)">lunga</b>, pineapple on the <b style="color:var(--ink)">tilla</b>. Crops grow only on days they are watered; rain waters everything. Rubber gives latex once a day between 05:00 and 11:00, and 3 cups roll into one sheet. Work uses energy: eat at the food stalls by the tomtom stands, rest, or sleep. The game saves on its own.</p>
       </div>
     </div>
   </div>
@@ -162,9 +210,9 @@
     <div class="panel card">
       <div class="stripe"></div>
       <div class="in">
-        <div class="eyebrow">Durga Puja · Ujjayanta Palace</div>
+        <div class="eyebrow">Durga Puja · Modern Club</div>
         <h3>The bari is alive again</h3>
-        <p style="margin:0;line-height:1.55;color:var(--ink-dim)">The dhak is beating by Jagannath Lake, the palace is lit end to end, and Grandpa Hemanta is telling anyone who will listen that the Abhoynagar fields are green again. The city is still yours to wander. Keep farming as long as you like.</p>
+        <p style="margin:0;line-height:1.55;color:var(--ink-dim)">The dhak is beating at Modern Club, the stadium floodlights are on across the lakes, and Grandpa Hemanta is telling anyone who will listen that the fields by the Haora are green again. The paras are still yours to wander. Keep farming as long as you like.</p>
         <div class="stats" id="endStats"></div>
         <div class="row"><button class="btn" id="endClose">Keep playing</button></div>
       </div>
@@ -173,14 +221,22 @@
 
 
   <div id="board" class="overlay" hidden>
-    <div class="panel card" style="width:min(720px,100%)">
+    <div class="panel card" style="width:min(760px,100%)">
       <div class="stripe"></div>
       <div class="in">
         <div class="row" style="justify-content:space-between"><h3>Your farm</h3><button class="btn ghost" id="boardClose">Close · L</button></div>
-        <div class="cols">
+        <div class="tabs" role="tablist">
+          <button role="tab" data-tab="farm" aria-selected="true">Farm</button>
+          <button role="tab" data-tab="people" aria-selected="false">People</button>
+          <button role="tab" data-tab="album" aria-selected="false">Album</button>
+          <button role="tab" data-tab="boards" aria-selected="false">Boards</button>
+        </div>
+
+        <section class="tab cols" data-tab="farm">
           <div>
             <h4>Net worth</h4>
             <div id="worth">₹0</div>
+            <div class="sm" id="upgrades"></div>
             <h4 style="margin-top:14px">Name on the leaderboard</h4>
             <div class="row"><input id="nameIn" maxlength="24" placeholder="Your name" autocomplete="nickname"><button class="btn" id="nameSave">Save</button></div>
             <h4 style="margin-top:14px">Home</h4>
@@ -203,10 +259,56 @@
             <ol id="parcelList" class="errlist"></ol>
             <h4 style="margin-top:14px">Sights of Agartala · <span id="sightCount"></span></h4>
             <ol id="sightList" class="errlist sights"></ol>
-            <h4 style="margin-top:14px">Leaderboard · richest farmers in Agartala</h4>
-            <ol id="lbList"></ol>
           </div>
-        </div>
+        </section>
+
+        <section class="tab cols" data-tab="people" hidden>
+          <div>
+            <h4>Neighbours</h4>
+            <div id="invite" class="sm"></div>
+            <ol id="friendList" class="flist"></ol>
+            <h4 style="margin-top:14px">Phrasebook · <span id="phraseCount"></span></h4>
+            <ol id="phraseList" class="plist"></ol>
+          </div>
+          <div>
+            <h4>Visit a friend's farm</h4>
+            <p class="sm" style="margin:0 0 6px">Your visit code is <b id="visitOut">—</b>. Share it so friends can find your farm. It cannot open your farm, only visit it.</p>
+            <div class="row"><input id="visitIn" placeholder="Friend's visit code: 4E38-112C" autocomplete="off"><button class="btn" id="visitGo">Visit</button></div>
+            <div id="visitCard" hidden>
+              <div id="visitInfo"></div>
+              <div class="row" style="margin-top:8px"><button class="btn" id="helpGo">Water their crops</button></div>
+              <div class="row" style="margin-top:8px"><select id="giftItem"></select><input id="giftN" type="number" min="1" max="50" value="1" style="width:70px;flex:0 0 auto"><button class="btn ghost" id="giftGo">Send gift</button></div>
+            </div>
+            <h4 style="margin-top:14px">Messages</h4>
+            <ol id="inboxList" class="plist"></ol>
+          </div>
+        </section>
+
+        <section class="tab cols" data-tab="album" hidden>
+          <div>
+            <h4>Grandpa's album · <span id="chapterCount"></span></h4>
+            <ol id="chapterList" class="clist"></ol>
+          </div>
+          <div>
+            <h4>Festivals this year</h4>
+            <ol id="festList" class="errlist"></ol>
+            <h4 style="margin-top:14px">Trips</h4>
+            <ol id="tripsDone" class="errlist"></ol>
+          </div>
+        </section>
+
+        <section class="tab" data-tab="boards" hidden>
+          <div class="row" id="boardKinds">
+            <button class="b2 on" data-board="rich">Richest farms</button>
+            <button class="b2" data-board="week">This week</button>
+            <button class="b2" data-board="para">Para against para</button>
+            <select id="weekCat" hidden>
+              <option value="earned">Most earned</option><option value="paddy">Paddy harvests</option><option value="deliveries">Parcels delivered</option><option value="kaam">Kaam done</option><option value="sights">Sights seen</option>
+            </select>
+          </div>
+          <p class="sm" id="boardNote" style="margin:0"></p>
+          <ol id="lbList"></ol>
+        </section>
       </div>
     </div>
   </div>

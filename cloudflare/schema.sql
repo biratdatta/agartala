@@ -15,3 +15,31 @@ CREATE TABLE IF NOT EXISTS leaderboard (
   updated_at TEXT NOT NULL
 );
 CREATE INDEX IF NOT EXISTS leaderboard_worth_idx ON leaderboard (worth DESC, day ASC);
+
+-- Weekly boards: one row per farm per ISO week. Para totals are summed from here.
+CREATE TABLE IF NOT EXISTS weekly (
+  id         TEXT NOT NULL,
+  week       TEXT NOT NULL,
+  name       TEXT NOT NULL,
+  para       TEXT NOT NULL,
+  paddy      INTEGER NOT NULL DEFAULT 0,
+  deliveries INTEGER NOT NULL DEFAULT 0,
+  kaam       INTEGER NOT NULL DEFAULT 0,
+  sights     INTEGER NOT NULL DEFAULT 0,
+  earned     INTEGER NOT NULL DEFAULT 0,
+  updated_at TEXT NOT NULL,
+  PRIMARY KEY (id, week)
+);
+CREATE INDEX IF NOT EXISTS weekly_week_idx ON weekly (week);
+
+-- Who is out in the city: refreshed every few seconds while a player walks around.
+CREATE TABLE IF NOT EXISTS presence (
+  id   TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  para TEXT NOT NULL,
+  x    REAL NOT NULL,
+  z    REAL NOT NULL,
+  face REAL NOT NULL,
+  t    INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS presence_t_idx ON presence (t);

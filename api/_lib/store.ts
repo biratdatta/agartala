@@ -1,11 +1,19 @@
 /**
  * Storage backends behind one small contract: a versioned key-value store with
- * compare-and-set, plus a leaderboard. The same contract tests run against all three.
+ * compare-and-set, the leaderboards, and who is out in the city right now.
+ * The same contract tests run against every backend.
  */
 import { deployed, getEnv, type D1Like } from './env.js';
 
 export interface Entry<T> { value: T; rev: number }
 export interface LbEntry { id: string; name: string; worth: number; day: number }
+/** One farm's tallies for one ISO week. `name` may be empty (unnamed farms still count for their para). */
+export interface WeekEntry { id: string; week: string; name: string; para: string; paddy: number; deliveries: number; kaam: number; sights: number; earned: number }
+export type WeekCat = 'paddy' | 'deliveries' | 'kaam' | 'sights' | 'earned';
+export const WEEK_CATS: WeekCat[] = ['paddy', 'deliveries', 'kaam', 'sights', 'earned'];
+export interface ParaRow { para: string; total: number; players: number }
+/** A player out in the city: public id, name, neighbourhood and where they stand. `t` is ms since epoch. */
+export interface Presence { id: string; name: string; para: string; x: number; z: number; face: number; t: number }
 
 export interface Store {
   readonly name: string;
@@ -18,9 +26,25 @@ export interface Store {
   put<T>(key: string, value: T, expectedRev: number | null): Promise<number | null>;
   lbUpsert(e: LbEntry): Promise<void>;
   lbTop(n: number): Promise<LbEntry[]>;
+  weekUpsert(e: WeekEntry): Promise<void>;
+  /** The week's top named farms in one category (zeros left out). */
+  weekTop(week: string, cat: WeekCat, n: number): Promise<WeekEntry[]>;
+  /** Each para's total earnings this week, best first. */
+  paraTop(week: string, n: number): Promise<ParaRow[]>;
+  presenceUpsert(p: Presence): Promise<void>;
+  /** Players seen since `since` (ms), most recent first. */
+  presenceRecent(since: number, n: number): Promise<Presence[]>;
 }
 
-const sortLb = (a: LbEntry[], n: number) => a.slice().sort((x, y) => y.worth - x.worth || x.day - y.day).slice(0, n);
+export const sortLb = (a: LbEntry[], n: number) => a.slice().sort((x, y) => y.worth - x.worth || x.day - y.day).slice(0, n);
+export const weekTopOf = (a: WeekEntry[], week: string, cat: WeekCat, n: number) => a.filter((e) => e.week === week && e.name && e[cat] > 0).sort((x, y) => y[cat] - x[cat]).slice(0, n);
+export function paraTopOf(a: WeekEntry[], week: string, n: number): ParaRow[] {
+  const m = new Map<string, ParaRow>();
+  for (const e of a) if (e.week === week && e.para) { const r = m.get(e.para) || { para: e.para, total: 0, players: 0 }; r.total += e.earned; r.players++; m.set(e.para, r); }
+  return [...m.values()].sort((x, y) => y.total - x.total).slice(0, n);
+}
+export const recentOf = (a: Presence[], since: number, n: number) => a.filter((p) => p.t >= since).sort((x, y) => y.t - x.t).slice(0, n);
+const clampN = (n: number) => Math.max(1, Math.min(100, Math.floor(n) || 1));
 
 export class MemoryStore implements Store {
   readonly name = 'MemoryStore';
@@ -34,14 +58,26 @@ export class MemoryStore implements Store {
     this.kv.set(key, { value: structuredClone(value), rev });
     return rev;
   }
+  private wk = new Map<string, WeekEntry>();
+  private pres = new Map<string, Presence>();
   async lbUpsert(e: LbEntry) { this.lb.set(e.id, { ...e }); }
   async lbTop(n: number) { return sortLb([...this.lb.values()], n); }
+  async weekUpsert(e: WeekEntry) { this.wk.set(`${e.id}|${e.week}`, { ...e }); }
+  async weekTop(week: string, cat: WeekCat, n: number) { return weekTopOf([...this.wk.values()], week, cat, clampN(n)); }
+  async paraTop(week: string, n: number) { return paraTopOf([...this.wk.values()], week, clampN(n)); }
+  async presenceUpsert(p: Presence) { this.pres.set(p.id, { ...p }); }
+  async presenceRecent(since: number, n: number) { return recentOf([...this.pres.values()], since, clampN(n)); }
 }
 
 /** Cloudflare D1 (SQLite at the edge). Same tables as supabase/schema.sql; see cloudflare/schema.sql. */
 export class D1Store implements Store {
   readonly name = 'D1Store';
+  private ready: Promise<void> | null = null;
   constructor(private db: D1Like) {}
+  /** Creates the newer tables on first use, so an existing database picks them up without a migration step. */
+  private ensure(): Promise<void> {
+    return (this.ready ||= (async () => { for (const sql of D1_TABLES) await this.db.prepare(sql).bind().run(); })().catch((e) => { this.ready = null; throw e; }));
+  }
   async get<T>(key: string) {
     const row = await this.db.prepare('SELECT value, rev FROM kv WHERE key = ?').bind(key).first<{ value: string; rev: number }>();
     return row ? { value: JSON.parse(row.value) as T, rev: Number(row.rev) } : null;
@@ -63,7 +99,41 @@ export class D1Store implements Store {
     const r = await this.db.prepare('SELECT id, name, worth, day FROM leaderboard ORDER BY worth DESC, day ASC LIMIT ?').bind(Math.max(1, Math.min(100, n))).all<LbEntry>();
     return r.results.map((e) => ({ ...e, worth: Number(e.worth), day: Number(e.day) }));
   }
+  async weekUpsert(e: WeekEntry) {
+    await this.ensure();
+    await this.db.prepare('INSERT INTO weekly (id, week, name, para, paddy, deliveries, kaam, sights, earned, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id, week) DO UPDATE SET name = excluded.name, para = excluded.para, paddy = excluded.paddy, deliveries = excluded.deliveries, kaam = excluded.kaam, sights = excluded.sights, earned = excluded.earned, updated_at = excluded.updated_at')
+      .bind(e.id, e.week, e.name, e.para, e.paddy, e.deliveries, e.kaam, e.sights, e.earned, new Date().toISOString()).run();
+  }
+  async weekTop(week: string, cat: WeekCat, n: number) {
+    if (!WEEK_CATS.includes(cat)) return [];
+    await this.ensure();
+    const r = await this.db.prepare(`SELECT id, week, name, para, paddy, deliveries, kaam, sights, earned FROM weekly WHERE week = ? AND name <> '' AND ${cat} > 0 ORDER BY ${cat} DESC LIMIT ?`).bind(week, clampN(n)).all<WeekEntry>();
+    return r.results.map(numify);
+  }
+  async paraTop(week: string, n: number) {
+    await this.ensure();
+    const r = await this.db.prepare("SELECT para, SUM(earned) AS total, COUNT(*) AS players FROM weekly WHERE week = ? AND para <> '' GROUP BY para ORDER BY total DESC LIMIT ?").bind(week, clampN(n)).all<ParaRow>();
+    return r.results.map((p) => ({ para: p.para, total: Number(p.total), players: Number(p.players) }));
+  }
+  async presenceUpsert(p: Presence) {
+    await this.ensure();
+    await this.db.prepare('INSERT INTO presence (id, name, para, x, z, face, t) VALUES (?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id) DO UPDATE SET name = excluded.name, para = excluded.para, x = excluded.x, z = excluded.z, face = excluded.face, t = excluded.t')
+      .bind(p.id, p.name, p.para, p.x, p.z, p.face, p.t).run();
+  }
+  async presenceRecent(since: number, n: number) {
+    await this.ensure();
+    const r = await this.db.prepare('SELECT id, name, para, x, z, face, t FROM presence WHERE t >= ? ORDER BY t DESC LIMIT ?').bind(since, clampN(n)).all<Presence>();
+    return r.results.map((p) => ({ ...p, x: Number(p.x), z: Number(p.z), face: Number(p.face), t: Number(p.t) }));
+  }
 }
+const numify = (e: WeekEntry): WeekEntry => ({ ...e, paddy: Number(e.paddy), deliveries: Number(e.deliveries), kaam: Number(e.kaam), sights: Number(e.sights), earned: Number(e.earned) });
+/** Tables added after the first release; also in cloudflare/schema.sql. */
+export const D1_TABLES = [
+  'CREATE TABLE IF NOT EXISTS weekly (id TEXT NOT NULL, week TEXT NOT NULL, name TEXT NOT NULL, para TEXT NOT NULL, paddy INTEGER NOT NULL DEFAULT 0, deliveries INTEGER NOT NULL DEFAULT 0, kaam INTEGER NOT NULL DEFAULT 0, sights INTEGER NOT NULL DEFAULT 0, earned INTEGER NOT NULL DEFAULT 0, updated_at TEXT NOT NULL, PRIMARY KEY (id, week))',
+  'CREATE INDEX IF NOT EXISTS weekly_week_idx ON weekly (week)',
+  'CREATE TABLE IF NOT EXISTS presence (id TEXT PRIMARY KEY, name TEXT NOT NULL, para TEXT NOT NULL, x REAL NOT NULL, z REAL NOT NULL, face REAL NOT NULL, t INTEGER NOT NULL)',
+  'CREATE INDEX IF NOT EXISTS presence_t_idx ON presence (t)',
+];
 
 /** Production store: Supabase Postgres over its REST API, with the service key (server side only). */
 export class SupabaseStore implements Store {
@@ -98,6 +168,25 @@ export class SupabaseStore implements Store {
   async lbTop(n: number) {
     const r = await this.req(`leaderboard?select=id,name,worth,day&order=worth.desc,day.asc&limit=${Math.max(1, Math.min(100, n))}`, { headers: this.h() });
     return (await r.json()) as LbEntry[];
+  }
+  async weekUpsert(e: WeekEntry) {
+    await this.req('weekly?on_conflict=id,week', { method: 'POST', headers: this.h({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify({ ...e, updated_at: new Date().toISOString() }) });
+  }
+  async weekTop(week: string, cat: WeekCat, n: number) {
+    if (!WEEK_CATS.includes(cat)) return [];
+    const r = await this.req(`weekly?select=id,week,name,para,paddy,deliveries,kaam,sights,earned&week=eq.${encodeURIComponent(week)}&name=neq.&${cat}=gt.0&order=${cat}.desc&limit=${clampN(n)}`, { headers: this.h() });
+    return ((await r.json()) as WeekEntry[]).map(numify);
+  }
+  async paraTop(week: string, n: number) {
+    const r = await this.req(`para_week?select=para,total,players&week=eq.${encodeURIComponent(week)}&order=total.desc&limit=${clampN(n)}`, { headers: this.h() });
+    return ((await r.json()) as ParaRow[]).map((p) => ({ para: p.para, total: Number(p.total), players: Number(p.players) }));
+  }
+  async presenceUpsert(p: Presence) {
+    await this.req('presence?on_conflict=id', { method: 'POST', headers: this.h({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(p) });
+  }
+  async presenceRecent(since: number, n: number) {
+    const r = await this.req(`presence?select=id,name,para,x,z,face,t&t=gte.${Math.floor(since)}&order=t.desc&limit=${clampN(n)}`, { headers: this.h() });
+    return (await r.json()) as Presence[];
   }
 }
 

@@ -1,6 +1,6 @@
 /** The city itself: ground, parks, ponds, roads, 17,000 buildings, trees, the farm tillas and the sky. */
 import * as THREE from 'three';
-import { HILLS, HOME, POND, RINA } from '../../shared/farm.js';
+import { HILLS, HOME, POND, RINA, inFarm } from '../../shared/farm.js';
 import { SPOTS } from '../../shared/spots.js';
 import { mulberry, rnd2, smooth } from '../../shared/rng.js';
 import { STANDS } from '../../shared/stands.js';
@@ -76,7 +76,7 @@ export function buildTrees(scene: THREE.Scene, map: CityMap): void {
   const rng = mulberry(5);
   type T = { x: number; z: number; s: number; ry: number };
   const lists: Record<'broad' | 'areca' | 'banana' | 'coco', T[]> = { broad: [], areca: [], banana: [], coco: [] };
-  const farmClear = (x: number, z: number) => Math.hypot(x - HOME.x, z - HOME.z) < 30 || (x > -812 && x < -782 && z > -1551 && z < -1527) || Math.hypot(x - HILLS[0].x, z - HILLS[0].z) < 15 || Math.hypot(x - HILLS[1].x, z - HILLS[1].z) < 16 || Math.hypot(x - RINA.house.x, z - RINA.house.z) < 14;
+  const farmClear = (x: number, z: number) => Math.hypot(x - HOME.x, z - HOME.z) < 30 || inFarm(x, z) || Math.hypot(x - RINA.house.x, z - RINA.house.z) < 14 || Math.hypot(x - POND.x, z - POND.z) < 10;
   const special = [SPOTS.gopal, SPOTS.pandal, SPOTS.busTerminus, ...STANDS.map((s) => [s.x, s.z] as const)];
   let tries = 0, count = 0;
   while (tries++ < 60000 && count < 9000) {
@@ -84,7 +84,6 @@ export function buildTrees(scene: THREE.Scene, map: CityMap): void {
     if (map.inBuilding(x, z) || map.inWaterPoly(x, z) || farmClear(x, z)) continue;
     const rn = map.roadNear(x, z); if (rn && rn.d < ROAD_W[rn.r.t] / 2 + 1.5) continue;
     if (special.some((s) => Math.hypot(x - s[0], z - s[1]) < 10)) continue;
-    if (x > -40 && x < 120 && z > -100 && z < -20) continue; // palace
     const near = map.nearBuilding(x, z, 2.5);
     const t: T = { x, z, s: 0.75 + rng() * 0.6, ry: rng() * 6 }; const k = rng();
     if (near) (k < 0.45 ? lists.areca : k < 0.7 ? lists.banana : k < 0.85 ? lists.coco : lists.broad).push(t);

@@ -1,5 +1,5 @@
 /**
- * More to do around the city: parcels to carry between neighbours, and sights to see.
+ * More to do around the paras: parcels to carry between neighbours, and sights to see.
  * Like kaam, deliveries come from the day number so the browser and server agree on them.
  */
 import { NEIGHBOURS } from './kaam.js';
@@ -30,18 +30,16 @@ export function deliveryById(id: string): Delivery | undefined {
 export interface Sight { id: string; name: string; x: number; z: number; lore: string }
 /** Places worth seeing, at their real map positions. The first visit to each pays a little. */
 export const SIGHTS: Sight[] = [
-  { id: 'palace', name: 'Ujjayanta Palace', x: 40, z: -24, lore: 'Built in 1901 by Maharaja Radha Kishore Manikya, the palace is now the Tripura State Museum. Its Mughal gardens look over two large lakes.' },
-  { id: 'jagannath', name: 'Jagannath Bari', x: -212, z: 65, lore: 'The Jagannath temple stands beside its lake, a short walk from the palace gates.' },
-  { id: 'kalibari', name: 'Kalibari Lake', x: 92, z: 155, lore: 'The second of the palace lakes. At Diwali the water is covered with floating lamps.' },
-  { id: 'laxmi', name: 'Laxminarayan Bari', x: 94.5, z: 272, lore: 'A temple to Lakshmi-Narayan close to the palace, busy every evening at aarti.' },
-  { id: 'rabindra', name: 'Rabindra Shatabarshiki Bhawan', x: -186, z: 316, lore: 'The city\'s big auditorium, named for Tagore\'s birth centenary. Tagore visited Tripura several times and was close to its royal family.' },
-  { id: 'umakanta', name: 'Umakanta Academy', x: -734.5, z: 557.5, lore: 'One of the oldest schools in Tripura, from the time of the Maharajas. Half of Agartala\'s grandparents studied here.' },
-  { id: 'library', name: 'Birchandra State Central Library', x: -1139.5, z: 597, lore: 'Named for Maharaja Bir Chandra Manikya, a poet, painter and patron of the arts.' },
-  { id: 'melarmath', name: 'Melarmath Kalibari', x: -998.5, z: 834.5, lore: 'A crowded Kali temple in Melarmath. The sweet shops around it never close.' },
-  { id: 'maharajganj', name: 'Maharajganj Bazar', x: 250.5, z: 1255, lore: 'The old market by the Haora river. Fish at dawn, vegetables by nine, gossip all day.' },
-  { id: 'stadium', name: 'Maharaja Bir Bikram Stadium', x: 1374, z: 932, lore: 'The city\'s stadium. On match days you can hear the crowd from Battala.' },
-  { id: 'kanan', name: 'Rabindra Kanan', x: 111, z: -1666, lore: 'A green park beside Circuit House, shady and quiet in the afternoons.' },
-  { id: 'heritage', name: 'Heritage Park', x: 198, z: -1958, lore: 'A park of small models of Tripura\'s monuments: Unakoti\'s rock carvings, Neermahal, the Tripura Sundari temple.' },
+  { id: 'stadium', name: 'Maharaja Bir Bikram Stadium', x: 1436, z: 975, lore: 'Agartala\'s big ground, named for the last ruling Maharaja of Tripura. Cricket, football and the Republic Day parade all happen on this grass.' },
+  { id: 'shivmandir', name: 'Modern Club Shiv Mandir', x: 905, z: 1040, lore: 'The little Shiva temple by Modern Club, at the edge of the Shibnagar lakes. Busy every Monday and all night at Shivaratri.' },
+  { id: 'lakes', name: 'The Shibnagar lakes', x: 1180, z: 1095, lore: 'A chain of ponds and lakes between Modern Club and the stadium, ringed with paths. Morning walkers, evening couples, and fishermen at every hour.' },
+  { id: 'modernclub', name: 'Modern Club', x: 920, z: 975, lore: 'One of Agartala\'s best-known puja clubs. Its Durga Puja pandal by the lakes draws crowds from across the city.' },
+  { id: 'southlake', name: 'The lake south of the stadium', x: 1330, z: 1380, lore: 'A quieter lake behind the stadium, where the city thins out towards the river.' },
+  { id: 'ghat', name: 'The Haora riverbank', x: 1720, z: 1330, lore: 'The Haora winds round the east of the city. In the dry months it is a gentle stream; in the monsoon it rises right up to the fields.' },
+  { id: 'bridge', name: 'The Haora bridge', x: 1470, z: 1640, lore: 'The road south crosses the Haora here. Boys jump off it into the river all summer, while their mothers shout from the bank.' },
+  { id: 'math', name: 'Math Chowmuhani', x: 845, z: 615, lore: 'A busy crossroads on the west side of the stadium paras, named for the old math (monastery) nearby. Shops, tea stalls and tomtoms all day.' },
+  { id: 'stadiumpond', name: 'The stadium pond', x: 1570, z: 700, lore: 'A pond north of the stadium, where the groundsmen wash their mowers and the neighbourhood washes everything else.' },
+  { id: 'polyclinic', name: 'The road to Joynagar', x: 1500, z: 400, lore: 'The main road along the north of the stadium paras, lined with clinics, pharmacies and sweet shops.' },
 ];
 export const SIGHT_REWARD = 25;
 export const sightById = (id: string): Sight | undefined => SIGHTS.find((s) => s.id === id);

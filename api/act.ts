@@ -29,7 +29,7 @@ export const POST = guard(async (req) => {
     const rev = await store.put(`save:${l.saveId}`, l.doc, l.rev);
     if (rev === null) continue; // someone else saved first; replay on the fresh copy
     l.rev = rev;
-    if (applied) await updateLeaderboard(store, l.saveId, s).catch((e) => console.error('[leaderboard]', e));
+    if (applied) await updateLeaderboard(store, l.saveId, s, now).catch((e) => console.error('[leaderboard]', e));
     return json({ ...view(token, l, store, now), applied, rejected, events });
   }
   return fail('The save is busy, try again', 409);

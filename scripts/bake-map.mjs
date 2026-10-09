@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Turns data/raw/agartala-osm.json into the game's map:
- *   public/agartala-map.json   buildings, roads, water, parks and named places, coordinates × 2 as integers
+ *   public/agartala-map.json   buildings, roads, water, parks and named places round MBB Stadium, coordinates × 2 as integers
  *   src/shared/spots.ts        free spots beside real roads for the bazar stall, bus, pandal and tomtom stands
  * The Ujjayanta Palace footprint is dropped (the game places its own model there).
  */
@@ -51,19 +51,26 @@ function freeSpot(tx, tz, { clear = 6, rmin = 1.5, rmax = 14, search = 90, maxTy
   }
   return null;
 }
+/* The play area: the paras round Maharaja Bir Bikram Stadium (Shibnagar, Math Chowmuhani, Ramnagar,
+ * Joynagar) and the Haora river bank, where the family fields are. Same origin as before (near
+ * Ujjayanta Palace), so x east and z south in metres. */
+const AREA = { x0: 500, x1: 2400, z0: 100, z1: 2000 };
+/** The family fields: open land between the stadium buildings and the river. OSM footprints inside are left out. */
+const FARM_ZONE = [[1566, 1122], [1846, 1122], [1745, 1258], [1695, 1302], [1590, 1302], [1562, 1262]];
 const TARGETS = {
-  gopal: [26.5, -547], busTerminus: [-88.5, -891], pandal: [-90.5, 266.5, { clear: 11, rmax: 30 }],
-  stLake: [-198.5, -565.5], stPalace: [28.5, -310], stPost: [-383.5, 788.5], stMaharajganj: [250.5, 1255], stRadhanagar: [-60, -905],
-  stDurga: [-60, 300], stCircuit: [71.5, -1527], stHome: [-700, -1452, { clear: 3 }], stBattala: [-12.5, 726.5],
-  // neighbours who ask for help (daily kaam), each beside a lane in a real para
-  nShiva: [-167.5, -1289.5, { clear: 4 }], nRadhanagar: [-187.5, -866.5, { clear: 4 }], nKrishnanagar: [-734.5, -167.5, { clear: 4 }],
-  nSupari: [-401.5, -442, { clear: 4 }], nKadamtali: [-553, 298.5, { clear: 4 }], nMelarmath: [-998.5, 834.5, { clear: 4 }],
-  nKalibari: [206.5, 70.5, { clear: 4 }], nMaharajganj: [250.5, 1255, { clear: 4 }], nAbhoynagar: [602, -982, { clear: 4 }], nBhati: [-580, -1000, { clear: 4 }],
+  gopal: [870, 640, { clear: 5 }], busTerminus: [1330, 470, { clear: 5 }], pandal: [960, 975, { clear: 9, rmax: 40 }],
+  stStadium: [1440, 862], stShibnagar: [880, 1080], stMath: [845, 625], stRamnagar: [1000, 1330], stJoynagar: [1250, 500], stBridge: [1450, 1600],
+  stHome: [1563, 1205, { clear: 3, maxType: 6 }],
+  // neighbours who ask for help (daily kaam), each beside a lane in one of the paras
+  nShiva: [910, 1060, { clear: 4 }], nRadhanagar: [760, 650, { clear: 4 }], nKrishnanagar: [1150, 560, { clear: 4 }],
+  nSupari: [1050, 760, { clear: 4 }], nKadamtali: [900, 1420, { clear: 4 }], nMelarmath: [1150, 1380, { clear: 4 }],
+  nKalibari: [1620, 820, { clear: 4 }], nMaharajganj: [1500, 1560, { clear: 4 }], nAbhoynagar: [1650, 420, { clear: 4 }], nBhati: [1560, 1330, { clear: 4 }],
 };
 const spots = {};
 for (const [k, [x, z, opt]] of Object.entries(TARGETS)) { spots[k] = freeSpot(x, z, opt); console.log(`${k.padEnd(14)} → ${JSON.stringify(spots[k])}`); if (!spots[k]) throw new Error(`No free spot for ${k}`); }
 
-const skip = new Set([...blds.flatMap((b, i) => (b.name >= 0 && /Ujj/.test(N[b.name]) ? [i] : [])), ...bldNear(spots.pandal[0], spots.pandal[1], 10)]);
+const centre = (p) => [p.reduce((a, q) => a + q[0], 0) / p.length, p.reduce((a, q) => a + q[1], 0) / p.length];
+const skip = new Set([...blds.flatMap((b, i) => ((b.name >= 0 && /Ujj/.test(N[b.name])) || pip(...centre(b.p), FARM_ZONE) || !(centre(b.p)[0] > AREA.x0 && centre(b.p)[0] < AREA.x1 && centre(b.p)[1] > AREA.z0 && centre(b.p)[1] < AREA.z1) ? [i] : [])), ...bldNear(spots.pandal[0], spots.pandal[1], 10)]);
 /* Some OSM footprints sit right across a street (gates, overhangs, mapping slips). Tomtoms and
  * walkers follow the street, so drop any footprint that a road's centre line runs through. */
 let acrossRoad = 0;
@@ -122,7 +129,8 @@ blds.forEach((b, i) => {
   }
   BO.push([Math.round(o.cx * 2), Math.round(o.cz * 2), Math.round(w * 2), Math.round(d * 2), Math.round(Math.atan2(fx, fz) * 1000), rp ? rp.t : 9, rp ? Math.min(255, Math.round(rp.d)) : 255]);
 });
-const R = roads.map((r) => [r.t, r.name, r.bridge, ...enc(r.p)]);
+const inArea = (p) => p.some(([x, z]) => x > AREA.x0 - 50 && x < AREA.x1 + 50 && z > AREA.z0 - 50 && z < AREA.z1 + 50);
+const R = roads.filter((r) => inArea(r.p)).map((r) => [r.t, r.name, r.bridge, ...enc(r.p)]);
 const W = waters.map(open).filter((p) => p.length >= 3).map(enc);
 const LC = { park: 0, grass: 0, recreation_ground: 0, pitch: 0, playground: 0, stadium: 0, greenfield: 0, dog_park: 0, sports_centre: 0, farmland: 1, wood: 2, forest: 2, wetland: 3, sand: 4 };
 const L = o.land.filter((l) => l[0] in LC).map((l) => [LC[l[0]], open(pts(l[2]))]).filter(([, p]) => p.length >= 3).map(([c, p]) => [c, ...enc(p)]);
@@ -134,7 +142,7 @@ const Pp = o.poi.map((p) => [Math.trunc(p[0] * 2), Math.trunc(p[1] * 2), p[2], p
  * We mark everything that must stay open (roads, water, parks, fields, existing buildings,
  * landmarks) on a 2 m grid, then walk the lanes placing modest houses on free plots,
  * a front row facing the lane and sometimes a second row behind. Seeded, so it never changes. */
-const IX0 = -2100, IZ0 = -2050, CELL = 2, NX = Math.ceil(4200 / CELL), NZ = Math.ceil(4500 / CELL);
+const IX0 = AREA.x0, IZ0 = AREA.z0, CELL = 2, NX = Math.ceil((AREA.x1 - AREA.x0) / CELL), NZ = Math.ceil((AREA.z1 - AREA.z0) / CELL);
 const occ = new Uint8Array(NX * NZ);
 const cellOf = (x, z) => { const i = Math.floor((x - IX0) / CELL), j = Math.floor((z - IZ0) / CELL); return i < 0 || j < 0 || i >= NX || j >= NZ ? -1 : j * NX + i; };
 const markPoly = (p, pad = 0) => {
@@ -153,7 +161,8 @@ for (const r of roads) {
     for (let t = 0; t <= L; t += 1) { const x = ax + ((bx - ax) * t) / L, z = az + ((bz - az) * t) / L; for (let dz = -hw; dz <= hw; dz += 1) for (let dx = -hw; dx <= hw; dx += 1) { if (dx * dx + dz * dz > hw * hw) continue; const c = cellOf(x + dx, z + dz); if (c >= 0) occ[c] = 1; } }
   }
 }
-const keepOpen = [[40, -61, 110], [-760, -1550, 190], [-650, -1440, 40], ...Object.values(spots).map(([x, z]) => [x, z, 14])];
+markPoly(FARM_ZONE.map(([x, z]) => [x, z]), 6);
+const keepOpen = [...Object.values(spots).map(([x, z]) => [x, z, 14])];
 for (const [x, z, r] of keepOpen) for (let dz = -r; dz <= r; dz += CELL) for (let dx = -r; dx <= r; dx += CELL) if (dx * dx + dz * dz <= r * r) { const c = cellOf(x + dx, z + dz); if (c >= 0) occ[c] = 1; }
 // how built-up is each neighbourhood? (existing buildings per 100 m cell)
 const dens = new Map(); for (const b of blds) { const k = Math.floor(b.p[0][0] / 100) * 1000 + Math.floor(b.p[0][1] / 100); dens.set(k, (dens.get(k) || 0) + 1); }
@@ -174,7 +183,7 @@ for (const r of roads) {
         const w = 6 + irnd() * 5, d = 7 + irnd() * 5; const mx = ax + ux * t, mz = az + uz * t;
         const nx = -uz * side, nz = ux * side; // away from the lane
         const dn = density(mx, mz);
-        if (dn >= 3 || Math.hypot(mx + 200, mz - 300) < 1500) {
+        if (dn >= 3 || Math.hypot(mx - 1400, mz - 1000) < 900) {
           const off = hw + 2.4 + d / 2; const cx = mx + nx * off, cz = mz + nz * off; // clear of the verge marked around the lane
           // local frame: x along the lane, z away from it; the front faces the lane
           if (tryPlace(cx, cz, ux, uz, w, d)) {
@@ -188,9 +197,9 @@ for (const r of roads) {
   }
 }
 // inner plots: the lanes are lined, now fill the backs of the blocks the way paras actually grow
-for (let z = -2000; z < 2400; z += 13) for (let x = -2050; x < 2050; x += 13) {
+for (let z = AREA.z0 + 10; z < AREA.z1 - 10; z += 13) for (let x = AREA.x0 + 10; x < AREA.x1 - 10; x += 13) {
   const jx = x + (irnd() - 0.5) * 6, jz = z + (irnd() - 0.5) * 6;
-  const dn = density(jx, jz); if (dn < 4 && Math.hypot(jx + 200, jz - 300) > 1500) continue;
+  const dn = density(jx, jz); if (dn < 4 && Math.hypot(jx - 1400, jz - 1000) > 900) continue;
   const rp = nearestRoadPoint(jx, jz); if (!rp || rp.d > 70 || rp.d < 8) continue;
   if (irnd() < 0.25) continue;
   // face the nearest lane
@@ -208,7 +217,7 @@ for (const f of INFILL) {
 }
 console.log(`Infill: ${INFILL.length} houses added on empty plots (OSM had ${bs}).`);
 
-const data = { v: 3, bs, origin: o.origin, names: N, b: B, bo: BO, r: R, w: W, l: L, rv: RV, p: Pp, spots, attribution: `Map data © OpenStreetMap contributors, ODbL. Central Agartala${o.fetched ? `, fetched ${o.fetched.slice(0, 10)}` : ''}.` };
+const data = { v: 4, area: AREA, farm: FARM_ZONE, bs, origin: o.origin, names: N, b: B, bo: BO, r: R, w: W, l: L, rv: RV, p: Pp, spots, attribution: `Map data © OpenStreetMap contributors, ODbL. Agartala, around MBB Stadium${o.fetched ? `, fetched ${o.fetched.slice(0, 10)}` : ''}.` };
 await writeFile(path.resolve('public/agartala-map.json'), JSON.stringify(data));
 const ts = `// Generated by scripts/bake-map.mjs from OpenStreetMap data. Do not edit by hand.\n// Each spot is a point on free ground beside a real road, near the named place.\nexport const SPOTS = {\n${Object.entries(spots).map(([k, v]) => `  ${JSON.stringify(k)}: [${v[0]}, ${v[1]}]`).join(',\n')}\n} as const;\n`;
 await writeFile(path.resolve('src/shared/spots.ts'), ts);

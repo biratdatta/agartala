@@ -7,6 +7,11 @@ import * as authConfig from '../../api/auth-config.js';
 import * as authEmailCallback from '../../api/auth-email-callback.js';
 import * as authGoogleCallback from '../../api/auth-google-callback.js';
 import * as authStart from '../../api/auth-start.js';
+import * as farm from '../../api/farm.js';
+import * as gift from '../../api/gift.js';
+import * as help from '../../api/help.js';
+import * as players from '../../api/players.js';
+import * as presence from '../../api/presence.js';
 import * as health from '../../api/health.js';
 import * as leaderboard from '../../api/leaderboard.js';
 import * as session from '../../api/session.js';
@@ -16,7 +21,7 @@ import { setEnv, type Env } from '../../api/_lib/env.js';
 type Handler = (req: Request) => Promise<Response>;
 const routes: Record<string, Partial<Record<string, Handler>>> = {
   act, 'auth-config': authConfig, 'auth-email-callback': authEmailCallback, 'auth-google-callback': authGoogleCallback,
-  'auth-start': authStart, health, leaderboard, session, state,
+  'auth-start': authStart, farm, gift, health, help, leaderboard, players, presence, session, state,
 };
 
 export const onRequest = async (ctx: { request: Request; env: Env }): Promise<Response> => {

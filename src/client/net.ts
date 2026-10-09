@@ -8,9 +8,13 @@ import { apply, type Action } from '../shared/rules.js';
 import { newState, normalize, type GameState } from '../shared/save.js';
 
 export interface Geo { city: string; country: string; km: number }
-export interface SessionView { token: string; code: string; signedIn: boolean; email?: string; state: GameState; rev: number; serverNow: number; store: string; geo?: Geo | null }
+export interface SessionView { token: string; code: string; visit?: string; pid?: string; signedIn: boolean; email?: string; state: GameState; rev: number; serverNow: number; store: string; geo?: Geo | null }
 export interface ActResponse extends SessionView { applied: number; rejected?: { index: number; err: string } }
 export interface LbRow { rank: number; name: string; worth: number; day: number; id: string }
+export interface WeekRow { rank: number; name: string; para: string; value: number; id: string }
+export interface ParaRow { rank: number; para: string; total: number; players: number }
+export interface OtherPlayer { id: string; name: string; para: string; x: number; z: number; face: number; age: number }
+export interface FarmSummary { visit: string; name: string; para: string; day: number; worth: number; plots: number; planted: number; thirsty: number; ripe: number; tea: number; pond: boolean; sights: number; festivals: number }
 
 const TOKEN_KEY = 'haora.agartala.token';
 const LOCAL_KEY = 'haora.agartala.local';
@@ -27,6 +31,8 @@ export class Net {
   code = '';
   signedIn = false;
   email = '';
+  /** Your visit code (for friends) and public id. */
+  visit = ''; pid = '';
   storeName = '';
   /** Where the server thinks this player is connecting from (Cloudflare or Vercel IP geolocation). */
   geo: Geo | null = null;
@@ -49,7 +55,7 @@ export class Net {
   }
   private accept(v: SessionView): void {
     this.token = v.token; ls.set(TOKEN_KEY, v.token); this.skew = v.serverNow - Date.now();
-    this.code = v.code; this.signedIn = v.signedIn; this.email = v.email || ''; this.storeName = v.store; if (v.geo !== undefined) this.geo = v.geo;
+    this.code = v.code; this.signedIn = v.signedIn; this.email = v.email || ''; if (v.visit) this.visit = v.visit; if (v.pid) this.pid = v.pid; this.storeName = v.store; if (v.geo !== undefined) this.geo = v.geo;
   }
 
   /** Opens (or creates) this device's farm. Falls back to a browser-only save if there is no server. */
@@ -107,6 +113,43 @@ export class Net {
   async leaderboard(): Promise<LbRow[]> {
     const r = await fetch('/api/leaderboard'); if (!r.ok) throw new Error('Leaderboard unavailable');
     return ((await r.json()) as { entries: LbRow[] }).entries;
+  }
+  async weekBoard(cat: string): Promise<WeekRow[]> {
+    const r = await fetch(`/api/leaderboard?board=week&cat=${encodeURIComponent(cat)}`); if (!r.ok) throw new Error('Board unavailable');
+    return ((await r.json()) as { entries: WeekRow[] }).entries;
+  }
+  async paraBoard(): Promise<ParaRow[]> {
+    const r = await fetch('/api/leaderboard?board=para'); if (!r.ok) throw new Error('Board unavailable');
+    return ((await r.json()) as { paras: ParaRow[] }).paras;
+  }
+
+  /* ---------- other players ---------- */
+  async presence(x: number, z: number, face: number): Promise<void> {
+    if (!this.token) return;
+    await fetch('/api/presence', { method: 'POST', headers: this.headers(), body: JSON.stringify({ x, z, face }) });
+  }
+  async players(): Promise<OtherPlayer[]> {
+    const r = await fetch(`/api/players?me=${encodeURIComponent(this.pid)}`); if (!r.ok) throw new Error('No players');
+    return ((await r.json()) as { players: OtherPlayer[] }).players;
+  }
+  async farm(code: string): Promise<FarmSummary> {
+    const r = await fetch(`/api/farm?code=${encodeURIComponent(code)}`); const v = await r.json();
+    if (!r.ok) throw new Error((v as { error?: string }).error || 'No such farm'); return v as FarmSummary;
+  }
+  /** Water a friend's crops, or send them a gift. The answer replaces your own state. */
+  async help(code: string): Promise<{ state: GameState; watered: number; farm: FarmSummary }> {
+    await this.flush();
+    const r = await fetch('/api/help', { method: 'POST', headers: this.headers(), body: JSON.stringify({ code }) });
+    const v = (await r.json()) as SessionView & { error?: string; watered: number; farm: FarmSummary };
+    if (!r.ok) throw new Error(v.error || 'Could not help'); this.pending = []; this.accept(v);
+    return { state: normalize(v.state, this.now()), watered: v.watered, farm: v.farm };
+  }
+  async gift(code: string, item: string, n: number): Promise<{ state: GameState; to: string }> {
+    await this.flush();
+    const r = await fetch('/api/gift', { method: 'POST', headers: this.headers(), body: JSON.stringify({ code, item, n }) });
+    const v = (await r.json()) as SessionView & { error?: string; sent: { to: string } };
+    if (!r.ok) throw new Error(v.error || 'Could not send it'); this.pending = []; this.accept(v);
+    return { state: normalize(v.state, this.now()), to: v.sent.to };
   }
 
   /** Starts over on this device. */

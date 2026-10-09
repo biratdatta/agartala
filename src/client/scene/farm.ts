@@ -1,7 +1,7 @@
 /** The family bari: house, plots, rubber, bamboo, jackfruit, the roller and Rina's courtyard. Redrawn from game state. */
 import * as THREE from 'three';
-import { NEED } from '../../shared/constants.js';
-import { BAMBOO, JACK, PLOTS, RACK, RINA, ROLLER, RUBBER } from '../../shared/farm.js';
+import { AGAR_NEED, FISH_NEED, NEED, TEA_NEED } from '../../shared/constants.js';
+import { AGAR, BAMBOO, COLD, CRAFT, JACK, PLOTS, POND, PUMP, RACK, RINA, ROLLER, RUBBER, SHED, TEA } from '../../shared/farm.js';
 import { rnd2 } from '../../shared/rng.js';
 import type { GameState } from '../../shared/save.js';
 import { colliders } from '../collide.js';
@@ -18,14 +18,51 @@ export class FarmView {
   private jackFruits: THREE.Mesh[][] = [];
   private rack: THREE.Mesh[] = [];
   private garia = new THREE.Group();
+  private tea: { g: THREE.Group; bush: THREE.Mesh; tips: THREE.Mesh }[] = [];
+  private agar: { g: THREE.Group; crown: THREE.Mesh; trunk: THREE.Mesh }[] = [];
+  private pump = new THREE.Group(); private cold = new THREE.Group();
+  private fish: THREE.Mesh[] = []; private floods: THREE.Mesh[] = [];
+  private stocked = false; private fishGrowth = 0;
 
   constructor(private scene: THREE.Scene) {
-    this.home(); this.buildPlots(); this.buildRubber(); this.buildBamboo(); this.buildJack();
+    this.home(); this.buildPlots(); this.buildRubber(); this.buildBamboo(); this.buildJack(); this.buildNew();
+  }
+
+  /** Tea on the third tilla, agar along the lunga, the pump, cold store and craft bench. */
+  private buildNew() {
+    const s = this.scene;
+    for (const t of TEA) {
+      const g = new THREE.Group(); const bush = add(g, new THREE.SphereGeometry(0.75, 9, 6), M('#2f6b2a'), 0, 0.5, 0); bush.scale.set(1.3, 0.7, 1.3);
+      const tips = add(g, new THREE.SphereGeometry(0.78, 9, 6, 0, Math.PI * 2, 0, Math.PI * 0.35), M('#8cc94a'), 0, 0.52, 0, false); tips.scale.set(1.3, 0.75, 1.3);
+      const peg = new THREE.Group(); cyl(peg, 0.04, 0.04, 0.9, '#6b5432', 0, 0.45, 0, 4); box(peg, 0.4, 0.25, 0.04, '#5f8f35', 0, 0.85, 0); peg.name = 'peg'; g.add(peg);
+      place(s, g, t.x, t.z, rnd2(t.x, t.z) * 6); this.tea.push({ g, bush, tips });
+    }
+    for (const a of AGAR) {
+      const g = new THREE.Group(); const trunk = cyl(g, 0.12, 0.2, 4, '#7d6a52', 0, 2, 0, 6);
+      const crown = add(g, new THREE.IcosahedronGeometry(1.6, 0), M('#3d6b33'), 0, 4.4, 0); crown.scale.set(1, 1.5, 1);
+      const peg = new THREE.Group(); cyl(peg, 0.04, 0.04, 0.9, '#6b5432', 0, 0.45, 0, 4); box(peg, 0.4, 0.25, 0.04, '#8a5a2a', 0, 0.85, 0); peg.name = 'peg'; g.add(peg);
+      place(s, g, a.x, a.z); colliders.push({ ...a, r: 0.35 }); this.agar.push({ g, crown, trunk });
+    }
+    // diesel pump set on a little plinth, with a pipe running into the pukur
+    const p = this.pump; box(p, 1.2, 0.25, 0.8, '#8d8170', 0, 0.12, 0); box(p, 0.9, 0.55, 0.6, '#2f6fb0', 0, 0.52, 0); cyl(p, 0.22, 0.22, 0.6, '#c62f2f', 0.15, 0.55, 0.32, 10).rotation.x = Math.PI / 2;
+    cyl(p, 0.07, 0.07, 2.4, '#3a3a36', -1.3, 0.2, 0, 6).rotation.z = Math.PI / 2; box(p, 0.08, 0.6, 0.08, '#3a3a36', 0.3, 1, -0.1);
+    place(s, p, PUMP.x, PUMP.z, Math.PI / 2); p.visible = false;
+    // the cold store: a white insulated shed with a heavy door
+    const c = this.cold; box(c, 3.6, 0.3, 3, '#8d8170', 0, 0.15, 0); box(c, 3.2, 2.6, 2.6, '#e8e6df', 0, 1.6, 0); box(c, 1, 2, 0.12, '#9aa4ab', 0, 1.3, 1.32); box(c, 3.5, 0.2, 2.9, '#c9cdd0', 0, 3, 0);
+    box(c, 0.9, 0.5, 0.5, '#6f777d', 1.1, 3.3, -0.6); place(s, c, COLD.x, COLD.z, -0.3); c.visible = false; colliders.push({ ...COLD, r: 2.1 });
+    // craft bench: split bamboo and a half-woven basket
+    const b = new THREE.Group(); box(b, 1.8, 0.1, 0.8, '#8a6a42', 0, 0.8, 0); for (const [x, z] of [[-0.8, -0.3], [0.8, -0.3], [-0.8, 0.3], [0.8, 0.3]]) cyl(b, 0.05, 0.05, 0.8, '#6b5432', x, 0.4, z, 4);
+    for (let k = 0; k < 6; k++) box(b, 1.4, 0.03, 0.05, '#c9b25a', 0, 0.87 + (k % 2) * 0.03, -0.25 + k * 0.1);
+    cyl(b, 0.3, 0.22, 0.35, '#b08a4a', 0.55, 1.03, 0.1, 10); place(s, b, CRAFT.x, CRAFT.z, 0.4); colliders.push({ ...CRAFT, r: 1 });
+    // fish rings on the pukur when it is stocked
+    for (let i = 0; i < 5; i++) { const m = new THREE.Mesh(new THREE.RingGeometry(0.15, 0.22, 16), new THREE.MeshBasicMaterial({ color: '#d8f0f0', transparent: true, opacity: 0.6, depthWrite: false })); m.rotation.x = -Math.PI / 2; m.visible = false; s.add(m); this.fish.push(m); }
+    // floodwater over the lunga
+    PLOTS.forEach((pl) => { if (pl.kind !== 'lunga') return; const m = new THREE.Mesh(new THREE.PlaneGeometry(5.8, 5.8), MAT.sheetWater); m.rotation.x = -Math.PI / 2; m.position.set(pl.x, getH(pl.x, pl.z) + 0.55, pl.z); m.visible = false; s.add(m); this.floods.push(m); });
   }
 
   private home() {
     const s = this.scene;
-    tinHut(s, -707, -1477, -0.3); // the field shed, by the roller
+    tinHut(s, SHED.x, SHED.z, -0.3); // the field shed, by the roller
     const r = new THREE.Group(); box(r, 1.6, 0.9, 0.8, '#5c5c58', 0, 0.45, 0);
     cyl(r, 0.22, 0.22, 1.7, '#8a8a84', 0, 1.1, 0.1, 10).rotation.z = Math.PI / 2; cyl(r, 0.22, 0.22, 1.7, '#8a8a84', 0, 1.1, -0.35, 10).rotation.z = Math.PI / 2; box(r, 0.08, 0.7, 0.08, '#3a3a36', 1, 1.3, 0.1);
     place(s, r, ROLLER.x, ROLLER.z); colliders.push({ ...ROLLER, r: 1 });
@@ -121,6 +158,20 @@ export class FarmView {
     this.jackFruits.forEach((fs, i) => fs.forEach((f, k) => (f.visible = k < s.jack[i].fruits)));
     this.rack.forEach((m, i) => (m.visible = i < Math.min(6, s.inv.sheet)));
     this.garia.visible = !!s.flags.gariaDone;
+    s.tea.forEach((t, i) => { const v = this.tea[i]; v.bush.visible = t.planted; v.tips.visible = t.planted && t.growth >= TEA_NEED && t.picked !== s.day; v.g.getObjectByName('peg')!.visible = !t.planted; const k = t.planted ? 0.35 + 0.65 * Math.min(1, t.growth / TEA_NEED) : 0; v.bush.scale.set(1.3 * k, 0.7 * k, 1.3 * k); v.tips.scale.set(1.3 * k, 0.75 * k, 1.3 * k); });
+    s.agar.forEach((t, i) => { const v = this.agar[i]; v.trunk.visible = v.crown.visible = t.planted; v.g.getObjectByName('peg')!.visible = !t.planted; const k = t.planted ? 0.25 + 0.75 * Math.min(1, t.growth / AGAR_NEED) : 0; v.trunk.scale.set(k, k, k); v.trunk.position.y = 2 * k; v.crown.scale.set(k, 1.5 * k, k); v.crown.position.y = 4.4 * k; });
+    this.pump.visible = s.pump; this.cold.visible = s.coldStore;
+    this.stocked = s.pond.stocked; this.fishGrowth = s.pond.growth / FISH_NEED;
+    for (const f of this.floods) f.visible = s.flood;
+  }
+  /** Ripples where fish rise in a stocked pukur. Called every frame. */
+  animate(time: number): void {
+    this.fish.forEach((m, i) => {
+      m.visible = this.stocked; if (!m.visible) return;
+      const ph = (time * 0.6 + i * 0.37) % 1; const a = i * 2.1 + Math.floor(time * 0.6 + i * 0.37) * 1.7;
+      if (ph < 0.02) m.position.set(POND.x + Math.cos(a) * POND.w * 0.6, getH(POND.x, POND.z) + 0.08, POND.z + Math.sin(a) * POND.d * 0.6);
+      const sc = 1 + ph * (3 + this.fishGrowth * 4); m.scale.set(sc, sc, sc); (m.material as THREE.MeshBasicMaterial).opacity = 0.6 * (1 - ph);
+    });
   }
   /** Cheap per-tick update for growing crops only. */
   growing(s: GameState): void { for (let i = 0; i < PLOTS.length; i++) if (s.plots[i].crop) this.plot(s, i); }

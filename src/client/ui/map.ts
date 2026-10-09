@@ -3,12 +3,13 @@ import { clamp } from '../../shared/rng.js';
 import { SPOTS } from '../../shared/spots.js';
 import { STANDS } from '../../shared/stands.js';
 import { type CityMap, type Poly, ROAD_W, X0, X1, Z0, Z1 } from '../map/data.js';
-import { PALACE } from '../scene/landmarks.js';
+import { STADIUM } from '../scene/landmarks.js';
+import { PARAS } from '../../shared/area.js';
 import { $ } from './dom.js';
 
 const PX = 1800, SIZE = Math.max(X1 - X0, Z1 - Z0);
 const m2p = (v: number, o: number) => ((v - o) / SIZE) * PX;
-export interface MapMarks { player: { x: number; z: number; face: number }; target: { x: number; z: number } | null; kaam?: { x: number; z: number }[]; errand?: { x: number; z: number }[]; sights?: { x: number; z: number }[]; home?: { x: number; z: number } }
+export interface MapMarks { player: { x: number; z: number; face: number }; target: { x: number; z: number } | null; others?: { x: number; z: number; name: string }[]; stalls?: { x: number; z: number }[]; kaam?: { x: number; z: number }[]; errand?: { x: number; z: number }[]; sights?: { x: number; z: number }[]; home?: { x: number; z: number } }
 
 export class MapView {
   private img: HTMLCanvasElement;
@@ -46,6 +47,8 @@ export class MapView {
     for (const s of STANDS) { const [x, y] = to(s.x, s.z); if (x > 0 && x < W && y > 0 && y < W) { c.fillStyle = '#2f8f4e'; c.beginPath(); c.arc(x, y, 6, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); } }
     const dot = (k: { x: number; z: number }, col: string, r: number) => { const [x, y] = to(k.x, k.z); if (x > 0 && x < W && y > 0 && y < W) { c.fillStyle = col; c.beginPath(); c.arc(x, y, r, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 2; c.stroke(); } };
     for (const k of m.sights || []) dot(k, '#9b6bd6', 6);
+    for (const k of m.stalls || []) dot(k, '#c62f2f', 5);
+    for (const k of m.others || []) dot(k, '#6ad1ff', 6);
     for (const k of m.kaam || []) dot(k, '#4aa3df', 7);
     for (const k of m.errand || []) dot(k, '#e8812f', 7);
     if (m.home) { const [x, y] = to(m.home.x, m.home.z); if (x > 0 && x < W && y > 0 && y < W) { c.fillStyle = '#f6efe0'; c.strokeStyle = '#1c1624'; c.lineWidth = 2; c.beginPath(); c.moveTo(x, y - 9); c.lineTo(x + 8, y - 1); c.lineTo(x + 6, y - 1); c.lineTo(x + 6, y + 7); c.lineTo(x - 6, y + 7); c.lineTo(x - 6, y - 1); c.lineTo(x - 8, y - 1); c.closePath(); c.fill(); c.stroke(); } }
@@ -69,10 +72,14 @@ export class MapView {
     for (const p of this.map.chowmuhanis) { const [a, b] = P(p.x, p.z); c.fillStyle = '#c0532f'; c.fillRect(a - 2, b - 2, 4, 4); lb(p.name.replace(' Chowmuhani', ''), p.x, p.z, '#6b2a22'); }
     for (const s of STANDS) { const [a, b] = P(s.x, s.z); c.fillStyle = '#2f8f4e'; c.beginPath(); c.arc(a, b, 5, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.9)'; }
     c.font = '700 14px "Hind Siliguri", sans-serif';
-    lb('Ujjayanta Palace', PALACE.x, PALACE.z - 60); lb('Family fields', -770, -1590); lb('Haora river', 300, 1150, '#2a5f7a'); lb('Lake Chowmuhani Bazar', SPOTS.gopal[0], SPOTS.gopal[1] - 23);
-    lb('Radhanagar Bus Terminus', SPOTS.busTerminus[0], SPOTS.busTerminus[1] - 38); lb('Durgabari', SPOTS.pandal[0], SPOTS.pandal[1] + 24); lb('Circuit House', 84, -1690); lb('Maharajganj Bazar', 250, 1290); lb('M.B.B. Stadium', 1374, 932);
+    lb('MBB Stadium', STADIUM.x, STADIUM.z); lb('Family fields', 1700, 1130); lb('Haora river', 1830, 1060, '#2a5f7a'); lb('Math Chowmuhani Bazar', SPOTS.gopal[0], SPOTS.gopal[1] + 26);
+    lb('Joynagar bus stop', SPOTS.busTerminus[0], SPOTS.busTerminus[1] - 20); lb('Modern Club', SPOTS.pandal[0], SPOTS.pandal[1] - 18); lb('Shibnagar lakes', 1180, 1110, '#2a5f7a');
+    c.font = '700 16px "Hind Siliguri", sans-serif'; for (const p of PARAS) if (!/Stadium|Math/.test(p.name)) lb(p.name, p.x, p.z, '#6b2a22');
     const dot = (k: { x: number; z: number }, col: string, r: number) => { const [a, b] = P(k.x, k.z); c.fillStyle = col; c.beginPath(); c.arc(a, b, r, 0, 7); c.fill(); c.strokeStyle = '#fff'; c.lineWidth = 1.5; c.stroke(); };
     for (const k of m.sights || []) dot(k, '#9b6bd6', 5);
+    for (const k of m.stalls || []) dot(k, '#c62f2f', 4);
+    c.font = '600 11px "Hind Siliguri", sans-serif';
+    for (const k of m.others || []) { dot(k, '#6ad1ff', 5); lb(k.name, k.x, k.z, '#1a4a6a', -9); }
     for (const k of m.kaam || []) dot(k, '#4aa3df', 6);
     for (const k of m.errand || []) dot(k, '#e8812f', 6);
     if (m.home) { const [a, b] = P(m.home.x, m.home.z); c.fillStyle = '#f6efe0'; c.strokeStyle = '#1c1624'; c.lineWidth = 2; c.beginPath(); c.moveTo(a, b - 10); c.lineTo(a + 9, b - 1); c.lineTo(a + 7, b - 1); c.lineTo(a + 7, b + 8); c.lineTo(a - 7, b + 8); c.lineTo(a - 7, b - 1); c.lineTo(a - 9, b - 1); c.closePath(); c.fill(); c.stroke(); c.lineWidth = 3; c.strokeStyle = 'rgba(255,255,255,.9)'; lb('Home', m.home.x, m.home.z, '#1c1624', -14); }

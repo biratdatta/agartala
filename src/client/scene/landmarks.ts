@@ -1,4 +1,4 @@
-/** Hand-built models placed on real locations: Ujjayanta Palace, the Durgabari pandal, the bazar stall, tomtom stands, the bus, and the people you talk to. */
+/** Hand-built models placed on real locations: the stadium floodlights, the Modern Club pandal, the bazar stall, tomtom stands, the bus, and the people you talk to. */
 import * as THREE from 'three';
 import { GRANDPA, RINA } from '../../shared/farm.js';
 import { SPOTS } from '../../shared/spots.js';
@@ -30,37 +30,19 @@ export function tinHut(scene: THREE.Scene, x: number, z: number, rot = 0, W = 4.
   place(scene, g, x, z, rot); colliders.push({ x, z, r: Math.max(W, D) / 2 + 0.3 }); return g;
 }
 
-/** Ujjayanta Palace (1901), on its OSM footprint, facing south over its two lakes. */
-export const PALACE = { x: 40, z: -61, s: 1.62 };
-export function buildPalace(scene: THREE.Scene): THREE.Group {
-  const g = new THREE.Group(); const W = '#f3efe6', T = '#d9d0bf', Dm = '#e6e2da';
-  box(g, 76, 1.2, 26, '#cbc4b4', 0, 0.6, 0); box(g, 64, 9.4, 14, W, 0, 5.9, 0); box(g, 65.2, 0.7, 15, T, 0, 10.9, 0);
-  for (let i = -14; i <= 14; i++) {
-    const x = i * 2.15; if (Math.abs(x) < 6.5) continue;
-    add(g, new THREE.BoxGeometry(1.2, 2.5, 0.25), MAT.win, x, 4, 7.02); add(g, new THREE.BoxGeometry(1.2, 2.2, 0.25), MAT.win, x, 8.1, 7.02); box(g, 0.35, 9, 0.5, T, x - 1.07, 5.9, 7.1);
-  }
-  box(g, 6, 7, 0.4, '#7a6a58', 0, 4.7, 7.1); box(g, 15, 0.6, 4, T, 0, 0.9, 9.6); box(g, 13, 0.6, 2.4, T, 0, 1.5, 9.4);
-  box(g, 14, 8, 14, W, 0, 15, 0); box(g, 15.2, 0.7, 15.2, T, 0, 19.2, 0);
-  for (const s of [-1, 1]) for (const k of [-4, 0, 4]) add(g, new THREE.BoxGeometry(1.4, 3.4, 0.3), MAT.win, k, 15, s * 7.02);
-  add(g, new THREE.CylinderGeometry(5.6, 6.2, 1.6, 20), W, 0, 20.3, 0); add(g, new THREE.SphereGeometry(5.8, 20, 12, 0, Math.PI * 2, 0, Math.PI / 2), Dm, 0, 21, 0);
-  cyl(g, 0.25, 0.5, 3, '#c9a24a', 0, 28, 0, 8); sph(g, 0.5, '#c9a24a', 0, 27.2, 0, 8, 6);
-  for (const sx of [-1, 1]) {
-    box(g, 9, 8, 10, W, sx * 24, 14.5, 0); box(g, 10, 0.6, 11, T, sx * 24, 18.7, 0);
-    add(g, new THREE.SphereGeometry(3.8, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2), Dm, sx * 24, 19, 0); cyl(g, 0.15, 0.3, 1.8, '#c9a24a', sx * 24, 23.6, 0, 6);
-    for (const k of [-2, 2]) add(g, new THREE.BoxGeometry(1.2, 3, 0.3), MAT.win, sx * 24 + k, 14.5, 5.02);
-    for (const ex of [31, 13]) for (const cz of [-5.5, 5.5]) {
-      const cx = sx * ex;
-      for (const q of [[-0.8, -0.8], [0.8, -0.8], [-0.8, 0.8], [0.8, 0.8]]) cyl(g, 0.12, 0.12, 2, T, cx + q[0], 12.2, cz + q[1], 6);
-      add(g, new THREE.SphereGeometry(1.2, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), Dm, cx, 13.2, cz);
-    }
-  }
+/** Maharaja Bir Bikram Stadium: the ground itself comes from OSM; we add the four floodlight towers. */
+export const STADIUM = { x: 1436, z: 975 };
+export function buildStadiumLights(scene: THREE.Scene): THREE.Group {
   const lights = new THREE.Group(); const lm = MAT.palaceLights;
-  for (const [x, y, z, w] of [[0, 11.3, 7.6, 66], [0, 19.6, 7.7, 15.5], [24, 19.0, 5.6, 10.2], [-24, 19.0, 5.6, 10.2], [0, 1.3, 13.2, 76]]) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, 0.12), lm); m.position.set(x, y, z); lights.add(m); }
-  for (const s of [-1, 1]) for (const x of [7.6, 32.6]) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.12, 10.5, 0.12), lm); m.position.set(s * x, 6, 7.6); lights.add(m); }
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(5.9, 0.08, 4, 40), lm); ring.rotation.x = Math.PI / 2; ring.position.y = 21.1; lights.add(ring);
-  g.add(lights); g.scale.setScalar(PALACE.s); place(scene, g, PALACE.x, PALACE.z);
-  colliders.push({ x0: PALACE.x - 38 * PALACE.s, x1: PALACE.x + 38 * PALACE.s, z0: PALACE.z - 13 * PALACE.s, z1: PALACE.z + 11.5 * PALACE.s });
-  return lights;
+  for (const [dx, dz] of [[-88, -78], [88, -78], [-88, 78], [88, 78]]) {
+    const x = STADIUM.x + dx, z = STADIUM.z + dz; const t = new THREE.Group();
+    cyl(t, 0.35, 0.6, 32, '#8a8f94', 0, 16, 0, 6); box(t, 5, 3, 0.4, '#5d6266', 0, 33, 0);
+    for (let i = 0; i < 3; i++) for (let j = 0; j < 4; j++) { const m = new THREE.Mesh(new THREE.BoxGeometry(1, 0.8, 0.2), lm); m.position.set(-1.8 + j * 1.2, 32 + i * 0.95, 0.25); t.add(m); lights.add(m.clone()); }
+    t.lookAt(STADIUM.x, 0, STADIUM.z); place(scene, t, x, z, Math.atan2(STADIUM.x - x, STADIUM.z - z)); colliders.push({ x, z, r: 0.8 });
+    // the glowing panels live in the lights group so they switch on at dusk
+    lights.children.slice(-12).forEach((m) => { m.position.applyMatrix4(new THREE.Matrix4().makeRotationY(Math.atan2(STADIUM.x - x, STADIUM.z - z))); m.position.add(new THREE.Vector3(x, 0, z)); m.rotation.y = Math.atan2(STADIUM.x - x, STADIUM.z - z); });
+  }
+  scene.add(lights); return lights;
 }
 
 export function buildPandal(scene: THREE.Scene, map: CityMap): THREE.Group {
@@ -126,8 +108,8 @@ export function buildNPCs(scene: THREE.Scene, map: CityMap): Record<NpcKey, Npc>
   const def: Record<NpcKey, { x: number; z: number; o: Parameters<typeof person>[0]; name: string; role: string; faceRoad?: boolean }> = {
     grandpa: { ...GRANDPA, o: { shirt: '#e4ddcc', lowerMat: new THREE.MeshLambertMaterial({ color: '#f1ece0' }), hair: '#d9d6cf', skin: '#8a5d3c' }, name: 'Hemanta Debbarma', role: 'Your grandfather' },
     rina: { ...RINA.npc, o: { female: true, shirt: '#7d1d3f', bun: true, lowerMat: MAT.rignai }, name: 'Rina Jamatia', role: 'Neighbour · weaver' },
-    gopal: { x: SPOTS.gopal[0], z: SPOTS.gopal[1], o: { shirt: '#6b8fb3', lowerMat: MAT.lungi2, gamcha: true }, name: 'Gopal Saha', role: 'Trader · Lake Chowmuhani Bazar', faceRoad: true },
-    conductor: { x: SPOTS.busTerminus[0], z: SPOTS.busTerminus[1], o: { shirt: '#b9a37a', lowerMat: new THREE.MeshLambertMaterial({ color: '#4a4a52' }) }, name: 'Bus conductor', role: 'Radhanagar Bus Terminus', faceRoad: true },
+    gopal: { x: SPOTS.gopal[0], z: SPOTS.gopal[1], o: { shirt: '#6b8fb3', lowerMat: MAT.lungi2, gamcha: true }, name: 'Gopal Saha', role: 'Trader · Math Chowmuhani Bazar', faceRoad: true },
+    conductor: { x: SPOTS.busTerminus[0], z: SPOTS.busTerminus[1], o: { shirt: '#b9a37a', lowerMat: new THREE.MeshLambertMaterial({ color: '#4a4a52' }) }, name: 'Bus conductor', role: 'Joynagar bus stop', faceRoad: true },
   };
   const out = {} as Record<NpcKey, Npc>;
   for (const k of Object.keys(def) as NpcKey[]) {

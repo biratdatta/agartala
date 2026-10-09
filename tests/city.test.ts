@@ -34,8 +34,18 @@ describe('the baked city', () => {
       for (let d = 0; d < r.length; d += 4, n++) { let ok = false; for (const sd of [1.4, 0.7, 0]) { const p = along(r, d, sd); if (!map.inBuilding(p.x, p.z)) { ok = true; break; } } if (!ok) inside++; }
       expect(inside / n).toBeLessThan(0.002);
     }
-    const home = standByKey('stHome')!, lake = standByKey('stLake')!;
-    expect(g.route(home.x, home.z, lake.x, lake.z).length).toBeGreaterThan(1200);
+    const home = standByKey('stHome')!, math = standByKey('stMath')!;
+    expect(g.route(home.x, home.z, math.x, math.z).length).toBeGreaterThan(900);
+  });
+
+  it('lays the farm out on open, dry ground by the river', async () => {
+    const F = await import('../src/shared/farm.js');
+    const pts = [F.HOME, F.GRANDPA, F.ROLLER, F.RACK, F.SHED, F.CRAFT, F.COLD, F.PUMP, F.RINA.house, F.RINA.npc, ...F.PLOTS, ...F.TEA, ...F.AGAR, ...F.RUBBER, ...F.BAMBOO, ...F.JACK];
+    for (const p of pts) {
+      expect(map.inBuilding(p.x, p.z), `${p.x},${p.z}`).toBe(false);
+      expect(map.inWaterPoly(p.x, p.z) && !(Math.abs(p.x - F.POND.x) < F.POND.w && Math.abs(p.z - F.POND.z) < F.POND.d), `${p.x},${p.z} in water`).toBe(false);
+      expect(F.inFarm(p.x, p.z) || Math.hypot(p.x - F.HOME.x, p.z - F.HOME.z) < 40, `${p.x},${p.z} outside the farm`).toBe(true);
+    }
   });
 
   it('places every neighbour on open ground', () => {
@@ -47,7 +57,7 @@ describe('the baked city', () => {
   });
 
   it('finds open ground for a house near every named locality', () => {
-    const list = localities(map); expect(list.length).toBeGreaterThan(30);
+    const list = localities(map); expect(list.length).toBeGreaterThan(12);
     let far = 0;
     for (const l of list) {
       const h = findHomeSite(map, l.x, l.z, l.name); expect(h, l.name).not.toBeNull();

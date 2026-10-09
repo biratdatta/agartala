@@ -136,6 +136,11 @@ export class Crowd {
     w.side = (this.rng() < 0.5 ? 1 : -1) * (this.rng() < 0.8 ? hw + 0.3 + this.rng() * 0.7 : this.rng() * hw);
     w.speed = 0.9 + this.rng() * 0.8; w.idle = this.rng() < 0.12; w.pause = 0;
   }
+  /** People out at a given hour: the evening rush is the busiest, the small hours nearly empty. */
+  static densityAt(hour: number, rain: boolean): number {
+    const h = hour; const d = h < 5 ? 0.12 : h < 7 ? 0.45 : h < 10 ? 0.85 : h < 16 ? 0.7 : h < 20 ? 1 : h < 23 ? 0.5 : 0.18;
+    return d * (rain ? 0.6 : 1);
+  }
   nearest(x: number, z: number, r: number): { i: number; x: number; z: number } | null {
     let best: { i: number; x: number; z: number } | null = null, bd = r;
     this.w.forEach((w, i) => { const d = Math.hypot(w.x - x, w.z - z); if (d < bd) { bd = d; best = { i, x: w.x, z: w.z }; } });
@@ -143,11 +148,15 @@ export class Crowd {
   }
   hold(i: number, px: number, pz: number, seconds: number): void { const w = this.w[i]; if (!w) return; w.pause = seconds; w.faceTo = Math.atan2(px - w.x, pz - w.z); }
   private lastX = 1e6; private lastZ = 1e6;
+  /** Share of the crowd out on the streets (busy at the evening rush, nearly empty at night). */
+  density = 1;
   update(dt: number, px: number, pz: number): void {
     // after a jump or a tomtom ride, fill the new neighbourhood straight away
     const jumped = Math.abs(px - this.lastX) + Math.abs(pz - this.lastZ) > 150; this.lastX = px; this.lastZ = pz;
+    const active = Math.round(this.w.length * Math.max(0, Math.min(1, this.density)));
     for (let i = 0; i < this.w.length; i++) {
       const w = this.w[i];
+      if (i >= active) { for (const part of this.parts) part.mesh.setMatrixAt(i, this.zero); w.x = w.z = 1e6; continue; }
       const far = Math.abs(w.x - px) + Math.abs(w.z - pz);
       if (far > 420) this.respawn(w, px, pz, jumped || w.x > 1e5);
       let moving = false;
@@ -178,7 +187,9 @@ export class Traffic {
   private cars: Mover[] = [];
   readonly crowd: Crowd;
   private rng = mulberry(21);
-  constructor(scene: THREE.Scene, private map: CityMap, private fleet: { set(i: number, x: number, y: number, z: number, rot: number): void }, private carCount: number) {
+  /** Share of the tomtoms on the road. */
+  density = 1;
+  constructor(scene: THREE.Scene, private map: CityMap, private fleet: { set(i: number, x: number, y: number, z: number, rot: number): void; hide(i: number): void }, private carCount: number) {
     this.crowd = new Crowd(scene, map);
     for (let i = 0; i < carCount; i++) this.cars.push({ r: map.roads[0], s: 0, t: 0, dir: 1, speed: 0, side: 0 });
     this.pos = this.cars.map(() => ({ x: 1e6, z: 1e6 }));
@@ -192,8 +203,10 @@ export class Traffic {
   update(dt: number, px: number, pz: number): void {
     this.jumped = Math.abs(px - this.lx) + Math.abs(pz - this.lz) > 150; this.lx = px; this.lz = pz;
     this.crowd.update(dt, px, pz);
+    const active = Math.round(this.carCount * Math.max(0, Math.min(1, this.density)));
     for (let i = 0; i < this.carCount; i++) {
       const c = this.cars[i], p0 = this.pos[i];
+      if (i >= active) { if (p0.x < 1e5) { this.fleet.hide(i); p0.x = p0.z = 1e6; } continue; }
       if (Math.abs(p0.x - px) + Math.abs(p0.z - pz) > 700) {
         const m = spawnNear(this.map, this.rng, px, pz, p0.x > 1e5 || this.jumped ? 20 : 250, 450, 3); if (m) { Object.assign(c, m); c.speed = 5 + this.rng() * 4; c.side = Math.min(1.8, ROAD_W[m.r.t] / 4); }
       }

@@ -42,3 +42,36 @@ export const SFX: Record<string, () => void> = {
 export const play = (name?: string): void => { if (name && SFX[name]) SFX[name](); };
 export function unlockAudio(): void { ac(); }
 export function toggleSound(): boolean { on = !on; if (ctx) void (on ? ctx.resume() : ctx.suspend()); return on; }
+
+/* ---------- ambience: rain, crickets, birds, temple bells, horns and the dhak ---------- */
+function bell(f: number, vol = 0.06, delay = 0): void { for (const [m, v] of [[1, 1], [2.76, 0.5], [5.4, 0.25]] as const) tone(f * m, 3.2 / m, 'sine', vol * v, 0, delay); }
+let rainNode: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
+function rainLoop(level: number): void {
+  const a = ac(); if (!a) return;
+  if (!rainNode && level > 0) {
+    const n = a.createBuffer(1, a.sampleRate * 2, a.sampleRate); const d = n.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = a.createBufferSource(); src.buffer = n; src.loop = true; const f = a.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1400;
+    const gain = a.createGain(); gain.gain.value = 0; src.connect(f).connect(gain).connect(a.destination); src.start(); rainNode = { src, gain };
+  }
+  if (rainNode) rainNode.gain.gain.setTargetAtTime(level, a.currentTime, 1.2);
+}
+export interface AmbienceInput { hour: number; rain: boolean; flood: boolean; nearTraffic: number; festival: string | null; nearPandal: boolean; nearTemple: boolean; farm: boolean }
+/**
+ * Called about twice a second. Picks what you would hear in Agartala at this hour and place:
+ * rain on the tin roofs, crickets after dark, birds at dawn, temple bells at dawn and dusk,
+ * tomtom horns near traffic, and the dhak when a puja is on.
+ */
+export class Ambience {
+  private lastBellHour = -1; private t = 0;
+  update(dt: number, s: AmbienceInput): void {
+    if (!on || !ctx) return; this.t += dt;
+    rainLoop(s.rain ? (s.flood ? 0.09 : 0.06) : 0);
+    const night = s.hour >= 19 || s.hour < 5, dawn = s.hour >= 5 && s.hour < 8;
+    if (night && Math.random() < dt * (s.farm ? 3 : 1.2)) { const f = 4200 + Math.random() * 600; for (let i = 0; i < 3; i++) tone(f, 0.04, 'sine', 0.012, 0, i * 0.07); }
+    if (dawn && !s.rain && Math.random() < dt * 0.9) { const f = 1800 + Math.random() * 1600; tone(f, 0.09, 'sine', 0.02, Math.random() < 0.5 ? 600 : -500); tone(f * 1.2, 0.07, 'sine', 0.015, 0, 0.12); }
+    const hh = Math.floor(s.hour); if ((hh === 6 || hh === 18) && this.lastBellHour !== hh) { this.lastBellHour = hh; for (let i = 0; i < 5; i++) bell(s.nearTemple ? 520 : 440, s.nearTemple ? 0.07 : 0.03, i * 1.4); }
+    if (hh !== 6 && hh !== 18) this.lastBellHour = -1;
+    if (s.nearTraffic > 0 && Math.random() < dt * 0.12 * s.nearTraffic) { const f = 560 + Math.random() * 140; tone(f, 0.12, 'square', 0.015); if (Math.random() < 0.5) tone(f, 0.12, 'square', 0.015, 0, 0.18); }
+    if (s.festival && s.nearPandal && Math.random() < dt * 0.5) for (let i = 0; i < 4; i++) { tone(95, 0.2, 'sine', 0.12, -40, i * 0.17 + (i % 2) * 0.04); noise(0.05, 0.1, 900, 2, i * 0.17); }
+  }
+}

@@ -1,6 +1,9 @@
 import { netWorth } from '../../src/shared/economy.js';
 import { newState, normalize, type GameState } from '../../src/shared/save.js';
 import { AGARTALA, haversineKm } from '../../src/shared/geo.js';
+import { weekId } from '../../src/shared/week.js';
+import { paraAt } from '../../src/shared/area.js';
+import { HOME } from '../../src/shared/farm.js';
 import type { Store } from './store.js';
 
 /** What is stored under save:<id>. The game state plus account bookkeeping. */
@@ -50,14 +53,31 @@ export async function loadByToken(store: Store, token: string | null, now: numbe
   return s ? loadSave(store, s.value.saveId, now) : null;
 }
 
-export async function updateLeaderboard(store: Store, saveId: string, s: GameState): Promise<void> {
-  if (!s.name || s.name.length < 2) return;
-  await store.lbUpsert({ id: saveId, name: s.name, worth: netWorth(s), day: s.day });
+/** A farm's public id: safe to show other players (never the session token or farm code). */
+export const publicId = (saveId: string): string => saveId.replace(/-/g, '').slice(0, 8).toUpperCase();
+/** The visit code friends type to find your farm: the public id as XXXX-XXXX. */
+export const visitCode = (saveId: string): string => publicId(saveId).replace(/^(.{4})(.{4})$/, '$1-$2');
+export const normVisit = (c: string): string => String(c).toUpperCase().replace(/[^0-9A-F]/g, '').slice(0, 8);
+/** Remembers the visit code for a farm, so friends can find it. Cheap no-op once it exists. */
+export async function ensureVisitCode(store: Store, saveId: string): Promise<void> {
+  await store.put(`pid:${publicId(saveId)}`, { saveId }, null);
+}
+export async function loadByVisitCode(store: Store, code: string, now: number): Promise<Loaded | null> {
+  const p = await store.get<{ saveId: string }>(`pid:${normVisit(code)}`);
+  return p ? loadSave(store, p.value.saveId, now) : null;
+}
+/** The neighbourhood a farm plays for on the para board. */
+export const paraOf = (s: GameState): string => (s.home ? paraAt(s.home.x, s.home.z) : paraAt(HOME.x, HOME.z));
+
+export async function updateLeaderboard(store: Store, saveId: string, s: GameState, now = Date.now()): Promise<void> {
+  const named = !!s.name && s.name.length >= 2;
+  if (named) await store.lbUpsert({ id: saveId, name: s.name, worth: netWorth(s), day: s.day });
+  const w = s.week; if (w.id === weekId(now)) await store.weekUpsert({ id: publicId(saveId), week: w.id, name: named ? s.name : '', para: paraOf(s), paddy: w.paddy, deliveries: w.deliveries, kaam: w.kaam, sights: w.sights, earned: w.earned });
 }
 
 /** The public view of a save sent to the browser. */
 export const view = (token: string, l: Loaded, store: Store, now: number, geo: Geo | null = null) => ({
-  token, code: l.doc.code, signedIn: !!l.doc.userId, email: l.doc.userId ? l.doc.email || '' : '', state: l.doc.state, rev: l.rev, serverNow: now, store: store.name, geo,
+  token, code: l.doc.code, visit: visitCode(l.saveId), pid: publicId(l.saveId), signedIn: !!l.doc.userId, email: l.doc.userId ? l.doc.email || '' : '', state: l.doc.state, rev: l.rev, serverNow: now, store: store.name, geo,
 });
 
 /**

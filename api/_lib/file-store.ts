@@ -1,8 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import type { Entry, LbEntry, Store } from './store.js';
-
-const sortLb = (a: LbEntry[], n: number) => a.slice().sort((x, y) => y.worth - x.worth || x.day - y.day).slice(0, n);
+import { paraTopOf, recentOf, sortLb, weekTopOf, type Entry, type LbEntry, type Presence, type Store, type WeekCat, type WeekEntry } from './store.js';
 
 /** Development store: one JSON file per key under .data/. Writes are serialised inside the process. */
 export class FileStore implements Store {
@@ -23,5 +21,13 @@ export class FileStore implements Store {
   }
   lbUpsert(e: LbEntry) { return this.lock(async () => { const f = path.join(this.dir, 'leaderboard.json'); const all = (await this.read<Record<string, LbEntry>>(f)) || {}; all[e.id] = e; await this.write(f, all); }); }
   async lbTop(n: number) { const all = (await this.read<Record<string, LbEntry>>(path.join(this.dir, 'leaderboard.json'))) || {}; return sortLb(Object.values(all), n); }
+  weekUpsert(e: WeekEntry) { return this.lock(async () => { const f = path.join(this.dir, 'weekly.json'); const all = (await this.read<Record<string, WeekEntry>>(f)) || {}; all[`${e.id}|${e.week}`] = e; await this.write(f, all); }); }
+  private async weeks() { return Object.values((await this.read<Record<string, WeekEntry>>(path.join(this.dir, 'weekly.json'))) || {}); }
+  async weekTop(week: string, cat: WeekCat, n: number) { return weekTopOf(await this.weeks(), week, cat, n); }
+  async paraTop(week: string, n: number) { return paraTopOf(await this.weeks(), week, n); }
+  /** Who is in the city is short-lived, so in local dev it stays in memory. */
+  private pres = new Map<string, Presence>();
+  async presenceUpsert(p: Presence) { this.pres.set(p.id, { ...p }); }
+  async presenceRecent(since: number, n: number) { return recentOf([...this.pres.values()], since, n); }
 }
 

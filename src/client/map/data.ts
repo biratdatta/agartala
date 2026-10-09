@@ -4,6 +4,7 @@
  * Coordinates are metres from the origin near Ujjayanta Palace, x east and z south.
  */
 import { HILLS, PLOTS, POND } from '../../shared/farm.js';
+import { AREA, PARAS } from '../../shared/area.js';
 import { clamp, lerp, smooth } from '../../shared/rng.js';
 
 export interface RawMap {
@@ -17,7 +18,7 @@ export interface Road extends Poly { t: number; name: string; bridge: number }
 export interface Land extends Poly { code: number }
 export interface Place { x: number; z: number; name: string; kind: string }
 
-export const X0 = -2100, X1 = 2100, Z0 = -2050, Z1 = 2450;
+export const X0 = AREA.x0, X1 = AREA.x1, Z0 = AREA.z0, Z1 = AREA.z1;
 /** Carriageway widths in metres by road class: primary … path. */
 export const ROAD_W = [11, 9, 7.5, 6, 5, 3.5, 2];
 export const fixName = (s: string): string => s.replace(/Chowmohani/g, 'Chowmuhani');
@@ -80,6 +81,8 @@ export class CityMap {
       const w = ROAD_W[r.t] / 2 + 2;
       for (let s = 0; s < r.n - 1; s++) this.rGrid.add(Math.min(r.xs[s], r.xs[s + 1]) - w, Math.min(r.zs[s], r.zs[s + 1]) - w, Math.max(r.xs[s], r.xs[s + 1]) + w, Math.max(r.zs[s], r.zs[s + 1]) + w, ri * 4096 + s);
     });
+    // the five paras the game is about (OSM names few of them)
+    for (const p of PARAS) { const pl = { x: p.x, z: p.z, name: p.name, kind: 'para' }; this.places.push(pl); if (/Chowmuhani/.test(p.name)) this.chowmuhanis.push(pl); }
     for (const p of raw.p) {
       const name = raw.names[p[3]]; if (!name) continue;
       const pl = { x: p[0] * 0.5, z: p[1] * 0.5, name: fixName(name), kind: p[2] };
@@ -118,7 +121,7 @@ export class CityMap {
   }
 }
 
-/* ---- ground height: the city is flat; the farm has two small tillas ---- */
+/* ---- ground height: the city is flat; the farm has three small tillas ---- */
 function hillH(x: number, z: number): number {
   let h = 0;
   for (const t of HILLS) { const d2 = ((x - t.x) ** 2 + (z - t.z) ** 2) / (t.r * t.r); if (d2 < 9) h += t.h * Math.exp(-d2 * 2.2); }
@@ -126,7 +129,7 @@ function hillH(x: number, z: number): number {
 }
 const BEDS = PLOTS.filter((p) => p.kind === 'tilla').map((b) => ({ ...b, y: hillH(b.x, b.z) }));
 export function getH(x: number, z: number): number {
-  if (x < -920 || x > -700 || z < -1700 || z > -1560) return 0;
+  if (x < 1640 || x > 1840 || z < 1090 || z > 1290) return 0;
   let h = hillH(x, z);
   for (const b of BEDS) { const d = Math.hypot(x - b.x, z - b.z); if (d < 5.5) h = lerp(h, b.y, 1 - smooth(2.2, 5.5, d)); }
   return h;

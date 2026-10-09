@@ -22,9 +22,9 @@ describe('economy', () => {
   it('values a new farm at its cash and land', () => {
     expect(netWorth(newState(T0))).toBe(100 + 6 * 400);
   });
-  it('has nine tomtom stands with sensible ride times', () => {
-    expect(STANDS).toHaveLength(9);
-    const home = STANDS[0], lake = STANDS.find((s) => s.k === 'stLake')!;
-    expect(rideMinutes(home, lake)).toBeGreaterThan(5); expect(rideMinutes(home, lake)).toBeLessThan(20);
+  it('has seven tomtom stands with sensible ride times', () => {
+    expect(STANDS).toHaveLength(7);
+    const home = STANDS[0], lake = STANDS.find((s) => s.k === 'stMath')!;
+    expect(rideMinutes(home, lake)).toBeGreaterThan(5.5); expect(rideMinutes(home, lake)).toBeLessThan(20);
   });
 });

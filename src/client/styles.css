@@ -174,3 +174,59 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
 .errlist.sights{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 .errlist.sights li{border-left-color:#9b6bd6;background:rgba(155,107,214,.08)}
 .errlist li.done{opacity:.5}
+
+/* energy, festival and players lines in the status card */
+#energy{position:relative;height:14px;border-radius:3px;background:rgba(246,239,224,.1);border:1px solid var(--line);overflow:hidden}
+#energy i{position:absolute;inset:0 auto 0 0;width:100%;background:linear-gradient(90deg,#c0532f,#e9b23b 45%,var(--paddy));transition:width .3s}
+#energy span{position:relative;display:block;text-align:center;font-size:10.5px;line-height:13px;font-weight:600;color:var(--ink);text-shadow:0 1px 2px rgba(0,0,0,.8)}
+#energy.low i{background:#c0532f}
+#fest{font-size:12px;line-height:1.3;color:#ffcf6a}
+#others{font-size:11.5px;color:#9fd3ff}
+
+/* tabs on the farm board */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.tabs button{background:transparent;border:0;border-bottom:2px solid transparent;color:var(--ink-dim);padding:6px 12px;font-size:14px;font-weight:600}
+.tabs button[aria-selected="true"]{color:var(--gold);border-bottom-color:var(--gold)}
+#board .tab.cols{display:grid}
+#board select{background:rgba(246,239,224,.06);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:7px 8px;font:inherit;font-size:14px}
+#board select option{background:var(--panel-solid)}
+.b2{padding:4px 9px;font-size:12.5px;border-radius:4px;border:1px solid var(--line);background:transparent;color:var(--ink)}
+.b2:hover:not(:disabled),.b2.on{border-color:var(--gold);color:var(--gold)}
+.b2:disabled{opacity:.35;cursor:not-allowed}
+.flist,.plist,.clist{list-style:none;margin:0;padding:0;display:grid;gap:5px}
+.flist li{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:6px 8px;background:rgba(246,239,224,.04);border-radius:4px;font-size:13.5px}
+.flist .bar{grid-column:1/-1;height:4px;border-radius:2px;background:rgba(246,239,224,.1);overflow:hidden}
+.flist .bar i{display:block;height:100%;background:var(--paddy)}
+.flist .lv{color:var(--gold);font-size:12px}
+.plist li{padding:5px 8px;border-left:3px solid #4fb0a0;background:rgba(79,176,160,.08);font-size:13.5px}
+.plist li b{color:var(--ink)}
+.plist li.locked{border-left-color:rgba(246,239,224,.2);color:var(--ink-dim);font-style:italic}
+.clist li{padding:7px 9px;border-left:3px solid var(--gold);background:rgba(233,178,59,.07);font-size:13.5px;cursor:pointer}
+.clist li.locked{border-left-color:rgba(246,239,224,.2);cursor:default;color:var(--ink-dim)}
+.clist li.ready{border-left-color:#9fd36a;background:rgba(159,211,106,.1)}
+#visitInfo{border:1px solid var(--line);border-radius:4px;padding:8px 10px;font-size:13.5px;line-height:1.5;margin-top:8px}
+#visitOut{color:var(--gold);letter-spacing:.05em}
+
+/* stall menu and bus trips */
+#stall .ride,#trips .ride,#haatList label{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;padding:10px 12px;font-size:14px;text-align:left;border-radius:4px;border:1px solid var(--line);background:transparent;color:var(--ink)}
+#stall .ride:hover:not(:disabled),#trips .ride:hover:not(:disabled){border-color:var(--gold);color:var(--gold)}
+#stall .ride:disabled,#trips .ride:disabled{opacity:.45;cursor:not-allowed}
+#stall .sm,#trips .sm{font-size:12px;color:var(--ink-dim)}
+#trips .ride{flex-direction:column;align-items:flex-start;gap:3px}
+#trips .ride .top{display:flex;justify-content:space-between;width:100%;gap:10px}
+#trips h4{margin:6px 0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold);font-weight:600}
+#haatList input{width:64px;background:rgba(246,239,224,.06);border:1px solid var(--line);color:var(--ink);border-radius:4px;padding:5px 6px;font:inherit}
+
+/* photo mode */
+#photobar{position:absolute;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:center;padding:10px 14px;border-radius:8px;background:var(--panel);border:1px solid var(--line);max-width:calc(100vw - 24px)}
+#game.photo #hud,#game.photo #touch{display:none}
+
+/* touch extras */
+#tRun{position:absolute;right:104px;bottom:calc(74px + env(safe-area-inset-bottom,0px));pointer-events:auto}
+#tRun[aria-pressed="true"]{border-color:var(--gold);color:var(--gold)}
+@media (max-width:560px){
+  .panel .in{padding:14px 14px 16px}
+  .panel h3{font-size:22px}
+  #board .tab.cols{grid-template-columns:1fr}
+  #energy span{font-size:9.5px}
+}

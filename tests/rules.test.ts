@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { NEED, PRICES } from '../src/shared/constants.js';
-import { price } from '../src/shared/economy.js';
+import { saleValue } from '../src/shared/economy.js';
 import { apply } from '../src/shared/rules.js';
 import { newState, normalize } from '../src/shared/save.js';
 import { advance } from '../src/shared/time.js';
@@ -60,9 +60,9 @@ describe('rubber, bamboo, jackfruit', () => {
 
 describe('market', () => {
   it('sells at the day\'s rate and refuses to sell what you do not have', () => {
-    const g = game(); g.s.inv.paddy = 3; const p = price('paddy', g.s.day);
+    const g = game(); g.s.inv.paddy = 3; const v = saleValue('paddy', g.s.day, 0, 2);
     g.ok({ t: 'sell', item: 'paddy', n: 2 });
-    expect(g.s.money).toBe(100 + 2 * p);
+    expect(g.s.money).toBe(100 + v);
     expect(g.do({ t: 'sell', item: 'paddy', n: 5 }).ok).toBe(false);
     expect(g.do({ t: 'sell', item: 'paddy', n: -1 }).ok).toBe(false);
     expect(g.do({ t: 'sell', item: 'gold' as 'paddy', n: 1 }).ok).toBe(false);
@@ -76,23 +76,23 @@ describe('market', () => {
   });
   it('gives the first tomtom ride free, then charges, and counts ride time only while riding', () => {
     const g = game();
-    g.ok({ t: 'ride', from: 'stCircuit', to: 'stHome' });
+    g.ok({ t: 'ride', from: 'stStadium', to: 'stHome' });
     expect(g.s.money).toBe(100); expect(g.s.ride).not.toBeNull();
-    expect(g.do({ t: 'ride', from: 'stHome', to: 'stLake' }).ok).toBe(false); // already riding
-    const g2 = game(); g2.ok({ t: 'ride', from: 'stCircuit', to: 'stHome' });
+    expect(g.do({ t: 'ride', from: 'stHome', to: 'stMath' }).ok).toBe(false); // already riding
+    const g2 = game(); g2.ok({ t: 'ride', from: 'stStadium', to: 'stHome' });
     expect(g2.s.ride).not.toBeNull();
     // skip: arrive books the rest of the ride time and drops you at the stand
     g2.ok({ t: 'arrive' });
     expect(g2.s.ride).toBeNull(); expect(g2.s.flags.arrived).toBe(true); expect(g2.s.mission).toBe(1);
-    g2.ok({ t: 'ride', from: 'stHome', to: 'stLake' });
+    g2.ok({ t: 'ride', from: 'stHome', to: 'stMath' });
     expect(g2.s.money).toBe(100 - PRICES.fare);
     expect(g2.do({ t: 'ride', from: 'stHome', to: 'nowhere' }).ok).toBe(false);
   });
   it('finishes a ride on its own when the time is up', () => {
-    const g = game(); g.ok({ t: 'ride', from: 'stCircuit', to: 'stHome' });
+    const g = game(); g.ok({ t: 'ride', from: 'stStadium', to: 'stHome' });
     const ms = g.s.ride!.ms; const before = g.s.hour;
     g.wait((ms / 1000 / 300) * 24 * 3); g.do({ t: 'fill' });
-    expect(g.s.ride).toBeNull(); expect(g.s.pos.x).toBeCloseTo(-700, 0); expect(g.s.hour).toBeGreaterThan(before);
+    expect(g.s.ride).toBeNull(); expect(g.s.pos.x).toBeCloseTo(1532.4, 0); expect(g.s.hour).toBeGreaterThan(before);
   });
 });
 
@@ -151,12 +151,12 @@ describe('home anywhere in Agartala', () => {
   it('moves the Home tomtom stand with the house, and arrival follows it', async () => {
     const { standByKey } = await import('../src/shared/stands.js');
     const g = game();
-    g.ok({ t: 'home', site: { name: 'Krishnanagar', x: -730, z: -160, sx: -735, sz: -150, face: 0 } });
-    expect(g.s.home?.name).toBe('Krishnanagar');
-    expect(standByKey('stHome', g.s.home)?.x).toBe(-735);
+    g.ok({ t: 'home', site: { name: 'Ramnagar', x: 1020, z: 1420, sx: 1015, sz: 1410, face: 0 } });
+    expect(g.s.home?.name).toBe('Ramnagar');
+    expect(standByKey('stHome', g.s.home)?.x).toBe(1015);
     expect(standByKey('stFields', g.s.home)).toBeDefined();
-    g.ok({ t: 'ride', from: 'stCircuit', to: 'stHome' }); g.ok({ t: 'arrive' });
-    expect(g.s.pos.x).toBe(-735); expect(g.s.flags.arrived).toBe(true);
+    g.ok({ t: 'ride', from: 'stStadium', to: 'stHome' }); g.ok({ t: 'arrive' });
+    expect(g.s.pos.x).toBe(1015); expect(g.s.flags.arrived).toBe(true);
     expect(g.do({ t: 'home', site: { name: 'Mars', x: 99999, z: 0, sx: 0, sz: 0, face: 0 } }).ok).toBe(false);
     g.ok({ t: 'home', site: null }); expect(g.s.home).toBeNull();
   });

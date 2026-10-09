@@ -16,10 +16,16 @@ export function bearer(req: Request): string | null {
   return m ? m[1] : null;
 }
 
+/** An error meant for the player, with its HTTP status. */
+export class HttpError extends Error { constructor(message: string, readonly status = 400) { super(message); } }
+
 /** Wraps a handler so storage or config errors come back as JSON instead of a crash page. */
 export function guard(fn: (req: Request) => Promise<Response>): (req: Request) => Promise<Response> {
   return async (req) => {
     try { return await fn(req); }
-    catch (err) { console.error('[api]', err); return fail(err instanceof Error ? err.message : 'Server error', 500); }
+    catch (err) {
+      if (err instanceof HttpError) return fail(err.message, err.status);
+      console.error('[api]', err); return fail(err instanceof Error ? err.message : 'Server error', 500);
+    }
   };
 }

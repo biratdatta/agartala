@@ -2,11 +2,11 @@
 
 **A 3D farming game set in the real streets of Agartala, Tripura.**
 
-You fly home from wherever you live now to your grandfather's fields at Bhati Abhoynagar, on the north-west edge of the city. When the game is deployed, your hometown comes from where you log in (Cloudflare or Vercel IP geolocation), and you can change it on the title screen.
+You fly home from wherever you live now to your grandfather's bari on the bank of the Haora river, behind Maharaja Bir Bikram (MBB) Stadium. When the game is deployed, your hometown comes from where you log in (Cloudflare or Vercel IP geolocation), and you can change it on the title screen.
 
-You arrive at Circuit House and ride your first tomtom home along the real streets. Then you grow paddy and Queen pineapple, tap rubber at dawn, and help neighbours across the city with daily kaam. The festivals run from Garia Puja to Durga Puja at Ujjayanta Palace.
+The game covers a small, detailed part of Agartala: **Shibnagar, Math Chowmuhani, MBB Stadium, Ramnagar and Joynagar**, about 1.9 × 1.9 km. You arrive at the stadium gate and ride your first tomtom to the fields by the river. Then you grow paddy and Queen pineapple, tap rubber at dawn, and help neighbours across the paras with daily kaam. The festivals run from Garia Puja to Durga Puja at Modern Club.
 
-Every road, lane and pond, and all 17,664 buildings of central Agartala, come from OpenStreetMap and sit where they really are.
+Every road, lane, pond and lake, and the river, come from OpenStreetMap and sit where they really are. About 6,800 real building footprints are filled out to about 8,900 houses (see *A fuller city* below).
 
 It runs in the browser, with no install and no sign-up. The game is modelled on [Tanda](https://github.com/gajanansr/tanda-an-village) by Gajanan Rathod: Three.js on the front, a small server with one set of rules shared by the browser and the server.
 
@@ -37,7 +37,8 @@ If you deploy only `dist/` to a static host with no API, the game still works: i
 | **E** | do the thing in front of you: till, sow, water, harvest, tap, cut, talk, trade, take a tomtom |
 | **Z** | sleep till 06:00 (after 19:00) |
 | **M** | city map: type a place and press Jump, or click anywhere on it to jump there |
-| **L** | your farm: net worth, leaderboard name, farm code, sign-in |
+| **L** | your farm: farm, people, Grandpa's album and the boards |
+| **P** | photo mode: hide the HUD and save a postcard |
 | **H** | help |
 
 On phones there's a joystick and an Act button.
@@ -91,14 +92,27 @@ The title screen asks where home is. You can type a neighbourhood, chowmuhani, b
 
 The game then finds an open plot beside a lane near that spot (`findHomeSite` in `src/client/map/places.ts`) and moves your stilt house, Grandpa, your bed and the **Home** tomtom stand there. The arrival story, Grandpa's lines and the mission text all follow it.
 
-The family fields stay at Bhati Abhoynagar with their own stand, so farming becomes a commute by tomtom like it would be. You can move home later from the Farm panel (L).
+The family fields stay by the Haora with their own stand, so farming becomes a commute by tomtom like it would be. You can move home later from the Farm panel (L).
 
 ### More to do
 
 - **Kaam:** five neighbours ask for goods each day.
 - **Parcels:** three a day to carry across town. You pick one up from one neighbour and deliver it to another, carrying one at a time. Pay depends on the distance.
-- **Sights:** 12 real places to see, from Ujjayanta Palace and Umakanta Academy to Heritage Park, each with a little history. Your first visit to each pays ₹25.
+- **Sights:** 10 places round the paras, from MBB Stadium and the Modern Club Shiv Mandir to the Shibnagar lakes and the Haora bridge, each with a little history. Your first visit to each pays ₹25.
 - **Tracking:** the Farm panel lists everything for the day. The minimap marks kaam in blue, parcels in orange, unseen sights in purple and your house with a house icon.
+
+### Life in the paras
+
+- **A bazar that moves:** Gopal's rates follow the season, one item is in demand each day (+30%), and selling a lot at once pushes the rate down for a few days. Fruit, fish and pitha go off overnight unless you build a cold store.
+- **More to grow and make:** tea on the third tilla (plant once, pluck every morning), agar trees (a month to grow, worth a fortune), rohu and katla in the pukur, cane baskets from bamboo, pitha from paddy in the kitchen.
+- **Kit:** scooter, diesel pump set (waters every plot at once), cold store, and a farm hand who waters and harvests at dawn for a week.
+- **Energy and food:** work tires you; rest, sleep, or eat at the food stalls by every tomtom stand (momo, mui borok, chakhwi, wahan mosdeng…).
+- **Seasons:** monsoon floods in Asharh and Srabon (paddy grows faster, the lunga can't be tilled, rides are slow on muddy roads).
+- **Festivals every year:** Kharchi Puja fair, Ker Puja (no tomtoms till 18:00), Durga Puja at Modern Club, Diwali lamps on the lakes, Pous Sankranti pitha.
+- **Bus trips:** Neermahal, the Tripura Sundari temple (a four-day blessing on your crops), the Akhaura border retreat at sunset, and the weekly Kamalasagar border haat.
+- **People:** friendship with each neighbour (friends pay more and invite you over in the evening), a Kokborok and Bangla phrasebook you learn by talking, and ten chapters of Grandpa's stories.
+- **Other players:** signed-in or not, other farmers walk the same streets with name tags. Visit a friend's farm by their visit code, water their crops, or send them a gift. Weekly boards by category, and para against para.
+- **Polish:** street lamps and a crowd that follows the hour, stadium floodlights at night, ambient sound (rain, crickets, birds, temple bells, the dhak), photo mode with postcards, and an installable app that opens offline.
 
 ### Running
 
@@ -110,7 +124,7 @@ When you run, the stride, arm swing, forward lean and bob all grow with speed, t
 
 OpenStreetMap is missing many of Agartala's houses, especially in the newer paras. During the map bake, `scripts/bake-map.mjs` marks everything that must stay open on a 2 m grid: roads, water, parks, fields, landmarks and existing buildings. It then fills the gaps with modest houses facing the lanes, a front row plus houses in the backs of blocks, only where the neighbourhood is already built-up.
 
-That adds about 13,000 houses to OSM's 17,664 (about 31,000 in all). The infill is seeded, so it's identical on every build, and these houses are marked from index `bs` in the map file.
+That adds about 2,000 houses to OSM's 6,800. The infill is seeded, so it's identical on every build, and these houses are marked from index `bs` in the map file.
 
 ### Crowds and traffic
 
@@ -128,7 +142,7 @@ The crowd and the 70 tomtoms follow you around the city: anyone who falls far be
 
 ### People
 
-- **Neighbours:** ten named neighbours live in real paras: a tea stall near the Shiva temple, a tailor in Radhanagar, a fish trader at Maharajganj Bazar, and so on. Every day three of them ask for something (*kaam*). The requests come from the day number, and the server checks and pays them.
+- **Neighbours:** ten named neighbours live round the paras: a tea stall by the Modern Club Shiv Mandir, a tailor off Math Chowmuhani, the stadium groundsman, a boatman at the Haora bridge, and so on. Every day five of them ask for something.
 - **Passers-by:** people walking the lanes stop, turn to face you, and chat when you press E near them.
 - **The Farm panel (L):** lists today's kaam, and the minimap marks who needs help with blue dots.
 
@@ -137,7 +151,7 @@ The crowd and the 70 tomtoms follow you around the city: anyone who falls far be
 - `map/data.ts`: loads `public/agartala-map.json` and answers spatial questions (inside a building? in water? which road?).
 - `scene/`:
   - `world.ts`: ground, parks, ponds, roads, extruded buildings, rooftop water tanks, trees and sky.
-  - `landmarks.ts`: Ujjayanta Palace, the Durgabari pandal, the bazar stall, tomtom stands, the bus and NPCs.
+  - `landmarks.ts`: the stadium floodlights, the Modern Club pandal, the bazar stall, tomtom stands, the bus and NPCs.
   - `farm.ts`: the farm models.
   - `people.ts`: people and traffic.
 - `game.ts` and `net.ts`: optimistic moves, batched sync, rollback, and the offline fallback.
@@ -168,7 +182,7 @@ Secrets (`AUTH_SECRET`, Google client secret, Resend key) live only on the serve
 
 ## The map
 
-- **Area:** central Agartala, bbox `23.815,91.262 → 23.855,91.302` (about 4.2 × 4.5 km), at 1 game unit = 1 metre. Map data © OpenStreetMap contributors, ODbL.
+- **Area:** the paras round MBB Stadium: fetched with bbox `23.810,91.282 → 23.840,91.314` and played inside a 1.9 × 1.9 km box (`src/shared/area.ts`), at 1 game unit = 1 metre. Map data © OpenStreetMap contributors, ODbL.
 - **Rebuild it from fresh OSM data:**
 
   ```bash
@@ -177,7 +191,7 @@ Secrets (`AUTH_SECRET`, Google client secret, Resend key) live only on the serve
 
   To cover a different area, pass `node scripts/fetch-osm.mjs --bbox S,W,N,E`.
 - **Building heights:** OSM rarely records storeys in Agartala, so heights are estimated from footprint size.
-- **Hand-placed on real spots:** the palace model sits on its real footprint, facing Jagannath and Kalibari lakes. The farm's two small tillas are invented. Kharchi Puja happens by bus, because the Chaturdasha Devata Mandir is about 8 km east, off the map.
+- **Hand-placed on real spots:** OSM doesn't name Ramnagar, Joynagar or Math Chowmuhani, so their centres are set by hand in `src/shared/area.ts` (`PARAS`); adjust them there if they're off. The farm sits on open land between the stadium and the Haora (`FARM_ZONE` in `src/shared/farm.ts`, kept free of houses by the bake). Its three small tillas are invented. Kharchi Puja happens by bus, because the Chaturdasha Devata Mandir is about 8 km east, off the map.
 
 ## Deploy on Cloudflare (agartala.biratdatta.tech)
 

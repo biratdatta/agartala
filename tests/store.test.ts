@@ -58,3 +58,24 @@ describe.each(stores)('%s contract', (_name, make) => {
     expect(top[0].worth).toBe(1200);
   });
 });
+
+describe.each(stores.filter(([n]) => n !== 'SupabaseStore'))('%s weekly boards and presence', (_name, make) => {
+  const e = (id: string, para: string, earned: number, name = id) => ({ id, week: '2026-W41', name, para, paddy: earned / 100, deliveries: 1, kaam: 0, sights: 0, earned });
+  it('ranks the week by category and sums each para', async () => {
+    const s = await make();
+    await s.weekUpsert(e('A', 'Krishnanagar', 500)); await s.weekUpsert(e('B', 'Krishnanagar', 300)); await s.weekUpsert(e('C', 'Banamalipur', 700, ''));
+    await s.weekUpsert({ ...e('A', 'Krishnanagar', 900), week: '2026-W40' });
+    await s.weekUpsert(e('A', 'Krishnanagar', 600)); // update
+    expect((await s.weekTop('2026-W41', 'earned', 10)).map((x) => x.id)).toEqual(['A', 'B']); // C has no name
+    expect((await s.weekTop('2026-W41', 'kaam', 10))).toEqual([]);
+    expect(await s.paraTop('2026-W41', 10)).toEqual([{ para: 'Krishnanagar', total: 900, players: 2 }, { para: 'Banamalipur', total: 700, players: 1 }]);
+  });
+  it('keeps the latest position of each player', async () => {
+    const s = await make();
+    await s.presenceUpsert({ id: 'P1', name: 'Rina', para: 'Bhati', x: 1, z: 2, face: 0, t: 1000 });
+    await s.presenceUpsert({ id: 'P2', name: '', para: 'Bhati', x: 5, z: 5, face: 1, t: 500 });
+    await s.presenceUpsert({ id: 'P1', name: 'Rina', para: 'Bhati', x: 3, z: 4, face: 0, t: 2000 });
+    const r = await s.presenceRecent(900, 10);
+    expect(r.map((p) => [p.id, p.x])).toEqual([['P1', 3]]);
+  });
+});

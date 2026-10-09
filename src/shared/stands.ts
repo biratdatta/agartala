@@ -2,31 +2,30 @@ import { SPOTS } from './spots.js';
 
 /** Tomtom (shared e-rickshaw) stands. Rides between them cost a flat fare. */
 export interface Stand { k: StandKey; name: string; x: number; z: number }
-export type StandKey = 'stHome' | 'stFields' | 'stCircuit' | 'stRadhanagar' | 'stLake' | 'stPalace' | 'stDurga' | 'stPost' | 'stBattala' | 'stMaharajganj';
+export type StandKey = 'stHome' | 'stFields' | 'stStadium' | 'stShibnagar' | 'stMath' | 'stRamnagar' | 'stJoynagar' | 'stBridge';
 /** Where the player's house is, if they moved it away from the family fields. */
 export interface HomeSite { name: string; x: number; z: number; sx: number; sz: number; face: number }
 
 type CityKey = Exclude<StandKey, 'stHome' | 'stFields'>;
 const CITY: [CityKey, string][] = [
-  ['stCircuit', 'Circuit House'],
-  ['stRadhanagar', 'Radhanagar Bus Terminus'],
-  ['stLake', 'Lake Chowmuhani'],
-  ['stPalace', 'Ujjayanta Palace · North Gate'],
-  ['stDurga', 'Durgabari · Jagannath Lake'],
-  ['stPost', 'Post Office Chowmuhani'],
-  ['stBattala', 'Kaman Chowmuhani'],
-  ['stMaharajganj', 'Maharajganj Bazar'],
+  ['stStadium', 'MBB Stadium gate'],
+  ['stShibnagar', 'Shibnagar · Modern Club'],
+  ['stMath', 'Math Chowmuhani'],
+  ['stRamnagar', 'Ramnagar'],
+  ['stJoynagar', 'Joynagar'],
+  ['stBridge', 'Haora bridge'],
 ];
+export const STAND_KEYS: StandKey[] = ['stHome', 'stFields', ...CITY.map(([k]) => k)];
 const CITY_STANDS: Stand[] = CITY.map(([k, name]) => ({ k, name, x: SPOTS[k][0], z: SPOTS[k][1] }));
-/** The family fields at Bhati Abhoynagar always have a stand on their lane. */
-export const FIELDS_STAND: Stand = { k: 'stFields', name: 'Bhati Abhoynagar fields', x: SPOTS.stHome[0], z: SPOTS.stHome[1] };
+/** The family fields by the Haora always have a stand on their lane. */
+export const FIELDS_STAND: Stand = { k: 'stFields', name: 'The fields by the Haora', x: SPOTS.stHome[0], z: SPOTS.stHome[1] };
 
 /**
  * The stands in play. "Home" follows the player's house; when the house is at the fields
  * the two are one stand.
  */
 export function standsFor(home?: HomeSite | null): Stand[] {
-  if (!home) return [{ ...FIELDS_STAND, k: 'stHome', name: 'Home · Bhati Abhoynagar fields' }, ...CITY_STANDS];
+  if (!home) return [{ ...FIELDS_STAND, k: 'stHome', name: 'Home · the fields by the Haora' }, ...CITY_STANDS];
   return [{ k: 'stHome', name: `Home · ${home.name}`, x: home.sx, z: home.sz }, FIELDS_STAND, ...CITY_STANDS];
 }
 /** The stands with the house at the fields (the default). */

@@ -1,4 +1,4 @@
-/** Day, dusk, night and rain: sky colour, sun, fog, lit windows and the palace illumination. */
+/** Day, dusk, night and rain: sky colour, sun, fog, lit windows and the stadium floodlights. */
 import * as THREE from 'three';
 import { clamp, lerp, smooth } from '../shared/rng.js';
 import type { GameState } from '../shared/save.js';

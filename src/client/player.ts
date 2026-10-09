@@ -5,24 +5,33 @@ import { blocked, pushOut } from './collide.js';
 import { type CityMap, getH } from './map/data.js';
 import { bicycle, person, type Person } from './scene/people.js';
 import { play } from './audio.js';
-import { MAT } from './scene/kit.js';
+import { MAT, add, box, cyl } from './scene/kit.js';
 
 export const isTouch = matchMedia('(pointer: coarse)').matches || ('ontouchstart' in window && navigator.maxTouchPoints > 0);
 
 export class Player {
   readonly body: Person;
   readonly bike: THREE.Group;
+  readonly moped = new THREE.Group();
   yaw = 0; pitch = 0.28; dist = 5.5;
   readonly keys: Record<string, boolean> = {};
   readonly joy = { x: 0, y: 0, active: false };
   /** R toggles running on and off; Shift runs while held. */
   autoRun = false;
+  /** On a scooter you go faster than a bicycle; when tired you cannot run. */
+  scooter = false; tired = false;
+  /** Furthest the camera may pull back (photo mode lets it go further). */
+  maxDist = 22;
   private vx = 0; private vz = 0; private runBlend = 0; private phase = 0; private lastStep = 0;
   private camTarget = new THREE.Vector3(); private camPos = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, private map: CityMap, private camera: THREE.PerspectiveCamera, canvas: HTMLCanvasElement) {
     this.body = person({ shirt: '#efe8d6', lowerMat: MAT.lungi, gamcha: true }); this.body.rotation.order = 'YXZ'; scene.add(this.body);
     this.bike = bicycle(); this.bike.position.y = -0.35; this.bike.visible = false; this.body.add(this.bike);
+    const sc = this.moped; box(sc, 0.5, 0.35, 1.3, '#c62f2f', 0, 0.45, -0.05); box(sc, 0.45, 0.7, 0.18, '#c62f2f', 0, 0.75, 0.55); box(sc, 0.6, 0.05, 0.05, '#222', 0, 1.15, 0.58); box(sc, 0.42, 0.12, 0.6, '#1a1a1a', 0, 0.68, -0.3);
+    for (const z of [-0.6, 0.7]) add(sc, new THREE.TorusGeometry(0.22, 0.07, 6, 14), '#1a1a1a', 0, 0.22, z).rotation.y = Math.PI / 2;
+    cyl(sc, 0.08, 0.08, 0.05, '#ffe9a0', 0, 0.98, 0.66, 8).rotation.x = Math.PI / 2;
+    sc.position.y = -0.35; sc.visible = false; this.body.add(sc);
     addEventListener('keydown', (e) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
       const k = e.key.toLowerCase(); this.keys[k] = true;
@@ -36,7 +45,7 @@ export class Player {
     canvas.addEventListener('pointermove', (e) => { if (!drag || drag.id !== e.pointerId) return; this.yaw -= (e.clientX - drag.x) * 0.0055; this.pitch = clamp(this.pitch + (e.clientY - drag.y) * 0.004, 0.08, 1.35); drag.x = e.clientX; drag.y = e.clientY; });
     const end = (e: PointerEvent) => { if (drag && drag.id === e.pointerId) drag = null; };
     canvas.addEventListener('pointerup', end); canvas.addEventListener('pointercancel', end);
-    canvas.addEventListener('wheel', (e) => { this.dist = clamp(this.dist + e.deltaY * 0.01, 2.8, 22); e.preventDefault(); }, { passive: false });
+    canvas.addEventListener('wheel', (e) => { this.dist = clamp(this.dist + e.deltaY * 0.01 * (this.dist > 22 ? 3 : 1), 2.8, this.maxDist); e.preventDefault(); }, { passive: false });
   }
 
   get x() { return this.body.position.x; }
@@ -63,10 +72,10 @@ export class Player {
     if (k.w || k.arrowup) f += 1; if (k.s || k.arrowdown) f -= 1; if (k.d || k.arrowright) r += 1; if (k.a || k.arrowleft) r -= 1;
     if (this.joy.active) { f -= this.joy.y; r += this.joy.x; }
     const L = Math.min(1, Math.hypot(f, r)); const p = this.body.position;
-    const wantRun = (k.shift ? !this.autoRun : this.autoRun) || (isTouch && L > 0.95);
+    const wantRun = !this.tired && ((k.shift ? !this.autoRun : this.autoRun) || (isTouch && L > 0.95));
     let tx = 0, tz = 0, top = 0;
     if (L > 0.08) {
-      top = (cycle ? (wantRun ? 14 : 9) : wantRun ? 9 : 4.4) * L;
+      top = (cycle ? (this.scooter ? (wantRun ? 22 : 15) : wantRun ? 14 : 9) : wantRun ? 9 : this.tired ? 3.2 : 4.4) * L;
       const fx = -Math.sin(this.yaw), fz = -Math.cos(this.yaw), rx = Math.cos(this.yaw), rz = -Math.sin(this.yaw);
       const n = Math.hypot(f, r) || 1; tx = ((fx * f + rx * r) / n) * top; tz = ((fz * f + rz * r) / n) * top;
     }
@@ -95,10 +104,10 @@ export class Player {
     } else { this.vx = this.vz = 0; speed = 0; }
 
     const runTarget = cycle ? 0 : clamp((speed - 4.6) / 3.5, 0, 1); this.runBlend += (runTarget - this.runBlend) * Math.min(1, dt * 6);
-    this.bike.visible = cycle;
+    this.bike.visible = cycle && !this.scooter; this.moped.visible = cycle && this.scooter;
     const u = this.body.userData;
     if (cycle) {
-      this.phase += dt * speed * 1.4; u.legL.rotation.x = Math.sin(this.phase) * 0.6; u.legR.rotation.x = -Math.sin(this.phase) * 0.6;
+      this.phase += dt * speed * 1.4; const pedal = this.scooter ? 0 : 0.6; u.legL.rotation.x = this.scooter ? -1.2 : Math.sin(this.phase) * pedal; u.legR.rotation.x = this.scooter ? -1.2 : -Math.sin(this.phase) * pedal;
       p.y = getH(p.x, p.z) + 0.35; this.body.rotation.x = 0;
     } else {
       // stride grows with speed; arms swing harder, the body leans in and bobs when running
