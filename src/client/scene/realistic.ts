@@ -63,43 +63,79 @@ export function macroVariation(mat: THREE.Material, macro: THREE.Texture, scale:
 }
 
 /* ---------- sky, clouds and the light the sky gives ---------- */
+/** Cloud noise, drawn in the sky shader itself: cumulus on a layer above the city, lit by the sun. */
+const CLOUD_GLSL = /* glsl */ `
+uniform float skyGain; uniform float skyNight; uniform float cloudCover; uniform vec2 cloudWind;
+uniform vec3 cloudSun; uniform vec3 cloudAmb; uniform vec3 horizonCol; uniform float horizonAmt;
+float cHash(vec2 p) { p = fract(p * vec2(123.34, 456.21)); p += dot(p, p + 45.32); return fract(p.x * p.y); }
+float cNoise(vec2 p) { vec2 i = floor(p), f = fract(p); vec2 u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(cHash(i), cHash(i + vec2(1.0, 0.0)), u.x), mix(cHash(i + vec2(0.0, 1.0)), cHash(i + vec2(1.0, 1.0)), u.x), u.y); }
+float cFbm(vec2 p) { float v = 0.0, a = 0.5; mat2 m = mat2(1.6, 1.2, -1.2, 1.6); for (int i = 0; i < 6; i++) { v += a * cNoise(p); p = m * p; a *= 0.5; } return v; }
+float cDens(vec2 p) { float n = cFbm(p + 0.6 * vec2(cFbm(p * 0.45 + 3.1), cFbm(p * 0.45 - 1.7)) ); float lo = 1.0 - cloudCover; return smoothstep(lo, lo + 0.16, n); }
+`;
+const CLOUD_MAIN = /* glsl */ `
+  vec3 col = mix(vec3(dot(retColor, vec3(0.2126, 0.7152, 0.0722))), retColor, 1.6) * skyGain;
+  col += vec3(0.006, 0.011, 0.03) * skyNight;
+  #ifdef CLOUDS
+  if (direction.y > 0.0) {
+    vec2 cp = direction.xz / (direction.y + 0.08) * 1.0 + cloudWind;
+    float c = cDens(cp);
+    if (c > 0.002) {
+      float c2 = cDens(cp + vSunDirection.xz * 0.14);
+      float lit = clamp(0.78 + (c - c2) * 3.0, 0.12, 1.0);
+      float thick = smoothstep(0.1, 1.0, c);
+      vec3 cc = mix(cloudAmb, cloudSun, lit) * mix(1.0, 0.78, thick);
+      cc += cloudSun * pow(max(cosTheta, 0.0), 10.0) * (1.0 - thick) * 0.9; // bright edges near the sun
+      col = mix(col, cc, clamp(c * 1.5, 0.0, 1.0) * smoothstep(0.0, 0.16, direction.y));
+    }
+  }
+  #endif
+  gl_FragColor = vec4(col, 1.0);
+`;
+const HORIZON = /* glsl */ `#include <colorspace_fragment>
+  // the far haze: the sky meets the fog exactly, so the city fades into the horizon instead of ending
+  gl_FragColor.rgb = mix(gl_FragColor.rgb, horizonCol, (1.0 - smoothstep(-0.03, 0.13, direction.y)) * horizonAmt);`;
+
 export class RealSky {
-  readonly sky = new Sky(); private clouds: THREE.Mesh; private cloudTex: THREE.CanvasTexture;
+  readonly sky = new Sky();
   private pmrem: THREE.PMREMGenerator; private envScene = new THREE.Scene(); private envSky = new Sky(); private envRT: THREE.WebGLRenderTarget | null = null;
   private lastSun = new THREE.Vector3(9, 9, 9); private lastEnvAt = -1e9; readonly sunDir = new THREE.Vector3(0, 1, 0);
-  private gain: { value: number }; private envGain: { value: number };
+  private U = {
+    skyGain: { value: 0.3 }, skyNight: { value: 0 }, cloudCover: { value: 0.42 }, cloudWind: { value: new THREE.Vector2() },
+    cloudSun: { value: new THREE.Color(1, 1, 1) }, cloudAmb: { value: new THREE.Color(0.5, 0.55, 0.62) }, horizonCol: { value: new THREE.Color() }, horizonAmt: { value: 1 },
+  };
+  private tmp = new THREE.Color();
 
   constructor(private scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
-    for (const s of [this.sky, this.envSky]) { const u = s.material.uniforms; u.turbidity.value = 2.5; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.005; u.mieDirectionalG.value = 0.82; }
-    // a brightness knob for the sky shader, so it sits right with the scene's lights
-    this.gain = { value: 0.3 }; this.envGain = { value: 0.3 };
-    for (const [s, g] of [[this.sky, this.gain], [this.envSky, this.envGain]] as const) {
-      s.material.uniforms.skyGain = g;
-      // the film-style tone mapping greys bright blues, so the sky gets its saturation back here
-      s.material.fragmentShader = s.material.fragmentShader.replace('uniform vec3 up;', 'uniform vec3 up;\nuniform float skyGain;')
-        .replace('gl_FragColor = vec4( retColor, 1.0 );', 'gl_FragColor = vec4( mix(vec3(dot(retColor, vec3(0.2126, 0.7152, 0.0722))), retColor, 1.6) * skyGain, 1.0 );');
+    for (const s of [this.sky, this.envSky]) {
+      const u = s.material.uniforms; u.turbidity.value = 2.5; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.005; u.mieDirectionalG.value = 0.82;
+      Object.assign(u, this.U);
+      // the film-style tone mapping greys bright blues, so the sky gets its saturation back; then the clouds and the haze
+      s.material.fragmentShader = s.material.fragmentShader.replace('uniform vec3 up;', 'uniform vec3 up;\n' + CLOUD_GLSL)
+        .replace('gl_FragColor = vec4( retColor, 1.0 );', CLOUD_MAIN);
     }
+    this.sky.material.defines = { CLOUDS: 1 };
+    this.sky.material.fragmentShader = this.sky.material.fragmentShader.replace('#include <colorspace_fragment>', HORIZON);
     this.sky.scale.setScalar(1500); this.sky.frustumCulled = false; scene.add(this.sky);
     this.envSky.scale.setScalar(100); this.envScene.add(this.envSky);
-    // clouds: a dome of soft, drifting cumulus over the city
-    const S = 512; const cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d')!; const img = c.createImageData(S, S); const n = fbm(S, 41, 4, 5);
-    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const v = n(x, y); const a = Math.max(0, Math.min(1, (v - 0.47) * 4.5)); const k = (y * S + x) * 4; const sh = 235 + (v - 0.5) * 40; img.data[k] = sh; img.data[k + 1] = sh; img.data[k + 2] = sh + 8; img.data[k + 3] = a * 255; }
-    c.putImageData(img, 0, 0); this.cloudTex = new THREE.CanvasTexture(cv); this.cloudTex.wrapS = this.cloudTex.wrapT = THREE.RepeatWrapping; this.cloudTex.repeat.set(3, 3);
-    const dome = new THREE.SphereGeometry(1200, 32, 12, 0, Math.PI * 2, 0, Math.PI * 0.42);
-    this.clouds = new THREE.Mesh(dome, new THREE.MeshBasicMaterial({ map: this.cloudTex, transparent: true, depthWrite: false, fog: false, side: THREE.BackSide, opacity: 0.8 }));
-    this.clouds.renderOrder = -1; this.clouds.frustumCulled = false; scene.add(this.clouds);
     this.pmrem = new THREE.PMREMGenerator(renderer);
   }
 
-  /** hour 0..24, night 0..1, rain, the camera (sky follows it), seconds for the cloud drift. */
-  update(hour: number, night: number, rain: boolean, cam: THREE.Vector3, t: number): void {
+  /** hour 0..24, night 0..1, rain, where the player is (the sky follows), seconds, and the fog colour to meet at the horizon. */
+  update(hour: number, night: number, rain: boolean, at: THREE.Vector3, t: number, fog: THREE.Color): void {
     const ang = ((hour - 6) / 12) * Math.PI; this.sunDir.set(Math.cos(ang), Math.sin(ang), 0.45).normalize();
     for (const s of [this.sky, this.envSky]) { const u = s.material.uniforms; u.sunPosition.value.copy(this.sunDir); u.turbidity.value = rain ? 12 : 2.5; u.rayleigh.value = rain ? 0.7 : 1.6 + night * 1.5; }
-    this.gain.value = (rain ? 0.2 : 0.3) * (1 - night * 0.65); this.envGain.value = this.gain.value;
-    this.sky.position.copy(cam); this.clouds.position.set(cam.x, cam.y - 60, cam.z);
-    this.cloudTex.offset.set(t * 0.0012, t * 0.0004);
-    const m = this.clouds.material as THREE.MeshBasicMaterial; const dusk = Math.max(0, 1 - Math.abs(this.sunDir.y) * 5) * (1 - night);
-    m.color.setRGB(1, 1, 1).lerp(new THREE.Color('#ffb27a'), dusk * 0.7).multiplyScalar(1 - night * 0.82); m.opacity = rain ? 0.97 : 0.88;
+    const U = this.U; const day = 1 - night;
+    U.skyGain.value = (rain ? 0.2 : 0.3) * (1 - night * 0.65); U.skyNight.value = night;
+    const dusk = (1 - THREE.MathUtils.smoothstep(this.sunDir.y, 0.0, 0.35)) * day;
+    U.cloudCover.value = rain ? 0.97 : 0.48 + 0.08 * Math.sin(t * 0.004);
+    U.cloudWind.value.set(t * 0.0045, t * 0.0018);
+    U.cloudSun.value.setRGB(1.45, 1.42, 1.35).lerp(this.tmp.setRGB(1.35, 0.72, 0.42), dusk).multiplyScalar((rain ? 0.55 : 1) * (0.07 + 0.93 * day));
+    U.cloudAmb.value.setRGB(0.52, 0.58, 0.68).lerp(this.tmp.setRGB(0.42, 0.34, 0.4), dusk * 0.8);
+    if (rain) U.cloudAmb.value.lerp(this.tmp.setRGB(0.4, 0.42, 0.45), 0.8);
+    U.cloudAmb.value.lerp(this.tmp.setRGB(0.018, 0.022, 0.04), night);
+    fog.getRGB(U.horizonCol.value as unknown as THREE.RGB, THREE.SRGBColorSpace);
+    this.sky.position.copy(at);
     // re-light the scene from the sky when the sun has moved enough (or every 12 s)
     if (this.sunDir.distanceTo(this.lastSun) > 0.03 || t - this.lastEnvAt > 12) {
       this.lastSun.copy(this.sunDir); this.lastEnvAt = t;

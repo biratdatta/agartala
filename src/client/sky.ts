@@ -32,7 +32,7 @@ export class Lighting {
     const df = smooth(-0.12, 0.3, sy), nf = 1 - df; this.nightFactor = nf;
     const warm = df * (1 - smooth(0.08, 0.5, sy)) + (1 - df) * smooth(-0.25, -0.05, sy) * 0.6;
     this.sky.copy(cNight).lerp(cDay, df).lerp(cDawn, clamp(warm, 0, 0.75)); if (S.rain) this.sky.lerp(cRain, 0.55 * df + 0.2);
-    if (this.real) { this.real.update(S.hour, nf, S.rain, p, performance.now() / 1000); this.scene.background = null; this.sky.lerp(this.tmp.set('#dfe9ef'), 0.3 * df * (S.rain ? 0.3 : 1)); }
+    if (this.real) { this.sky.lerp(this.tmp.set('#dfe9ef'), 0.3 * df * (S.rain ? 0.3 : 1)); this.real.update(S.hour, nf, S.rain, p, performance.now() / 1000, this.sky); this.scene.background = null; }
     else this.scene.background = this.sky;
     const fog = this.scene.fog as THREE.Fog; fog.color.copy(this.sky);
     fog.far = lerp(this.viewFar * 0.5, this.viewFar, df) * (S.rain ? 0.6 : 1); fog.near = fog.far * 0.18;
