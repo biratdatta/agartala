@@ -56,7 +56,7 @@ function arm(g: G, h: number, side: number, out: number, fwd: number, skin: stri
   const hand = new THREE.Group(); hand.position.y = -0.36 * h; sph(hand, 0.035 * h, skin, 0, 0, 0, 8, 6); a.add(hand); if (held) held(hand);
 }
 const WEAPONS: ((hand: G, h: number) => void)[] = [
-  (k, h) => { cyl(k, 0.008 * h, 0.008 * h, 0.5 * h, GOLD, 0, -0.12 * h, 0, 4); for (const x of [-1, 0, 1]) add(k, new THREE.ConeGeometry(0.015 * h, 0.07 * h, 4), GOLD, x * 0.035 * h, -0.4 * h, 0).rotation.z = Math.PI; }, // trishul
+  (k, h) => { cyl(k, 0.008 * h, 0.008 * h, 0.5 * h, '#ffd25a', 0, -0.12 * h, 0, 4); for (const x of [-1, 0, 1]) add(k, new THREE.ConeGeometry(0.015 * h, 0.07 * h, 4), '#ffd25a', x * 0.035 * h, -0.4 * h, 0).rotation.z = Math.PI; }, // trishul, bright gold
   (k, h) => box(k, 0.02 * h, 0.3 * h, 0.006 * h, '#d8dde2', 0, -0.17 * h, 0),                                          // sword
   (k, h) => add(k, new THREE.TorusGeometry(0.06 * h, 0.012 * h, 4, 14), GOLD, 0, -0.07 * h, 0),                         // chakra
   (k, h) => add(k, new THREE.ConeGeometry(0.03 * h, 0.09 * h, 8), '#f6f3ec', 0, -0.06 * h, 0).rotation.z = 1.2,        // shankh
@@ -64,7 +64,7 @@ const WEAPONS: ((hand: G, h: number) => void)[] = [
   (k, h) => cyl(k, 0.005 * h, 0.005 * h, 0.3 * h, '#d8dde2', 0, -0.12 * h, 0, 4),                                       // arrow
   (k, h) => sph(k, 0.045 * h, '#f07ab0', 0, -0.05 * h, 0, 8, 6),                                                         // lotus
   (k, h) => { cyl(k, 0.007 * h, 0.007 * h, 0.22 * h, '#7a5a3a', 0, -0.1 * h, 0, 4); box(k, 0.07 * h, 0.05 * h, 0.01 * h, '#d8dde2', 0.03 * h, -0.2 * h, 0); }, // axe
-  (k, h) => add(k, new THREE.TorusGeometry(0.05 * h, 0.01 * h, 4, 12, Math.PI * 1.5), '#3f7a3a', 0, -0.06 * h, 0),      // snake
+  (k, h) => add(k, new THREE.TorusGeometry(0.05 * h, 0.01 * h, 4, 12, Math.PI * 1.5), '#5fb34a', 0, -0.06 * h, 0),      // snake
   (k, h) => add(k, new THREE.ConeGeometry(0.035 * h, 0.06 * h, 10), GOLD, 0, -0.05 * h, 0),                             // bell
 ];
 /** Ma Durga: ten arms fanned behind her, each with a weapon; the trishul goes down to Mahishasura. */
