@@ -70,18 +70,20 @@ export class RealSky {
   private gain: { value: number }; private envGain: { value: number };
 
   constructor(private scene: THREE.Scene, renderer: THREE.WebGLRenderer) {
-    for (const s of [this.sky, this.envSky]) { const u = s.material.uniforms; u.turbidity.value = 5.5; u.rayleigh.value = 1.5; u.mieCoefficient.value = 0.005; u.mieDirectionalG.value = 0.82; }
+    for (const s of [this.sky, this.envSky]) { const u = s.material.uniforms; u.turbidity.value = 2.5; u.rayleigh.value = 1.6; u.mieCoefficient.value = 0.005; u.mieDirectionalG.value = 0.82; }
     // a brightness knob for the sky shader, so it sits right with the scene's lights
-    this.gain = { value: 0.55 }; this.envGain = { value: 0.55 };
+    this.gain = { value: 0.3 }; this.envGain = { value: 0.3 };
     for (const [s, g] of [[this.sky, this.gain], [this.envSky, this.envGain]] as const) {
       s.material.uniforms.skyGain = g;
-      s.material.fragmentShader = s.material.fragmentShader.replace('uniform vec3 up;', 'uniform vec3 up;\nuniform float skyGain;').replace('gl_FragColor = vec4( retColor, 1.0 );', 'gl_FragColor = vec4( retColor * skyGain, 1.0 );');
+      // the film-style tone mapping greys bright blues, so the sky gets its saturation back here
+      s.material.fragmentShader = s.material.fragmentShader.replace('uniform vec3 up;', 'uniform vec3 up;\nuniform float skyGain;')
+        .replace('gl_FragColor = vec4( retColor, 1.0 );', 'gl_FragColor = vec4( mix(vec3(dot(retColor, vec3(0.2126, 0.7152, 0.0722))), retColor, 1.6) * skyGain, 1.0 );');
     }
     this.sky.scale.setScalar(1500); this.sky.frustumCulled = false; scene.add(this.sky);
     this.envSky.scale.setScalar(100); this.envScene.add(this.envSky);
     // clouds: a dome of soft, drifting cumulus over the city
     const S = 512; const cv = document.createElement('canvas'); cv.width = cv.height = S; const c = cv.getContext('2d')!; const img = c.createImageData(S, S); const n = fbm(S, 41, 4, 5);
-    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const v = n(x, y); const a = Math.max(0, Math.min(1, (v - 0.5) * 3.2)); const k = (y * S + x) * 4; const sh = 235 + (v - 0.5) * 40; img.data[k] = sh; img.data[k + 1] = sh; img.data[k + 2] = sh + 8; img.data[k + 3] = a * 255; }
+    for (let y = 0; y < S; y++) for (let x = 0; x < S; x++) { const v = n(x, y); const a = Math.max(0, Math.min(1, (v - 0.47) * 4.5)); const k = (y * S + x) * 4; const sh = 235 + (v - 0.5) * 40; img.data[k] = sh; img.data[k + 1] = sh; img.data[k + 2] = sh + 8; img.data[k + 3] = a * 255; }
     c.putImageData(img, 0, 0); this.cloudTex = new THREE.CanvasTexture(cv); this.cloudTex.wrapS = this.cloudTex.wrapT = THREE.RepeatWrapping; this.cloudTex.repeat.set(3, 3);
     const dome = new THREE.SphereGeometry(1200, 32, 12, 0, Math.PI * 2, 0, Math.PI * 0.42);
     this.clouds = new THREE.Mesh(dome, new THREE.MeshBasicMaterial({ map: this.cloudTex, transparent: true, depthWrite: false, fog: false, side: THREE.BackSide, opacity: 0.8 }));
@@ -92,12 +94,12 @@ export class RealSky {
   /** hour 0..24, night 0..1, rain, the camera (sky follows it), seconds for the cloud drift. */
   update(hour: number, night: number, rain: boolean, cam: THREE.Vector3, t: number): void {
     const ang = ((hour - 6) / 12) * Math.PI; this.sunDir.set(Math.cos(ang), Math.sin(ang), 0.45).normalize();
-    for (const s of [this.sky, this.envSky]) { const u = s.material.uniforms; u.sunPosition.value.copy(this.sunDir); u.turbidity.value = rain ? 14 : 5.5; u.rayleigh.value = rain ? 0.7 : 1.5 + night * 1.5; }
-    this.gain.value = (rain ? 0.32 : 0.55) * (1 - night * 0.65); this.envGain.value = this.gain.value;
+    for (const s of [this.sky, this.envSky]) { const u = s.material.uniforms; u.sunPosition.value.copy(this.sunDir); u.turbidity.value = rain ? 12 : 2.5; u.rayleigh.value = rain ? 0.7 : 1.6 + night * 1.5; }
+    this.gain.value = (rain ? 0.2 : 0.3) * (1 - night * 0.65); this.envGain.value = this.gain.value;
     this.sky.position.copy(cam); this.clouds.position.set(cam.x, cam.y - 60, cam.z);
     this.cloudTex.offset.set(t * 0.0012, t * 0.0004);
     const m = this.clouds.material as THREE.MeshBasicMaterial; const dusk = Math.max(0, 1 - Math.abs(this.sunDir.y) * 5) * (1 - night);
-    m.color.setRGB(1, 1, 1).lerp(new THREE.Color('#ffb27a'), dusk * 0.7).multiplyScalar(1 - night * 0.82); m.opacity = rain ? 0.97 : 0.72;
+    m.color.setRGB(1, 1, 1).lerp(new THREE.Color('#ffb27a'), dusk * 0.7).multiplyScalar(1 - night * 0.82); m.opacity = rain ? 0.97 : 0.88;
     // re-light the scene from the sky when the sun has moved enough (or every 12 s)
     if (this.sunDir.distanceTo(this.lastSun) > 0.03 || t - this.lastEnvAt > 12) {
       this.lastSun.copy(this.sunDir); this.lastEnvAt = t;
