@@ -116,7 +116,7 @@ export class PujoMusic {
   }
   private harmonium(a: AudioContext, t: number, f: number, len: number, city: boolean): void {
     const g = a.createGain(), lp = a.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 1700; lp.Q.value = 0.6;
-    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(city ? 0.06 : 0.075, t + 0.04); g.gain.setValueAtTime(city ? 0.06 : 0.075, t + Math.max(0.05, len - 0.08)); g.gain.linearRampToValueAtTime(0, t + len);
+    g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(city ? 0.12 : 0.1, t + 0.04); g.gain.setValueAtTime(city ? 0.12 : 0.1, t + Math.max(0.05, len - 0.08)); g.gain.linearRampToValueAtTime(0, t + len);
     for (const det of [-5, 5]) { const o = a.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f; o.detune.value = det; o.connect(lp); o.start(t); o.stop(t + len + 0.02); }
     const sq = a.createOscillator(); sq.type = 'square'; sq.frequency.value = f / 2; const sg = a.createGain(); sg.gain.value = 0.25; sq.connect(sg).connect(lp); sq.start(t); sq.stop(t + len + 0.02);
     lp.connect(g).connect(city ? this.speaker! : this.tuneBus!);

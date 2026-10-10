@@ -3,7 +3,7 @@ let ctx: AudioContext | null = null;
 let on = true;
 let master: GainNode | null = null; let volume = 0.8;
 /** Everything plays through one master gain, so the volume setting covers every sound. */
-const out = (a: AudioContext): AudioNode => { if (!master) { master = a.createGain(); master.gain.value = volume; master.connect(out(a)); } return master; };
+const out = (a: AudioContext): AudioNode => { if (!master) { master = a.createGain(); master.gain.value = volume; master.connect(a.destination); /* to the speakers */ } return master; };
 export function setVolume(v: number): void { volume = Math.max(0, Math.min(1, v)); if (master && ctx) master.gain.setTargetAtTime(volume, ctx.currentTime, 0.05); }
 
 function ac(): AudioContext | null {
@@ -50,6 +50,8 @@ export function unlockAudio(): void { ac(); }
 export const audioCtx = (): AudioContext | null => ac();
 export const masterBus = (a: AudioContext): AudioNode => out(a);
 export const soundOn = (): boolean => on;
+/** For test pages: the audio system's state. */
+export const audioState = () => ({ ctx: ctx?.state ?? 'none', on, volume, master: !!master });
 export function toggleSound(): boolean { on = !on; if (ctx) void (on ? ctx.resume() : ctx.suspend()); return on; }
 
 /* ---------- ambience: rain, crickets, birds, temple bells, horns and the dhak ---------- */

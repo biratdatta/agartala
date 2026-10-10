@@ -12,7 +12,7 @@ import { festivalsOn, isFestival } from '../shared/festivals.js';
 import { HOME } from '../shared/farm.js';
 import { tripOpen, type Trip } from '../shared/trips.js';
 import type { ItemKey } from '../shared/constants.js';
-import { Ambience, play, setVolume, toggleSound, unlockAudio } from './audio.js';
+import { Ambience, audioState, play, setVolume, toggleSound, unlockAudio } from './audio.js';
 import { OtherPlayers } from './social.js';
 import { RealPlaces } from './scene/realplaces.js';
 import { buildRealism } from './scene/realism.js';
@@ -589,6 +589,7 @@ async function boot(): Promise<void> {
   if ((window as unknown as { __HAORA_DEBUG__?: boolean }).__HAORA_DEBUG__ || new URLSearchParams(location.search).has('debug')) {
     (window as unknown as Record<string, unknown>).__haora = {
       start, game, player, map, vehicles, ride: (a: string, b: string) => startRide(standByKey(a)!, standByKey(b)!),
+      audio: () => audioState(),
       snap: (q = 0.9) => { renderer.render(scene, camera); return renderer.domElement.toDataURL('image/jpeg', q); }, camera, lighting,
       teleport: (x: number, z: number, face = 0) => player.teleport(x, z, face), view: (yaw: number, pitch: number, dist: number) => { player.yaw = yaw; player.pitch = pitch; player.dist = dist; },
     };
