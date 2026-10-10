@@ -8,7 +8,7 @@ The game covers a detailed part of Agartala, about 3.3 × 2.2 km: the old town r
 
 Every road, lane, pond and lake, and the river, come from OpenStreetMap and sit where they really are. About 6,800 real building footprints are filled out to about 8,900 houses (see *A fuller city* below).
 
-It runs in the browser, with no install and no sign-up. The game is modelled on [Tanda](https://github.com/gajanansr/tanda-an-village) by Gajanan Rathod: Three.js on the front, a small server with one set of rules shared by the browser and the server.
+It runs in the browser, with no install: sign in with Google and play. Three.js on the front, a small server with one set of rules shared by the browser and the server.
 
 ## Run it locally
 
