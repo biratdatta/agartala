@@ -23,7 +23,7 @@ import { StreetLamps, buildDiyas, buildKer, buildStalls, updateStalls } from './
 import { auth, loadAuthConfig, signIn, takeAuthResult } from './auth.js';
 import { blocked } from './collide.js';
 import { Game } from './game.js';
-import { buildSpots, findTarget, missionTarget, readChapter, type Ctx } from './interact.js';
+import { buildSpots, findTarget, missionTarget, readChapter, type Ctx, type Spot } from './interact.js';
 import { HomeView } from './home.js';
 import { findHomeSite, findLocality, localities } from './map/places.js';
 import { fixName, getH, loadMap } from './map/data.js';
@@ -37,6 +37,7 @@ import { City, KitFleet, loadKit, planBuildings } from './scene/buildings.js';
 import { FarmView } from './scene/farm.js';
 import { shuffledTour } from './scene/tour.js';
 import { Pandals } from './scene/pujo.js';
+import { PujoMusic } from './music.js';
 import { PANDALS, pujoSeason } from '../shared/pujo.js';
 import { STADIUM, StandsView, buildBus, buildCrowds, buildNPCs, buildPandal, buildStadiumLights, buildStall } from './scene/landmarks.js';
 import { PARAS } from '../shared/area.js';
@@ -101,6 +102,9 @@ async function boot(): Promise<void> {
   const rideView = new RideView(scene, map, graph, new KitFleet(scene, kit, 'tomtom', 1, ['#2f8f4e']), 0);
   const lighting = new Lighting(scene, skyFx, palaceLights, pandal);
   const pandals = new Pandals(scene, map); // Durga Puja pandals round the city, in the Puja season
+  const music = new PujoMusic();
+  // browsers only allow sound after a tap or key: start the audio (and the title music) on the first one
+  const wake = () => { unlockAudio(); removeEventListener('pointerdown', wake); removeEventListener('keydown', wake); }; addEventListener('pointerdown', wake); addEventListener('keydown', wake);
 
   /* ---------- settings: applied now and whenever they change ---------- */
   const QUALITY: Record<Exclude<Graphics, 'auto'>, { pr: number; shadow: number }> = {
@@ -124,19 +128,20 @@ async function boot(): Promise<void> {
   const openSettings = () => {
     const st = settings(); closePanels();
     const look = $('#setLook') as HTMLInputElement, view = $('#setView') as HTMLInputElement, vol = $('#setVol') as HTMLInputElement;
-    look.value = String(st.look); view.value = String(st.view); vol.value = String(st.volume);
+    look.value = String(st.look); view.value = String(st.view); vol.value = String(st.volume); ($('#setMusic') as HTMLInputElement).value = String(st.music);
     ($('#setMotion') as HTMLInputElement).checked = st.reduceMotion; ($('#setGfx') as HTMLSelectElement).value = st.graphics;
     ($('#setGfx').querySelector('option[value="auto"]') as HTMLOptionElement).textContent = `Auto (best for this device: ${autoQuality(isTouch)})`;
     showSettingValues(); $('#settings').hidden = false;
   };
   const showSettingValues = () => {
-    const st = settings(); $('#setLookV').textContent = st.look.toFixed(1); $('#setViewV').textContent = `${st.view} m`; $('#setVolV').textContent = `${st.volume}%`;
+    const st = settings(); $('#setLookV').textContent = st.look.toFixed(1); $('#setViewV').textContent = `${st.view} m`; $('#setVolV').textContent = `${st.volume}%`; $('#setMusicV').textContent = `${st.music}%`;
     document.querySelectorAll<HTMLButtonElement>('#settings .seg button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.text === st.text)));
   };
   $('#setLook').oninput = (e) => { updateSettings({ look: Number((e.target as HTMLInputElement).value) }); showSettingValues(); };
   $('#setView').oninput = (e) => { updateSettings({ view: Number((e.target as HTMLInputElement).value) }); showSettingValues(); };
   $('#setVol').oninput = (e) => { updateSettings({ volume: Number((e.target as HTMLInputElement).value) }); showSettingValues(); };
   $('#setVol').onchange = () => play('coin');
+  $('#setMusic').oninput = (e) => { updateSettings({ music: Number((e.target as HTMLInputElement).value) }); showSettingValues(); };
   document.querySelectorAll<HTMLButtonElement>('#settings .seg button').forEach((b) => { b.onclick = () => { updateSettings({ text: b.dataset.text as TextSize }); showSettingValues(); }; });
   ($('#setMotion') as HTMLInputElement).onchange = (e) => updateSettings({ reduceMotion: (e.target as HTMLInputElement).checked });
   ($('#setGfx') as HTMLSelectElement).onchange = (e) => updateSettings({ graphics: (e.target as HTMLSelectElement).value as Graphics });
@@ -149,7 +154,7 @@ async function boot(): Promise<void> {
   // apply the saved settings now that the player exists (and again whenever they change)
   onSettings((st) => {
     player.lookScale = st.look; lighting.viewFar = st.view; camera.far = Math.max(1200, st.view * 1.6); camera.updateProjectionMatrix();
-    setVolume(st.volume / 100);
+    setVolume(st.volume / 100); music.setVolume(st.music / 100);
     document.documentElement.dataset.text = st.text; document.documentElement.dataset.motion = st.reduceMotion ? 'reduce' : '';
     applyQuality(st.graphics === 'auto' ? autoLevel : st.graphics);
   });
@@ -233,7 +238,7 @@ async function boot(): Promise<void> {
   vehicles.onRent = (veh, at) => game.dispatch({ t: 'rent', veh, at }).ok;
   vehicles.onReturn = (at) => game.dispatch({ t: 'returnRental', at }).ok;
   const ctx: Ctx = {
-    game, map, npc, neighbours, traffic, home, stalls, extra: () => vehicles.spots(game.S),
+    game, map, npc, neighbours, traffic, home, stalls, extra: () => [...vehicles.spots(game.S), ...boothSpots()],
     trip: async (t: Trip, sell?: Partial<Record<ItemKey, number>>) => {
       const why = tripOpen(game.S, t); if (why) { toast(why); play('no'); return; }
       play('horn'); fade(true); await wait(700); fade(false);
@@ -277,7 +282,7 @@ async function boot(): Promise<void> {
   const marks = () => ({ player: { x: player.x, z: player.z, face: player.face }, target, kaam: kaamMarks(), errand: errandMarks(), sights: sightMarks(), home: home.front, others: others.marks(), stalls, rentals: vehicles.rentalMarks,
     pandals: pujoSeason(net.now()) ? PANDALS.map((p) => ({ x: p.x, z: p.z, name: p.name, seen: game.S.pandals.includes(p.id) })) : [] });
   function hudTick(force = false) {
-    target = rideView.active ? null : vehicles.target || missionTarget(game.S, { x: player.x, z: player.z }, spots, { x: npc.grandpa.x, z: npc.grandpa.z });
+    target = rideView.active ? null : vehicles.target || missionTarget(game.S, { x: player.x, z: player.z }, spots, { x: npc.grandpa.x, z: npc.grandpa.z }, neighbours);
     updateHud({ S: game.S, place: map.placeName(player.x, player.z), target, px: player.x, pz: player.z, yaw: player.yaw, online: net.online, lost: net.lost, others: others.count }, force);
     mapView.drawMini(marks());
   }
@@ -298,6 +303,12 @@ async function boot(): Promise<void> {
   const board = () => openBoard({ game, net, auth, readChapter: (id) => readChapter(ctx, id), onState: (s) => game.replace(s) });
   wireBoard();
   const photo = new PhotoMode(renderer, scene, camera, () => map.placeName(player.x, player.z) || 'Agartala', () => { const S = game.S; return `day ${S.day}, ${String(Math.floor(S.hour)).padStart(2, '0')}:${String(Math.floor((S.hour % 1) * 60)).padStart(2, '0')}`; });
+  // the Pujo photo booth: at a pandal, photos become a "Shubho Durga Puja from Agartala" card
+  photo.pujo = () => { if (!pujoSeason(net.now())) return null; const b = pandals.booths.find((q) => Math.hypot(q.x - player.x, q.z - player.z) < 22); return b ? b.name : null; };
+  const boothSpots = (): Spot[] => !pujoSeason(net.now()) ? [] : pandals.booths.map((b) => ({ x: b.x, z: b.z, r: 2.4, get: () => ({ label: `Pujo photo booth · take a photo with Ma Durga at ${b.name}`, run: () => {
+    player.teleport(b.x, b.z, b.face); player.yaw = b.face + Math.PI + 0.35; player.pitch = 0.18; player.dist = 6.5; if (!photo.active) togglePhoto();
+    toast('Frame it with Ma behind you, then press Save or Share. It becomes a Pujo card.', 'Pujo photo booth');
+  } }) }));
   const togglePhoto = () => { photo.toggle(); player.maxDist = photo.active ? 90 : 22; if (!photo.active && player.dist > 22) player.dist = 22; closePanels(); };
   $('#bPhoto').onclick = togglePhoto;
   $('#bMap').onclick = toggleMap; $('#mini').onclick = toggleMap; $('#mapClose').onclick = () => ($('#bigmap').hidden = true);
@@ -622,7 +633,7 @@ async function boot(): Promise<void> {
       hudT += dt; if (hudT > 0.2) { hudT = 0; hudTick(); setPrompt(promptP, isTouch); }
       slowT += dt; if (slowT > 0.5) {
         slowT = 0; farm.growing(S); labels.update(player.x, player.z); city.update(player.x, player.z);
-        updateStalls(stalls, S.hour >= 7 && S.hour < 22);
+        updateStalls(stalls, S.hour, pujoSeason(net.now()));
         const dens = Crowd.densityAt(S.hour, S.rain); traffic.crowd.density = dens; traffic.density = Math.min(1, dens + 0.15);
         void others.tick(Date.now(), player.x, player.z, player.face, !rideView.active);
         const near = (x: number, z: number, r: number) => Math.hypot(player.x - x, player.z - z) < r;
@@ -651,6 +662,13 @@ async function boot(): Promise<void> {
     const flame = player.updateLantern(hold, lighting.nightFactor);
     lighting.update(S, player.body.position, dt, playing ? { at: hold ? flame : null, on: lanternOn } : null);
     pandals.update(pujoSeason(net.now()), lighting.nightFactor, time);
+    {
+      const season = pujoSeason(net.now());
+      let near = 1e9; if (season && playing) for (const p of PANDALS) near = Math.min(near, Math.hypot(p.x - player.x, p.z - player.z));
+      music.set(!playing ? 'title' : season ? 'city' : 'off', 1 - (near - 14) / 150); // the theme always plays on the title screen
+      // the conch at aarti: at the pandals in the evening (18:00 to 19:00), and now and then after dark
+      if (season && playing && near < 90 && ((S.hour >= 18 && S.hour < 19) || (isNight(S) && Math.random() < dt * 0.01))) music.conch(1 - near / 110);
+    }
     kit.material.emissiveIntensity = lighting.nightFactor * 0.85;
     lamps.update(lighting.nightFactor); real.setNight(lighting.nightFactor); diyas.visible = isFestival(S.day, 'diwali') && lighting.nightFactor > 0.4;
     renderer.render(scene, camera);

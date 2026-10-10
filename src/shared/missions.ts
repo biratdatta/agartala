@@ -1,8 +1,8 @@
 import { ownedLunga, type GameState, type Inventory } from './save.js';
 import type { GameEvent } from './rules.js';
-import { PANDAL_GOAL, pujoSeason } from './pujo.js';
+import { BIJOYA_GOAL, PANDAL_GOAL, pujoSeason } from './pujo.js';
 
-export type MissionId = 'arrive' | 'home' | 'garia' | 'paddy' | 'sell' | 'pine' | 'rubber' | 'kharchi' | 'grow' | 'durga' | 'pujoPandals' | 'pujoAnjali' | 'pujoAarti' | 'pujoBisarjan';
+export type MissionId = 'arrive' | 'home' | 'garia' | 'paddy' | 'sell' | 'pine' | 'rubber' | 'kharchi' | 'grow' | 'durga' | 'pujoPandals' | 'pujoAnjali' | 'pujoAarti' | 'pujoBisarjan' | 'pujoBijoya';
 export interface Mission {
   id: MissionId;
   title: string;
@@ -50,7 +50,9 @@ export const PUJO_MISSIONS: Mission[] = [
   { id: 'pujoAarti', title: 'Sandhya aarti at Modern Club', text: 'After 18:00, go to the Modern Club pandal by College Lake for the evening aarti. The dhakis play, the conch is blown, and everyone dances the dhunuchi naach with smoking clay dhunuchis.',
     done: (s) => !!s.flags.pujoAarti, reward: { money: 150 }, msg: '+₹150. Your eyes sting from the dhuno smoke and you are grinning.' },
   { id: 'pujoBisarjan', title: 'Bijoya Dashami', text: 'Ma goes home to Kailash today. After 15:00, follow the procession to the ghat on the Haora, east of the fields, and say goodbye. Then wish everyone Shubho Bijoya.',
-    done: (s) => !!s.flags.pujoBisarjan, reward: { money: 300 }, msg: 'Shubho Bijoya! Asche bochor abar hobe: next year, again.' },
+    done: (s) => !!s.flags.pujoBisarjan, reward: { money: 300 }, msg: 'Asche bochor abar hobe: next year, again!' },
+  { id: 'pujoBijoya', title: 'Shubho Bijoya', text: `After Dashami everyone visits their neighbours with sweets. Buy a box of Bijoya mishti at the sweet shops by the Ramnagar or Palace Compound pandals, and take it to ${BIJOYA_GOAL} neighbours to wish them Shubho Bijoya.`,
+    progress: (s) => `Neighbours ${Math.min(s.bijoya.length, BIJOYA_GOAL)} / ${BIJOYA_GOAL} · mishti in your bag: ${s.inv.mishti}`, done: (s) => s.bijoya.length >= BIJOYA_GOAL, reward: { money: 200 }, msg: '+₹200 and a full heart. Shubho Bijoya, Agartala.' },
 ];
 const PUJO_IDS = new Set(PUJO_MISSIONS.map((m) => m.id));
 export const isPujoMission = (m: Mission | null): boolean => !!m && PUJO_IDS.has(m.id);

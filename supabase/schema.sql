@@ -65,3 +65,16 @@ create table if not exists public.place_requests (
 );
 create index if not exists place_requests_created_idx on public.place_requests (created_at desc);
 alter table public.place_requests enable row level security;
+
+create table if not exists public.pujo_board (
+  id         text not null,
+  season     text not null,
+  name       text not null default '',
+  para       text not null default '',
+  pandals    integer not null default 0,
+  seen       text not null default '',
+  all_at     text not null default '',
+  updated_at timestamptz not null default now(),
+  primary key (id, season)
+);
+alter table public.pujo_board enable row level security;

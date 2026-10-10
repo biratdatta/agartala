@@ -9,7 +9,7 @@ import { $, rupees } from './dom.js';
 const INV: [keyof GameState['inv'], string, string][] = [
   ['paddySeed', 'Paddy seed', '#c7b27a'], ['sucker', 'Suckers', '#6f9a3a'], ['water', 'Can', '#5aa4b0'], ['paddy', 'Paddy', '#d8b64a'], ['pineapple', 'Pineapple', '#e9a23b'],
   ['jackfruit', 'Jackfruit', '#9bb446'], ['latex', 'Latex', '#e8e2d2'], ['sheet', 'Sheets', '#a9733b'], ['bamboo', 'Bamboo', '#b9c46a'],
-  ['tea', 'Tea', '#8cc94a'], ['fish', 'Fish', '#9fc7d6'], ['basket', 'Baskets', '#c9a96a'], ['pitha', 'Pitha', '#f2e6c8'], ['agar', 'Agarwood', '#5a3a2a'],
+  ['tea', 'Tea', '#8cc94a'], ['fish', 'Fish', '#9fc7d6'], ['basket', 'Baskets', '#c9a96a'], ['pitha', 'Pitha', '#f2e6c8'], ['mishti', 'Bijoya mishti', '#f6c8d8'], ['agar', 'Agarwood', '#5a3a2a'],
   ['teaSapling', 'Tea saplings', '#5f8f35'], ['agarSapling', 'Agar saplings', '#7d6a52'], ['fingerling', 'Fingerlings', '#6a9aa0'],
 ];
 const fmtH = (h: number) => { const hh = Math.floor(h), mm = Math.floor((h - hh) * 60); return String(hh).padStart(2, '0') + ':' + String(mm).padStart(2, '0'); };
@@ -50,7 +50,7 @@ export function updateHud(h: HudInput, force = false): void {
 }
 
 export function setPrompt(p: { label: string; run?: () => void } | null, touch: boolean): void {
-  const el = $('#prompt'); if (!p) { el.hidden = true; return; }
+  const el = $('#prompt'); if (!p || !p.label) { el.hidden = true; return; }
   el.hidden = false; el.className = p.run ? '' : 'passive';
   el.innerHTML = `<span class="key">${touch ? 'Act' : 'E'}</span><span></span>`; (el.lastChild as HTMLElement).textContent = p.label;
 }

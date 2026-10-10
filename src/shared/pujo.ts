@@ -9,6 +9,8 @@ import { SPOTS } from './spots.js';
 /** The real-world Puja season (UTC). Opens on the eve of Mahalaya (9 October 2026) and runs to the start of November. */
 export const PUJO_SEASON = { from: Date.UTC(2026, 9, 9, 6, 30), to: Date.UTC(2026, 10, 2, 18, 30) };
 export const pujoSeason = (t: number): boolean => t >= PUJO_SEASON.from && t < PUJO_SEASON.to;
+/** Names this year's Puja on the pandal-hopping board. */
+export const PUJO_SEASON_ID = '2026';
 
 export interface Pandal { id: string; name: string; bn: string; x: number; z: number; theme: [string, string]; about: string }
 export const PANDALS: Pandal[] = [
@@ -38,3 +40,5 @@ export const GHAT = { x: 1720, z: 1330 };
 export const ANJALI_HOURS: [number, number] = [6, 12];
 export const AARTI_FROM = 18;
 export const BISARJAN_FROM = 15;
+/** Neighbours to visit with mishti on Bijoya. */
+export const BIJOYA_GOAL = 3;

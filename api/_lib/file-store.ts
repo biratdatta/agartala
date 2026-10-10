@@ -1,6 +1,6 @@
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
-import { paraTopOf, recentOf, sortLb, weekTopOf, type Entry, type LbEntry, type PlaceRequest, type Presence, type Store, type WeekCat, type WeekEntry } from './store.js';
+import { paraTopOf, recentOf, sortLb, sortPujo, weekTopOf, type Entry, type LbEntry, type PlaceRequest, type Presence, type PujoEntry, type Store, type WeekCat, type WeekEntry } from './store.js';
 
 /** Development store: one JSON file per key under .data/. Writes are serialised inside the process. */
 export class FileStore implements Store {
@@ -28,6 +28,8 @@ export class FileStore implements Store {
   /** Who is in the city is short-lived, so in local dev it stays in memory. */
   private pres = new Map<string, Presence>();
   async presenceUpsert(p: Presence) { this.pres.set(p.id, { ...p }); }
+  pujoUpsert(e: PujoEntry) { return this.lock(async () => { const f = path.join(this.dir, 'pujo-board.json'); const all = (await this.read<Record<string, PujoEntry>>(f)) || {}; const k = `${e.id}|${e.season}`; all[k] = { ...e, allAt: all[k]?.allAt || e.allAt }; await this.write(f, all); }); }
+  async pujoTop(season: string, n: number) { const all = (await this.read<Record<string, PujoEntry>>(path.join(this.dir, 'pujo-board.json'))) || {}; return Object.values(all).filter((e) => e.season === season && e.name).sort(sortPujo).slice(0, n); }
   placeRequestAdd(r: PlaceRequest) { return this.lock(async () => { const f = path.join(this.dir, 'place-requests.json'); const all = (await this.read<PlaceRequest[]>(f)) || []; all.push(r); await this.write(f, all); }); }
   async presenceRecent(since: number, n: number) { return recentOf([...this.pres.values()], since, n); }
 }

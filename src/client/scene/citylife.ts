@@ -3,7 +3,8 @@
  * Diwali lamps on College Lake and College Tilla Lake, and the Ker Puja shrine at the stadium gate.
  */
 import * as THREE from 'three';
-import { STALLS, dishById, type Stall } from '../../shared/food.js';
+import { PUJO_STALLS, STALLS, dishById, type Stall } from '../../shared/food.js';
+import { PANDALS, pandalById } from '../../shared/pujo.js';
 import { mulberry } from '../../shared/rng.js';
 import { SPOTS } from '../../shared/spots.js';
 import { standByKey } from '../../shared/stands.js';
@@ -14,7 +15,7 @@ import { board } from './realplaces.js';
 import { stallSpot } from '../map/stallspot.js';
 import { type Person, person } from './people.js';
 
-export interface StallView extends Stall { x: number; z: number; vendor: Person; shutter: THREE.Mesh; lamp: THREE.Mesh }
+export interface StallView extends Omit<Stall, 'stand'> { stand?: Stall['stand']; x: number; z: number; vendor: Person; shutter: THREE.Mesh; lamp: THREE.Mesh; /** A Puja stall: only there in the Puja season. */ pujo?: boolean; group: THREE.Group }
 
 /** A painted menu board: the stall's dishes and prices. */
 function menuBoard(items: { name: string; price: number }[]): THREE.Mesh {
@@ -39,8 +40,14 @@ const PAINT = ['#c62f2f', '#2f6fb0', '#1f6f5c', '#d9a43b', '#8c2346', '#3f6f2a',
  * comes down at night.
  */
 export function buildStalls(scene: THREE.Scene, map: CityMap): StallView[] {
-  return STALLS.map((st, i) => {
-    const s = standByKey(st.stand)!; const p = stallSpot(map, s.x, s.z); const paint = PAINT[i % PAINT.length];
+  // every pandal and its crowd stays clear of stalls
+  const clear = PANDALS.map((p) => ({ x: p.x, z: p.z, r: 13 }));
+  const list = [
+    ...STALLS.map((st) => ({ st, at: standByKey(st.stand)!, pujo: false })),
+    ...PUJO_STALLS.map((st) => ({ st: { ...st, stand: undefined }, at: pandalById(st.pandal)!, pujo: true })),
+  ];
+  return list.map(({ st, at, pujo }, i) => {
+    const p = stallSpot(map, at.x, at.z, clear, pujo ? 44 : 26); const paint = pujo ? ['#c62f2f', '#e9b23b', '#d0408a', '#f08a24'][i % 4] : PAINT[i % PAINT.length];
     const g = new THREE.Group();
     box(g, 4.6, 0.16, 3.6, '#b9b3a6', 0, 0.08, -0.1);                                   // concrete plinth
     box(g, 4.2, 2.6, 0.08, '#8f9aa3', 0, 1.46, -1.85); for (const sx of [-1, 1]) box(g, 0.08, 2.6, 2.0, '#8f9aa3', sx * 2.06, 1.46, -0.85); // tin back and sides
@@ -59,16 +66,24 @@ export function buildStalls(scene: THREE.Scene, map: CityMap): StallView[] {
     cyl(g, 0.01, 0.01, 0.4, '#333', 0, 2.55, 0.6, 4); const lamp = add(g, new THREE.SphereGeometry(0.12, 8, 6), MAT.bulb, 0, 2.3, 0.6, false);
     box(g, 2.6, 0.08, 0.4, '#7a5a3a', 0, 0.45, 2.85); for (const sx of [-1.1, 1.1]) box(g, 0.08, 0.42, 0.36, '#4a4a4a', sx, 0.21, 2.85); // customers' bench
     const shutter = box(g, 3.9, 1.9, 0.06, '#6f777d', 0, 1.3, 1.25); shutter.visible = false;
+    if (pujo) for (let k = 0; k < 12; k++) { const b = sph(g, 0.08, ['#ff5a5a', '#ffd84a', '#6ad1ff', '#8cff7a'][k % 4], -2.2 + k * 0.4, 2.62 - Math.sin((k / 11) * Math.PI) * 0.25, 1.85, 6, 4); b.userData.fairy = true; } // fairy lights on the frill
     place(scene, g, p.x, p.z, p.rot);
     const vendor = person(VENDORS[i % VENDORS.length]); const bx = p.x + Math.sin(p.rot) * 0.05, bz = p.z + Math.cos(p.rot) * 0.05; vendor.position.set(bx, getH(bx, bz), bz); vendor.rotation.y = p.rot; scene.add(vendor);
     const fx = Math.sin(p.rot), fz = Math.cos(p.rot), ux = Math.cos(p.rot), uz = -Math.sin(p.rot);
     for (const u of [-1.2, 1.2]) colliders.push({ x: p.x + ux * u - fx * 0.4, z: p.z + uz * u - fz * 0.4, r: 1.5 });
     for (const u of [-1.1, 1.1]) colliders.push({ x: p.x + ux * u + fx * 2.85, z: p.z + uz * u + fz * 2.85, r: 0.35 });
     // the player talks to the stall from its front, by the bench
-    return { ...st, x: p.x + fx * 2.1, z: p.z + fz * 2.1, vendor, shutter, lamp };
+    if (pujo) { g.visible = false; vendor.visible = false; }
+    return { ...st, x: p.x + fx * 2.1, z: p.z + fz * 2.1, vendor, shutter, lamp, pujo, group: g };
   });
 }
-export function updateStalls(list: StallView[], open: boolean): void { for (const s of list) { s.shutter.visible = !open; s.vendor.visible = open; } }
+/** Opens and shuts the stalls with the hours; the Puja stalls stand only in the season and keep late hours. */
+export function updateStalls(list: StallView[], hour: number, season: boolean): void {
+  for (const s of list) {
+    if (s.pujo) { s.group.visible = season; const open = season && !(hour >= 2 && hour < 8); s.shutter.visible = !open; s.vendor.visible = open; continue; }
+    const open = hour >= 7 && hour < 22; s.shutter.visible = !open; s.vendor.visible = open;
+  }
+}
 
 /**
  * Street lamps every ~32 m along the bigger roads, for the whole city, as two instanced meshes.

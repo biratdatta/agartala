@@ -6,6 +6,7 @@ import { paraAt } from '../../src/shared/area.js';
 import { HOME } from '../../src/shared/farm.js';
 import type { Store } from './store.js';
 import { signinRequired } from './env.js';
+import { PUJO_SEASON_ID, pujoSeason } from '../../src/shared/pujo.js';
 
 /** What is stored under save:<id>. The game state plus account bookkeeping. */
 export interface SaveDoc { state: GameState; code: string; userId?: string; email?: string; realName?: string; created: number }
@@ -84,6 +85,8 @@ export const paraOf = (s: GameState): string => (s.home ? paraAt(s.home.x, s.hom
 export async function updateLeaderboard(store: Store, saveId: string, s: GameState, now = Date.now()): Promise<void> {
   const named = !!s.name && s.name.length >= 2;
   if (named) await store.lbUpsert({ id: saveId, name: s.name, worth: netWorth(s), day: s.day });
+  // this Puja's pandal hoppers (only farms that have seen at least one pandal)
+  if (pujoSeason(now) && s.pandals.length) await store.pujoUpsert({ id: publicId(saveId), season: PUJO_SEASON_ID, name: named ? s.name : '', para: paraOf(s), pandals: s.pandals.length, seen: s.pandals.join(','), allAt: s.flags.pujoAllAt ? new Date(s.flags.pujoAllAt).toISOString() : '' });
   const w = s.week; if (w.id === weekId(now)) await store.weekUpsert({ id: publicId(saveId), week: w.id, name: named ? s.name : '', para: paraOf(s), paddy: w.paddy, deliveries: w.deliveries, kaam: w.kaam, sights: w.sights, earned: w.earned });
 }
 

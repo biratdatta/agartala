@@ -32,6 +32,10 @@ export interface Store {
   /** Each para's total earnings this week, best first. */
   paraTop(week: string, n: number): Promise<ParaRow[]>;
   presenceUpsert(p: Presence): Promise<void>;
+  /** This Puja's pandal hoppers: how many pandals each named farm has seen, and when it saw them all. */
+  pujoUpsert(e: PujoEntry): Promise<void>;
+  /** Farms that saw every pandal, first first; then everyone else by pandals seen. */
+  pujoTop(season: string, n: number): Promise<PujoEntry[]>;
   /** Saves a player's request for a missing place (table place_requests). */
   placeRequestAdd(r: PlaceRequest): Promise<void>;
   /** Players seen since `since` (ms), most recent first. */
@@ -47,6 +51,10 @@ export function paraTopOf(a: WeekEntry[], week: string, n: number): ParaRow[] {
 }
 export const recentOf = (a: Presence[], since: number, n: number) => a.filter((p) => p.t >= since).sort((x, y) => y.t - x.t).slice(0, n);
 const clampN = (n: number) => Math.max(1, Math.min(100, Math.floor(n) || 1));
+
+/** One farm on the pandal-hopping board. `allAt` is when (ISO) it had seen every pandal, '' until then. */
+export interface PujoEntry { id: string; season: string; name: string; para: string; pandals: number; seen: string; allAt: string }
+export const sortPujo = (a: PujoEntry, b: PujoEntry): number => (a.allAt && b.allAt ? a.allAt.localeCompare(b.allAt) : a.allAt ? -1 : b.allAt ? 1 : b.pandals - a.pandals);
 
 /** A player's request for a place that's missing from the game. */
 export interface PlaceRequest { id: string; name: string; kind: string; note: string; x: number; z: number; lat: number; lon: number; farm: string; email: string; created_at: string; status: string }
@@ -73,6 +81,9 @@ export class MemoryStore implements Store {
   async presenceUpsert(p: Presence) { this.pres.set(p.id, { ...p }); }
   readonly requests: PlaceRequest[] = [];
   async placeRequestAdd(r: PlaceRequest) { this.requests.push({ ...r }); }
+  private pujo = new Map<string, PujoEntry>();
+  async pujoUpsert(e: PujoEntry) { this.pujo.set(`${e.id}|${e.season}`, { ...e }); }
+  async pujoTop(season: string, n: number) { return [...this.pujo.values()].filter((e) => e.season === season && e.name).sort(sortPujo).slice(0, clampN(n)); }
   async presenceRecent(since: number, n: number) { return recentOf([...this.pres.values()], since, clampN(n)); }
 }
 
@@ -122,6 +133,16 @@ export class D1Store implements Store {
     const r = await this.db.prepare("SELECT para, SUM(earned) AS total, COUNT(*) AS players FROM weekly WHERE week = ? AND para <> '' GROUP BY para ORDER BY total DESC LIMIT ?").bind(week, clampN(n)).all<ParaRow>();
     return r.results.map((p) => ({ para: p.para, total: Number(p.total), players: Number(p.players) }));
   }
+  async pujoUpsert(e: PujoEntry) {
+    await this.ensure();
+    await this.db.prepare('INSERT INTO pujo_board (id, season, name, para, pandals, seen, all_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT(id, season) DO UPDATE SET name = excluded.name, para = excluded.para, pandals = excluded.pandals, seen = excluded.seen, all_at = CASE WHEN pujo_board.all_at <> \'\' THEN pujo_board.all_at ELSE excluded.all_at END, updated_at = excluded.updated_at')
+      .bind(e.id, e.season, e.name, e.para, e.pandals, e.seen, e.allAt, new Date().toISOString()).run();
+  }
+  async pujoTop(season: string, n: number) {
+    await this.ensure();
+    const r = await this.db.prepare("SELECT id, season, name, para, pandals, seen, all_at AS allAt FROM pujo_board WHERE season = ? AND name <> '' ORDER BY (all_at = '') ASC, all_at ASC, pandals DESC, updated_at ASC LIMIT ?").bind(season, clampN(n)).all<PujoEntry>();
+    return r.results.map((e) => ({ ...e, pandals: Number(e.pandals) }));
+  }
   async placeRequestAdd(r: PlaceRequest) {
     await this.ensure();
     await this.db.prepare('INSERT INTO place_requests (id, name, kind, note, x, z, lat, lon, farm, email, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)')
@@ -149,6 +170,7 @@ export const D1_TABLES = [
   'CREATE INDEX IF NOT EXISTS presence_t_idx ON presence (t)',
   'CREATE TABLE IF NOT EXISTS place_requests (id TEXT PRIMARY KEY, name TEXT NOT NULL, kind TEXT NOT NULL, note TEXT NOT NULL DEFAULT \'\', x INTEGER NOT NULL, z INTEGER NOT NULL, lat REAL NOT NULL, lon REAL NOT NULL, farm TEXT NOT NULL, email TEXT NOT NULL DEFAULT \'\', status TEXT NOT NULL DEFAULT \'new\', created_at TEXT NOT NULL)',
   'CREATE INDEX IF NOT EXISTS place_requests_created_idx ON place_requests (created_at)',
+  "CREATE TABLE IF NOT EXISTS pujo_board (id TEXT NOT NULL, season TEXT NOT NULL, name TEXT NOT NULL, para TEXT NOT NULL, pandals INTEGER NOT NULL DEFAULT 0, seen TEXT NOT NULL DEFAULT '', all_at TEXT NOT NULL DEFAULT '', updated_at TEXT NOT NULL, PRIMARY KEY (id, season))",
   'DROP VIEW IF EXISTS players', // recreated each start so new columns land
   PLAYERS_VIEW,
 ];
@@ -198,6 +220,15 @@ export class SupabaseStore implements Store {
   async paraTop(week: string, n: number) {
     const r = await this.req(`para_week?select=para,total,players&week=eq.${encodeURIComponent(week)}&order=total.desc&limit=${clampN(n)}`, { headers: this.h() });
     return ((await r.json()) as ParaRow[]).map((p) => ({ para: p.para, total: Number(p.total), players: Number(p.players) }));
+  }
+  async pujoUpsert(e: PujoEntry) {
+    const row = { id: e.id, season: e.season, name: e.name, para: e.para, pandals: e.pandals, seen: e.seen, updated_at: new Date().toISOString() };
+    await this.req('pujo_board?on_conflict=id,season', { method: 'POST', headers: this.h({ Prefer: 'resolution=merge-duplicates,return=minimal' }), body: JSON.stringify(row) });
+    if (e.allAt) await this.req(`pujo_board?id=eq.${encodeURIComponent(e.id)}&season=eq.${encodeURIComponent(e.season)}&all_at=eq.`, { method: 'PATCH', headers: this.h({ Prefer: 'return=minimal' }), body: JSON.stringify({ all_at: e.allAt }) });
+  }
+  async pujoTop(season: string, n: number) {
+    const r = await this.req(`pujo_board?select=id,season,name,para,pandals,seen,allAt:all_at&season=eq.${encodeURIComponent(season)}&name=neq.&limit=200`, { headers: this.h() });
+    return ((await r.json()) as PujoEntry[]).map((e) => ({ ...e, pandals: Number(e.pandals) })).sort(sortPujo).slice(0, clampN(n));
   }
   async placeRequestAdd(r: PlaceRequest) {
     await this.req('place_requests', { method: 'POST', headers: this.h({ Prefer: 'return=minimal' }), body: JSON.stringify(r) });

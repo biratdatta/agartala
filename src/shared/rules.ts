@@ -12,7 +12,7 @@ import { SIGHTS, SIGHT_REWARD, dailyDeliveries, deliveryById, sightById } from '
 import { normalizeHome, sanitizeName, sanitizePlace, type GameState, type Inventory } from './save.js';
 import { rideMinutes, rideSeconds, standByKey } from './stands.js';
 import { advance, finishRide, hoursToMorning, isNight, tickHours } from './time.js';
-import { BAZAR_CLOSE, BAZAR_OPEN, STALL_CLOSE, STALL_OPEN, dishById, stallById } from './food.js';
+import { BAZAR_CLOSE, BAZAR_OPEN, STALL_CLOSE, STALL_OPEN, dishById, isPujoStall, stallById } from './food.js';
 import { FRIENDABLE, INVITE_FROM, INVITE_UNTIL, PHRASE_REWARD, befriend, friendship, inviteToday, kaamBonus, nextPhrase } from './friends.js';
 import { festById, festKey, isFestival, kept, kerClosed, pithaSeason, type FestId } from './festivals.js';
 import { CHAPTER_REWARD, nextChapter } from './story.js';
@@ -20,7 +20,7 @@ import { tripById, tripOpen } from './trips.js';
 import { weekId } from './week.js';
 import { rnd2 } from './rng.js';
 import { AREA } from './area.js';
-import { ANJALI_HOURS, AARTI_FROM, BISARJAN_FROM, PANDALS, PANDAL_GOAL, pandalById, pujoSeason } from './pujo.js';
+import { ANJALI_HOURS, AARTI_FROM, BIJOYA_GOAL, BISARJAN_FROM, PANDALS, PANDAL_GOAL, pandalById, pujoSeason } from './pujo.js';
 import { FARES_PER_DAY, FARE_MAX_SPEED, RENTALS, RENT_RATE, canFare, fareFor, owns, rentalCost, vehicleByKey, type VehKey } from './vehicles.js';
 
 export type Action =
@@ -52,6 +52,7 @@ export type Action =
   | { t: 'anjali' }
   | { t: 'aarti' }
   | { t: 'bisarjan' }
+  | { t: 'bijoya'; npc: string }
   | { t: 'name'; name: string }
   | { t: 'pos'; x: number; z: number; face: number }
   // added with the bigger world
@@ -272,6 +273,7 @@ export function apply(s: GameState, a: Action, now: number): Result {
       const p = pandalById(String(a.id)); if (!p) return fail('No such pandal');
       if (s.pandals.includes(p.id)) return fail(`You have had darshan at ${p.name} already`);
       s.pandals = [...s.pandals, p.id]; s.energy = Math.min(ENERGY_MAX, s.energy + 8); s.stats.sights++;
+      if (s.pandals.length >= PANDALS.length && !s.flags.pujoAllAt) s.flags.pujoAllAt = now; // for the 'first to see them all' board
       toast(`Darshan of Ma Durga at ${p.name} · prasad +8 energy · ${Math.min(s.pandals.length, PANDALS.length)} of ${PANDALS.length} pandals${s.pandals.length === PANDAL_GOAL ? ' · that makes five!' : ''}`, 'dhak'); break;
     }
     case 'anjali': {
@@ -288,6 +290,14 @@ export function apply(s: GameState, a: Action, now: number): Result {
       if (currentMission(s)?.id !== 'pujoBisarjan') return fail('Bisarjan is on Dashami, at the end of the Puja');
       if (s.hour < BISARJAN_FROM && s.hour >= 5) return fail('The procession reaches the ghat after 15:00');
       s.flags.pujoBisarjan = true; befriend(s, 'nKalibari', 10); sfx('dhak'); break;
+    }
+    case 'bijoya': {
+      if (currentMission(s)?.id !== 'pujoBijoya') return fail('Bijoya greetings come after Dashami');
+      if (!FRIENDABLE.includes(a.npc)) return fail('Nobody by that name');
+      if (s.bijoya.includes(a.npc)) return fail('You have wished them already');
+      if (s.inv.mishti < 1) return fail('Bring a box of mishti: the sweet shops by the Ramnagar and Palace Compound pandals have them');
+      s.inv.mishti--; s.bijoya = [...s.bijoya, a.npc]; befriend(s, a.npc, 15);
+      toast(`Shubho Bijoya! They hug you and press a rasgulla on you · +friendship · ${s.bijoya.length} of ${BIJOYA_GOAL}`, 'talk'); break;
     }
     case 'name': {
       const n = sanitizeName(a.name); if (n.length < 2) return fail('Pick a name of at least 2 letters');
@@ -350,9 +360,15 @@ export function apply(s: GameState, a: Action, now: number): Result {
     }
     case 'eat': {
       const st = stallById(a.stall), d = dishById(a.dish); if (!st || !d || !st.menu.includes(d.id)) return fail('They do not serve that here');
-      if (s.hour < STALL_OPEN || s.hour >= STALL_CLOSE) return fail('The stall is shut. It opens at 07:00.');
+      const pujo = isPujoStall(st.id);
+      if (pujo && !pujoSeason(now)) return fail('The Puja stalls come up for Durga Puja');
+      // Puja stalls stay open late, like the pandals: 08:00 till 02:00
+      if (pujo ? s.hour >= 2 && s.hour < 8 : s.hour < STALL_OPEN || s.hour >= STALL_CLOSE) return fail(pujo ? 'The Puja stalls open at 08:00 and stay open till 02:00.' : 'The stall is shut. It opens at 07:00.');
       if (s.money < d.price) return fail('Not enough money');
+      if (d.takeaway) { s.money -= d.price; s.inv.mishti++; toast(`${d.name} · in your bag (${s.inv.mishti})`, 'coin'); break; }
+      if (d.id === 'bhog' && s.flags.bhogDay === s.day) return fail('You have had bhog today. Come back tomorrow.');
       if (s.energy >= ENERGY_MAX) return fail('You are full');
+      if (d.id === 'bhog') s.flags.bhogDay = s.day;
       s.money -= d.price; s.energy = Math.min(ENERGY_MAX, s.energy + d.energy); s.stats.meals++; toast(`${d.name}: +${d.energy} energy`, 'coin'); break;
     }
 

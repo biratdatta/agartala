@@ -90,12 +90,15 @@ export class Pandals {
   readonly group = new THREE.Group();
   private fairy: THREE.Object3D[] = [];
   private crowds: Person[] = [];
+  /** A spot in front of each pandal, facing Ma, for the Pujo photo booth. */
+  readonly booths: { x: number; z: number; face: number; name: string }[] = [];
   constructor(scene: THREE.Scene, map: CityMap) {
     PANDALS.forEach((p, i) => {
       const { g, fairy } = pandal(p, i); this.fairy.push(...fairy);
       const rn = map.roadNear(p.x, p.z); const rot = rn ? Math.atan2(rn.px - p.x, rn.pz - p.z) : 0;
       place(this.group, g, p.x, p.z, rot);
       const fx = Math.sin(rot), fz = Math.cos(rot), ux = Math.cos(rot), uz = -Math.sin(rot);
+      this.booths.push({ x: p.x + fx * 9.5 + ux * 2.2, z: p.z + fz * 9.5 + uz * 2.2, face: rot + Math.PI, name: p.name });
       for (const [u, v, r] of [[0, -3, 4.6], [-4.5, 0, 1.6], [4.5, 0, 1.6], [-5.4, 5, 0.8], [5.4, 5, 0.8]]) colliders.push({ x: p.x + ux * u + fx * v, z: p.z + uz * u + fz * v, r });
       // a crowd in front, there in the evenings
       for (let k = 0; k < 8; k++) {

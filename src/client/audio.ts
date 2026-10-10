@@ -46,6 +46,10 @@ export const SFX: Record<string, () => void> = {
 };
 export const play = (name?: string): void => { if (name && SFX[name]) SFX[name](); };
 export function unlockAudio(): void { ac(); }
+/** For the music engine: the audio context (null while sound is off) and the master bus. */
+export const audioCtx = (): AudioContext | null => ac();
+export const masterBus = (a: AudioContext): AudioNode => out(a);
+export const soundOn = (): boolean => on;
 export function toggleSound(): boolean { on = !on; if (ctx) void (on ? ctx.resume() : ctx.suspend()); return on; }
 
 /* ---------- ambience: rain, crickets, birds, temple bells, horns and the dhak ---------- */

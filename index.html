@@ -268,6 +268,8 @@
         <input type="range" id="setView" min="300" max="1600" step="50">
         <div class="set-row"><label for="setVol">Sound</label><output id="setVolV"></output></div>
         <input type="range" id="setVol" min="0" max="100" step="5">
+        <div class="set-row"><label for="setMusic">Music: dhak and the Puja tune</label><output id="setMusicV"></output></div>
+        <input type="range" id="setMusic" min="0" max="100" step="5">
         <fieldset class="seg"><legend>Text and buttons</legend>
           <button type="button" data-text="normal">Normal</button><button type="button" data-text="large">Large</button><button type="button" data-text="largest">Largest</button>
         </fieldset>
@@ -399,6 +401,7 @@
 
         <section class="tab" data-tab="boards" hidden>
           <div class="row" id="boardKinds">
+            <button class="b2 pujo-only" data-board="pujo">Pandal hoppers</button>
             <button class="b2 on" data-board="rich">Richest farms</button>
             <button class="b2" data-board="week">This week</button>
             <button class="b2" data-board="para">Para against para</button>

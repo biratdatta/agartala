@@ -16,6 +16,7 @@ import { $, esc, rupees, toast } from './dom.js';
 import { NEIGHBOURS } from '../../shared/kaam.js';
 import { kaamFor } from '../npcs.js';
 import { SIGHTS, dailyDeliveries, deliveryById } from '../../shared/errands.js';
+import { PANDALS, pujoSeason } from '../../shared/pujo.js';
 
 /* ---------- dialogue ---------- */
 let pages: string[] = []; let onDone: (() => void) | null = null;
@@ -72,11 +73,16 @@ export function wireShop(game: Game): void {
 }
 
 /* ---------- food stalls ---------- */
-export function openStall(game: Game, st: Stall & { owner: string }): void {
+export function openStall(game: Game, st: Pick<Stall, 'id' | 'name' | 'owner' | 'menu'> & { pujo?: boolean }): void {
   const render = () => {
-    const S = game.S; const open = S.hour >= STALL_OPEN && S.hour < STALL_CLOSE;
-    $('#stallName').textContent = st.name; $('#stallSub').textContent = `${st.owner} · ${open ? `energy ${Math.round(S.energy)} / 100 · ₹${S.money}` : 'shut for the night, opens at 07:00'}`;
-    $('#stallList').innerHTML = st.menu.map((id) => DISHES.find((d) => d.id === id)!).map((d) => `<button class="ride" data-dish="${d.id}" ${open && S.money >= d.price && S.energy < 100 ? '' : 'disabled'}><span>${esc(d.name)}<div class="sm">${esc(d.about)}</div></span><span class="sm">₹${d.price} · +${d.energy} energy</span></button>`).join('');
+    const S = game.S; const open = st.pujo ? !(S.hour >= 2 && S.hour < 8) : S.hour >= STALL_OPEN && S.hour < STALL_CLOSE;
+    $('#stallName').textContent = st.name; $('#stallSub').textContent = `${st.owner} · ${open ? `energy ${Math.round(S.energy)} / 100 · ₹${S.money}` : st.pujo ? 'the Puja stalls open again at 08:00' : 'shut for the night, opens at 07:00'}`;
+    $('#stallList').innerHTML = st.menu.map((id) => DISHES.find((d) => d.id === id)!).map((d) => {
+      const had = d.id === 'bhog' && S.flags.bhogDay === S.day;
+      const can = open && S.money >= d.price && (d.takeaway || (S.energy < 100 && !had));
+      const tag = d.takeaway ? `₹${d.price} · to take away${S.inv.mishti ? ` (${S.inv.mishti} in your bag)` : ''}` : d.price ? `₹${d.price} · +${d.energy} energy` : had ? 'had today · again tomorrow' : `free · +${d.energy} energy`;
+      return `<button class="ride" data-dish="${d.id}" ${can ? '' : 'disabled'}><span>${esc(d.name)}<div class="sm">${esc(d.about)}</div></span><span class="sm">${tag}</span></button>`;
+    }).join('');
   };
   render(); $('#stall').hidden = false;
   $('#stallClose').onclick = () => ($('#stall').hidden = true);
@@ -177,13 +183,14 @@ function renderBoard(): void {
     $('#tripsDone').innerHTML = TRIPS.map((t) => { const last = lastTrip(S, t.id); return `<li class="${last ? 'done' : ''}"><b>${esc(t.name)}</b><div class="sm">${last ? `Last went on day ${last}` : `${esc(t.where)} · by bus from Radhanagar`}</div></li>`; }).join('');
     void festKey;
   }
-  if (tab === 'boards') void loadBoard();
+  if (tab === 'boards') { document.querySelectorAll<HTMLElement>('#boardKinds .pujo-only').forEach((b) => { b.hidden = !pujoSeason(deps!.net.now()); }); if (pujoSeason(deps!.net.now()) && !pujoPicked) { boardKind = 'pujo'; pujoPicked = true; } void loadBoard(); }
 }
 function renderVisit(): void {
   const f = visiting; $('#visitCard').hidden = !f; if (!f) return;
   $('#visitInfo').innerHTML = `<b>${esc(f.name)}</b> · ${esc(f.para)} · day ${f.day}<br>Worth ${rupees(f.worth)} · ${f.planted} of ${f.plots} plots planted${f.ripe ? ` · ${f.ripe} ripe` : ''}${f.thirsty ? ` · <span style="color:#ef8a6a">${f.thirsty} thirsty</span>` : ''}<br>${f.tea ? `${f.tea} tea bushes · ` : ''}${f.pond ? 'fish in the pukur · ' : ''}${f.sights} sights seen · ${f.festivals} festivals kept`;
   ($('#helpGo') as HTMLButtonElement).disabled = !f.thirsty;
 }
+let pujoPicked = false; // in the Puja season the boards open on the pandal hoppers once
 async function loadBoard(): Promise<void> {
   if (!deps) return; const { net } = deps; const list = $('#lbList'); const note = $('#boardNote');
   document.querySelectorAll<HTMLElement>('#boardKinds .b2').forEach((b) => b.classList.toggle('on', b.dataset.board === boardKind));
@@ -191,7 +198,12 @@ async function loadBoard(): Promise<void> {
   if (!net.online) { list.innerHTML = '<li class="sm">The boards need the server.</li>'; return; }
   list.innerHTML = '<li class="sm">Loading…</li>';
   try {
-    if (boardKind === 'rich') {
+    if (boardKind === 'pujo') {
+      // this Puja's pandal hoppers: who saw every pandal first, and which pandals each has seen
+      note.textContent = `First to see Ma Durga in all ${PANDALS.length} pandals tops the board. Name your farm (Farm tab) to appear.`;
+      const b = await net.pujoBoard(); const short = (id: string) => PANDALS.find((p) => p.id === id)?.name.replace(' Sarbojanin', '').replace(' Mahila Puja Committee', ' Mahila') || id;
+      list.innerHTML = b.entries.length ? b.entries.map((r) => `<li><span class="rk">${r.allAt ? '★' : r.rank}</span><span class="nm">${esc(r.name)} <span class="sm">${esc(r.para)}</span><div class="sm pujo-seen">${r.seen.map((s) => `<span>${esc(short(s))}</span>`).join('')}</div></span><span class="sm">${r.allAt ? `all ${b.total} · ${new Date(r.allAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}</span><b>${r.pandals} / ${b.total}</b></li>`).join('') : '<li class="sm">Nobody has been pandal hopping yet. Be the first!</li>';
+    } else if (boardKind === 'rich') {
       note.textContent = 'Net worth: cash, goods, land and kit. Only farms with a name appear.';
       const rows = await net.leaderboard();
       list.innerHTML = rows.length ? rows.map((r) => `<li><span class="rk">${r.rank}</span><span class="nm">${esc(r.name)}</span><span class="sm">day ${r.day}</span><b>${rupees(r.worth)}</b></li>`).join('') : '<li class="sm">No named farms yet. Name yours to be first.</li>';

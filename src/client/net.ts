@@ -141,6 +141,10 @@ export class Net {
     const r = await fetch(`/api/players?me=${encodeURIComponent(this.pid)}`); if (!r.ok) throw new Error('No players');
     return ((await r.json()) as { players: OtherPlayer[] }).players;
   }
+  /** This Puja's pandal hoppers: who has seen the most pandals, and who saw all of them first. */
+  async pujoBoard(): Promise<{ total: number; entries: { rank: number; name: string; para: string; pandals: number; seen: string[]; allAt: string | null; id: string }[] }> {
+    const r = await fetch('/api/pujo-board'); if (!r.ok) throw new Error('Could not load the board'); return r.json();
+  }
   /** Asks for a real place that's missing from the game. Returns the thank-you message. */
   async requestPlace(r: { name: string; kind: string; note: string; x: number; z: number }): Promise<string> {
     const res = await fetch('/api/place-request', { method: 'POST', headers: this.headers(), body: JSON.stringify(r) });

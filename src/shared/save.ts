@@ -7,8 +7,8 @@ import { VEHICLES, type VehKey } from './vehicles.js';
 export const SAVE_VERSION = 6;
 
 export interface PlotState { state: 'grass' | 'tilled'; crop: CropKey | null; growth: number; watered: boolean; owned: boolean }
-export interface Inventory { paddySeed: number; sucker: number; water: number; paddy: number; pineapple: number; jackfruit: number; latex: number; sheet: number; bamboo: number; tea: number; agar: number; fish: number; basket: number; pitha: number; teaSapling: number; agarSapling: number; fingerling: number }
-export interface Flags { arrived?: boolean; freeRide?: boolean; metGrandpa?: boolean; gariaDone?: boolean; gariaDay?: number; shawl?: boolean; kharchi?: boolean; blessed?: boolean; durga?: boolean; sawFlood?: boolean; pujoAnjali?: boolean; pujoAarti?: boolean; pujoBisarjan?: boolean; /** Steps of the Durga Puja chapter finished (and paid). */ pujoDone?: number }
+export interface Inventory { paddySeed: number; sucker: number; water: number; paddy: number; pineapple: number; jackfruit: number; latex: number; sheet: number; bamboo: number; tea: number; agar: number; fish: number; basket: number; pitha: number; mishti: number; teaSapling: number; agarSapling: number; fingerling: number }
+export interface Flags { arrived?: boolean; freeRide?: boolean; metGrandpa?: boolean; gariaDone?: boolean; gariaDay?: number; shawl?: boolean; kharchi?: boolean; blessed?: boolean; durga?: boolean; sawFlood?: boolean; pujoAnjali?: boolean; pujoAarti?: boolean; pujoBisarjan?: boolean; /** Steps of the Durga Puja chapter finished (and paid). */ pujoDone?: number; /** Day you last had the free bhog. */ bhogDay?: number; /** When (ms) you'd seen every pandal. */ pujoAllAt?: number }
 export interface Stats { harvest: { paddy: number; pineapple: number }; sold: Partial<Record<string, number>>; sheets: number; earned: number; rides: number; kaam: number; deliveries: number; sights: number; meals: number; baskets: number; fish: number; tea: number; trips: number; festivals: number; helped: number }
 /** This real-world week's tallies, for the weekly boards. `id` is an ISO week like 2026-W41. */
 export interface Week { id: string; paddy: number; deliveries: number; kaam: number; sights: number; earned: number }
@@ -54,6 +54,8 @@ export interface GameState {
   visited: string[];
   /** Durga Puja pandals where you've had darshan this season. */
   pandals: string[];
+  /** Neighbours you've wished Shubho Bijoya (with mishti). */
+  bijoya: string[];
   /** Where the player stands. Reported by the client, never trusted by the rules. */
   pos: { x: number; z: number; face: number };
   /** 0..100. Work tires you; food, rest and sleep bring it back. */
@@ -101,13 +103,13 @@ export function newState(now: number, name = '', from = '', fromKm = 0): GameSta
   return {
     v: SAVE_VERSION, name, from: sanitizePlace(from), fromKm: Math.round(Math.max(0, Math.min(20000, fromKm))),
     day: 1, hour: 6.5, ts: now, money: 100, canMax: CAN_SMALL, cycle: false,
-    inv: { paddySeed: 0, sucker: 0, water: 0, paddy: 0, pineapple: 0, jackfruit: 0, latex: 0, sheet: 0, bamboo: 0, tea: 0, agar: 0, fish: 0, basket: 0, pitha: 0, teaSapling: 0, agarSapling: 0, fingerling: 0 },
+    inv: { paddySeed: 0, sucker: 0, water: 0, paddy: 0, pineapple: 0, jackfruit: 0, latex: 0, sheet: 0, bamboo: 0, tea: 0, agar: 0, fish: 0, basket: 0, pitha: 0, mishti: 0, teaSapling: 0, agarSapling: 0, fingerling: 0 },
     plots: PLOTS.map((p, i) => ({ state: 'grass', crop: null, growth: 0, watered: false, owned: p.kind === 'tilla' || i < START_OWNED_LUNGA })),
     trees: RUBBER.map(() => ({ tapped: 0 })),
     bamboo: BAMBOO.map(() => ({ ready: 0 })),
     jack: JACK.map(() => ({ fruits: 2 })),
     mission: 0, flags: { freeRide: true }, stats: { harvest: { paddy: 0, pineapple: 0 }, sold: {}, sheets: 0, earned: 0, rides: 0, kaam: 0, deliveries: 0, sights: 0, meals: 0, baskets: 0, fish: 0, tea: 0, trips: 0, festivals: 0, helped: 0 },
-    rain: false, ended: false, ride: null, kaamDone: [], home: null, carry: null, delivered: [], visited: [], pandals: [], pos: { x: SPAWN.x, z: SPAWN.z, face: SPAWN.face },
+    rain: false, ended: false, ride: null, kaamDone: [], home: null, carry: null, delivered: [], visited: [], pandals: [], bijoya: [], pos: { x: SPAWN.x, z: SPAWN.z, face: SPAWN.face },
     energy: ENERGY_MAX, flood: false, market: {}, scooter: false, pump: false, coldStore: false, pumpDay: 0, helperUntil: 0,
     tea: TEA.map(() => ({ planted: false, growth: 0, picked: 0 })), agar: AGAR.map(() => ({ planted: false, growth: 0, picked: 0 })),
     pond: { stocked: false, growth: 0 }, boostUntil: 0, friends: {}, chats: [], phrases: [], chapters: [], fests: [], pithaGiven: [], trips: [], attended: [],
@@ -146,6 +148,7 @@ export function normalize(raw: unknown, now: number): GameState {
   s.delivered = Array.isArray(r.delivered) ? r.delivered.filter((x) => typeof x === 'string').slice(-30) : [];
   s.visited = Array.isArray(r.visited) ? [...new Set(r.visited.filter((x) => typeof x === 'string'))].slice(0, 50) : [];
   s.pandals = Array.isArray(r.pandals) ? [...new Set(r.pandals.filter((x) => typeof x === 'string'))].slice(0, 20) : [];
+  s.bijoya = Array.isArray(r.bijoya) ? [...new Set(r.bijoya.filter((x) => typeof x === 'string'))].slice(0, 20) : [];
   s.energy = num(r.energy, ENERGY_MAX, 0, ENERGY_MAX); s.flood = !!r.flood;
   s.market = {}; for (const k of Object.keys(ITEMS) as ItemKey[]) { const v = num(r.market?.[k], 0, 0, 999); if (v > 0) s.market[k] = v; }
   s.scooter = !!r.scooter; s.pump = !!r.pump; s.coldStore = !!r.coldStore; s.pumpDay = num(r.pumpDay, 0, 0); s.helperUntil = num(r.helperUntil, 0, 0); s.boostUntil = num(r.boostUntil, 0, 0);

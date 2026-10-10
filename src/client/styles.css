@@ -441,3 +441,7 @@ html[data-motion="reduce"] :is(#fade,#tourFade,#tourCap){transition:none}
   #energy span{display:none}
   #mini{width:112px;height:112px}
 }
+
+/* the pandal hoppers board: which pandals each farm has seen */
+.pujo-seen{display:flex;flex-wrap:wrap;gap:3px;margin-top:3px}
+.pujo-seen span{font-size:10.5px;padding:1px 6px;border-radius:999px;background:rgba(198,47,47,.25);border:1px solid rgba(233,178,59,.4);color:#ffd9a0}

@@ -13,7 +13,8 @@ import { KER_SPOT } from './scene/citylife.js';
 import { NEIGHBOURS } from '../shared/kaam.js';
 import { SIGHTS, SIGHT_REWARD, dailyDeliveries, deliveryById } from '../shared/errands.js';
 import { currentMission } from '../shared/missions.js';
-import { AARTI_FROM, ANJALI_HOURS, BISARJAN_FROM, GHAT, PANDALS, pujoSeason } from '../shared/pujo.js';
+import { AARTI_FROM, ANJALI_HOURS, BISARJAN_FROM, GHAT, PANDALS, pandalById, pujoSeason } from '../shared/pujo.js';
+import { PUJO_STALLS } from '../shared/food.js';
 import type { GameState } from '../shared/save.js';
 import { SPOTS } from '../shared/spots.js';
 import { standByKey, standsFor, type Stand } from '../shared/stands.js';
@@ -94,7 +95,11 @@ export function buildSpots(c: Ctx): Spot[] {
     return { label: s.pump ? (s.pumpDay === s.day ? 'The pump ran today' : 'Everything is watered') : 'The pukur ghat · Gopal sells fingerlings and pump sets' };
   } });
   out.push({ ...CRAFT, r: 2, get: () => (S().inv.bamboo >= 2 ? { label: `Weave a cane basket · 2 bamboo culms, an hour (you have ${S().inv.bamboo})`, run: () => act({ t: 'craft' }) } : { label: 'Craft bench · 2 bamboo culms make a basket' }) });
-  for (const st of c.stalls) out.push({ x: st.x, z: st.z, r: 2.2, get: () => ({ label: `${st.name} · eat something`, run: () => openStall(c.game, st) }) });
+  for (const st of c.stalls) out.push({ x: st.x, z: st.z, get r() { return st.pujo && !pujoSeason(c.game.now()) ? -1 : 2.2; }, get: () => {
+    // (the Puja stalls are only there in the season: out of it their radius is -1, so nothing finds them)
+    const sweets = st.menu.includes('mishti');
+    return { label: `${st.name} · ${sweets ? 'Bijoya mishti and sweets' : st.menu.includes('bhog') ? 'free bhog khichuri' : 'eat something'}`, run: () => openStall(c.game, st) };
+  } });
   out.push({ ...KER_SPOT, r: 3, get: () => {
     const s = S(); if (!isFestival(s.day, 'ker')) return { label: 'The stadium gate' };
     if (kept(s, 'ker')) return { label: 'You kept the Ker this year' };
@@ -165,6 +170,7 @@ export function dynamicSpots(c: Ctx): Spot[] {
     if (m === 'pujoBisarjan') out.push({ x: GHAT.x, z: GHAT.z, r: 12, get: () => {
       const st = S(); if (st.hour < BISARJAN_FROM && st.hour >= 5) return { label: 'The bisarjan procession reaches the ghat after 15:00' };
       return { label: 'Say goodbye to Ma: bisarjan at the ghat', run: () => dialog({ name: 'The ghat on the Haora', role: 'Bijoya Dashami' }, [
+        'Before Ma leaves, the married women of the para play sindoor khela: they touch sindoor to Ma\'s forehead, offer her sweets, then smear each other\'s faces red, laughing.',
         'The procession comes down to the river with the dhak going and everyone covered in red sindoor.',
         'Ma is carried into the water. "Asche bochor abar hobe!" Next year, again. Everyone hugs and says Shubho Bijoya.',
       ], () => act({ t: 'bisarjan' })) };
@@ -188,6 +194,7 @@ export function findTarget(c: Ctx, spots: Spot[]): (Spot & { water?: boolean }) 
   let best: Spot | null = null, bd = 1e9;
   for (const it of [...dynamicSpots(c), ...c.extra(), ...spots]) {
     const d = Math.hypot(p.x - it.x, p.z - it.z); if (d >= it.r + 0.8) continue;
+    if (it.r < 0) continue;
     const score = d - (((it.x - p.x) * fx + (it.z - p.z) * fz) / (d || 1)) * 0.6; if (score < bd) { bd = score; best = it; }
   }
   if (best) return best;
@@ -254,6 +261,11 @@ function talkNeighbour(c: Ctx, n: NeighbourNpc): void {
     if (s.hour >= INVITE_FROM && s.hour < INVITE_UNTIL) return dialog(who, [`You came! Come in, come in. It is ${inv.what}, and there is far too much food.`, 'Sit with the others. Nobody leaves hungry from this house.'], () => c.game.dispatch({ t: 'attend', npc: n.id }));
     return dialog(who, [chat, `Oh, and you must come this evening. We are having ${inv.what}. After six, here. No excuses!`]);
   }
+  // Bijoya: bring mishti, wish them Shubho Bijoya
+  if (currentMission(s)?.id === 'pujoBijoya' && !s.bijoya.includes(n.id)) {
+    if (s.inv.mishti > 0) return dialog(who, ['Shubho Bijoya! Come in, come in. Mishti? You shouldn\'t have!', 'Touch my feet? Bless you, live long. Now sit and eat a nadu, I made them myself. Asche bochor abar hobe.'], () => c.game.dispatch({ t: 'bijoya', npc: n.id }));
+    return dialog(who, [chat, 'It\'s Bijoya! Everyone goes visiting with a box of mishti. The sweet shops by the Ramnagar and Palace Compound pandals have the best.']);
+  }
   if (pithaSeason(s.day) && s.inv.pitha > 0 && !s.pithaGiven.includes(`${yearOf(s.day)}:${n.id}`) && !dv && !(k && !k.done && s.inv[k.item] >= k.qty)) return dialog(who, ['Is that pitha? For me? You should not have. Well, since you did...', 'It is Poush, the season of pitha. My mother made a hundred every Sankranti.'], () => c.game.dispatch({ t: 'givePitha', npc: n.id }));
   if (dv?.kind === 'drop') return dialog(who, [`Ah, ${dv.d.parcel}! I have been waiting all morning.`, `Here, ₹${dv.d.reward} for your trouble. Come and have tea some time.`], () => c.game.dispatch({ t: 'deliver', id: dv.d.id }));
   if (dv?.kind === 'pick') {
@@ -285,7 +297,7 @@ function busPrompt(c: Ctx): Prompt {
 /* ---------- where the golden marker points ---------- */
 function nearest<T extends XZ>(list: T[], p: XZ): T | null { let b: T | null = null, bd = 1e9; for (const t of list) { const d = Math.hypot(t.x - p.x, t.z - p.z); if (d < bd) { bd = d; b = t; } } return b; }
 const PONDEDGE = { x: POND.x, z: POND.z - POND.d - 1 };
-export function missionTarget(s: GameState, p: XZ, spots: Spot[], grandpa: XZ): (XZ & { stand?: boolean }) | null {
+export function missionTarget(s: GameState, p: XZ, spots: Spot[], grandpa: XZ, neighbours: (XZ & { id: string })[] = []): (XZ & { stand?: boolean }) | null {
   const m = currentMission(s); if (!m) return null;
   const stands = standsFor(s.home);
   const standFor = (t: XZ | null): (XZ & { stand?: boolean }) | null => { if (!t) return null; if (Math.hypot(t.x - p.x, t.z - p.z) > 600) { const st = nearest(stands, p); return st ? { ...st, stand: true } : t; } return t; };
@@ -305,6 +317,10 @@ export function missionTarget(s: GameState, p: XZ, spots: Spot[], grandpa: XZ): 
     case 'pujoAnjali': return standFor(PANDALS[0]);
     case 'pujoAarti': return standFor({ x: SPOTS.pandal[0], z: SPOTS.pandal[1] });
     case 'pujoBisarjan': return standFor(GHAT);
+    case 'pujoBijoya': {
+      if (s.inv.mishti < 1) { const shops = PUJO_STALLS.filter((st) => st.menu.includes('mishti')).map((st) => pandalById(st.pandal)!); return standFor(nearest(shops, p)); }
+      const npcs = neighbours.filter((n) => !s.bijoya.includes(n.id)); return standFor(nearest(npcs, p));
+    }
   }
   return null;
 }

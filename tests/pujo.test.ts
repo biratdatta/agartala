@@ -18,7 +18,9 @@ describe('Durga Puja chapter', () => {
     g.at(8); g.ok({ t: 'anjali' }); expect(currentMission(g.s)?.id).toBe('pujoAarti');
     g.at(12); expect(g.do({ t: 'aarti' }).ok).toBe(false);
     g.at(19); g.ok({ t: 'aarti' }); expect(currentMission(g.s)?.id).toBe('pujoBisarjan');
-    g.at(16); g.ok({ t: 'bisarjan' });
+    g.at(16); g.ok({ t: 'bisarjan' }); expect(currentMission(g.s)?.id).toBe('pujoBijoya');
+    g.s.money = 1000; g.at(12); for (let i = 0; i < 3; i++) g.ok({ t: 'eat', stall: 'pSweetsR', dish: 'mishti' });
+    for (const n of ['nShiva', 'nSupari', 'nKalibari']) g.ok({ t: 'bijoya', npc: n });
     expect(currentMission(g.s)?.id).toBe('sell'); expect(g.s.mission).toBe(missionIndex('sell'));
   });
   it('a new player in the season is paid for coming home first, then the Puja begins', () => {
