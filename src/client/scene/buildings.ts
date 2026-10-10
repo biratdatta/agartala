@@ -10,7 +10,7 @@ import { rnd2 } from '../../shared/rng.js';
 import type { CityMap } from '../map/data.js';
 import { REAL_PLACES, inCampus } from '../../shared/places.js';
 import { pip } from '../map/data.js';
-import { GFX } from './kit.js';
+import { GFX } from './gfx.js';
 
 export interface Arch { name: string; geo: THREE.BufferGeometry; W: number; D: number; h: number; roof: string }
 export interface Kit { arch: Map<string, Arch>; material: THREE.MeshLambertMaterial; /** The same atlas with glossy paint, for vehicles (realistic graphics). */ vehicleMaterial: THREE.MeshLambertMaterial }

@@ -6,8 +6,8 @@ import { getH } from '../map/data.js';
  * Realistic graphics (Settings): physically based materials lit by the sky, instead of the simple
  * flat-shaded look. Decided once at start-up, before anything is built.
  */
-export const GFX = { realistic: false };
-export function setRealistic(on: boolean): void { GFX.realistic = on; }
+import { GFX } from './gfx.js';
+export { GFX, setRealistic } from './gfx.js';
 const cache = new Map<string, THREE.MeshLambertMaterial>();
 export function M(color: string, opts?: THREE.MeshLambertMaterialParameters): THREE.MeshLambertMaterial {
   const k = color + (opts ? JSON.stringify(opts) : '');
