@@ -10,7 +10,8 @@ import type { GameState } from '../shared/save.js';
 import { standsFor, type Stand } from '../shared/stands.js';
 import { FARES_PER_DAY, RENTALS, RENT_RATE, VEHICLES, fareFor, owns, rentalCost, vehicleByKey, type VehKey } from '../shared/vehicles.js';
 import { ROAD_W } from './map/data.js';
-import { canvasTexture } from './scene/kit.js';
+import { GFX, canvasTexture } from './scene/kit.js';
+import { glossify } from './scene/realistic.js';
 import { play } from './audio.js';
 import { blocked } from './collide.js';
 import { type CityMap, getH } from './map/data.js';
@@ -129,7 +130,7 @@ export class Vehicles {
     g.position.set(pt.x - Math.sin(pt.h) * 1.5, getH(pt.x, pt.z), pt.z - Math.cos(pt.h) * 1.5); g.rotation.y = pt.h + Math.PI / 2; this.scene.add(g);
   }
   private make(id: string, k: VehKey): Ride {
-    const g = model(k); g.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; }); this.scene.add(g);
+    const g = model(k); if (GFX.realistic) glossify(g); g.traverse((o) => { if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = true; }); this.scene.add(g);
     const wheels: THREE.Object3D[] = []; g.traverse((o) => { if ((o as THREE.Mesh).geometry instanceof THREE.TorusGeometry) wheels.push(o); });
     const r: Ride = { id, k, g, x: 0, z: 0, h: 0, v: 0, parked: 'home', lean: 0, wheels }; this.list.set(id, r); return r;
   }

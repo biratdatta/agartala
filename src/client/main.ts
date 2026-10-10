@@ -30,7 +30,9 @@ import { fixName, getH, loadMap } from './map/data.js';
 import { Net } from './net.js';
 import { buildNeighbours, kaamFor } from './npcs.js';
 import { Player, isTouch } from './player.js';
-import { autoQuality, onSettings, settings, updateSettings, type Graphics, type TextSize } from './settings.js';
+import { autoQuality, onSettings, realisticOn, settings, updateSettings, type Graphics, type TextSize } from './settings.js';
+import { setRealistic, GFX } from './scene/kit.js';
+import { Grass, RealSky, WIND } from './scene/realistic.js';
 import { RideView } from './ride.js';
 import { RoadGraph } from './route.js';
 import { City, KitFleet, loadKit, planBuildings } from './scene/buildings.js';
@@ -61,6 +63,7 @@ async function boot(): Promise<void> {
   const authResult = takeAuthResult();
   if (authResult?.token) net.adopt(authResult.token);
   const authReady = loadAuthConfig();
+  setRealistic(realisticOn(isTouch)); // chosen once, before any material is made
   const [map, kit, first] = await Promise.all([
     loadMap(`/agartala-map.json?v=${__MAP_V__}`, (f) => (loading.textContent = `Loading the streets of Agartala… ${Math.round(f * 100)}%`)),
     loadKit(`/models/kit.glb?v=${__KIT_V__}`),
@@ -79,6 +82,7 @@ async function boot(): Promise<void> {
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.5));
   renderer.shadowMap.enabled = true; renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  if (GFX.realistic) { renderer.toneMapping = THREE.ACESFilmicToneMapping; renderer.toneMappingExposure = 1.0; }
   const scene = new THREE.Scene();
   const camera = new THREE.PerspectiveCamera(55, 1, 0.2, 2600);
   const resize = () => { renderer.setSize(canvas.clientWidth, canvas.clientHeight, false); camera.aspect = canvas.clientWidth / canvas.clientHeight; camera.updateProjectionMatrix(); };
@@ -101,6 +105,8 @@ async function boot(): Promise<void> {
   const graph = new RoadGraph(map);
   const rideView = new RideView(scene, map, graph, new KitFleet(scene, kit, 'tomtom', 1, ['#2f8f4e']), 0);
   const lighting = new Lighting(scene, skyFx, palaceLights, pandal);
+  if (GFX.realistic) lighting.real = new RealSky(scene, renderer);
+  const grass = GFX.realistic ? new Grass(scene, map) : null;
   const pandals = new Pandals(scene, map); // Durga Puja pandals round the city, in the Puja season
   const music = new PujoMusic();
   // browsers only allow sound after a tap or key: start the audio (and the title music) on the first one
@@ -129,7 +135,8 @@ async function boot(): Promise<void> {
     const st = settings(); closePanels();
     const look = $('#setLook') as HTMLInputElement, view = $('#setView') as HTMLInputElement, vol = $('#setVol') as HTMLInputElement;
     look.value = String(st.look); view.value = String(st.view); vol.value = String(st.volume); ($('#setMusic') as HTMLInputElement).value = String(st.music);
-    ($('#setMotion') as HTMLInputElement).checked = st.reduceMotion; ($('#setGfx') as HTMLSelectElement).value = st.graphics;
+    ($('#setMotion') as HTMLInputElement).checked = st.reduceMotion; ($('#setGfx') as HTMLSelectElement).value = st.graphics; ($('#setReal') as HTMLSelectElement).value = st.realistic;
+    ($('#setReal').querySelector('option[value="auto"]') as HTMLOptionElement).textContent = `Auto (${autoQuality(isTouch) === 'high' ? 'on' : 'off'} for this device)`;
     ($('#setGfx').querySelector('option[value="auto"]') as HTMLOptionElement).textContent = `Auto (best for this device: ${autoQuality(isTouch)})`;
     showSettingValues(); $('#settings').hidden = false;
   };
@@ -144,6 +151,7 @@ async function boot(): Promise<void> {
   $('#setMusic').oninput = (e) => { updateSettings({ music: Number((e.target as HTMLInputElement).value) }); showSettingValues(); };
   document.querySelectorAll<HTMLButtonElement>('#settings .seg button').forEach((b) => { b.onclick = () => { updateSettings({ text: b.dataset.text as TextSize }); showSettingValues(); }; });
   ($('#setMotion') as HTMLInputElement).onchange = (e) => updateSettings({ reduceMotion: (e.target as HTMLInputElement).checked });
+  ($('#setReal') as HTMLSelectElement).onchange = (e) => { updateSettings({ realistic: (e.target as HTMLSelectElement).value as 'auto' | 'on' | 'off' }); toast('Restarting with the new graphics…'); setTimeout(() => location.reload(), 600); };
   ($('#setGfx') as HTMLSelectElement).onchange = (e) => updateSettings({ graphics: (e.target as HTMLSelectElement).value as Graphics });
   for (const id of ['#setClose', '#setDone']) $(id).onclick = () => { $('#settings').hidden = true; };
   $('#bSettings').onclick = openSettings; $('#titleSettings').onclick = openSettings;
@@ -670,7 +678,8 @@ async function boot(): Promise<void> {
       // the conch at aarti: at the pandals in the evening (18:00 to 19:00), and now and then after dark
       if (season && playing && near < 90 && ((S.hour >= 18 && S.hour < 19) || (isNight(S) && Math.random() < dt * 0.01))) music.conch(1 - near / 110);
     }
-    kit.material.emissiveIntensity = lighting.nightFactor * 0.85;
+    kit.material.emissiveIntensity = lighting.nightFactor * 0.85; kit.vehicleMaterial.emissiveIntensity = kit.material.emissiveIntensity;
+    if (grass) { grass.update(player.body.position.x, player.body.position.z); WIND.value = performance.now() / 1000; }
     lamps.update(lighting.nightFactor); real.setNight(lighting.nightFactor); diyas.visible = isFestival(S.day, 'diwali') && lighting.nightFactor > 0.4;
     renderer.render(scene, camera);
   });

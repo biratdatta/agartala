@@ -2,10 +2,21 @@
 import * as THREE from 'three';
 import { getH } from '../map/data.js';
 
+/**
+ * Realistic graphics (Settings): physically based materials lit by the sky, instead of the simple
+ * flat-shaded look. Decided once at start-up, before anything is built.
+ */
+export const GFX = { realistic: false };
+export function setRealistic(on: boolean): void { GFX.realistic = on; }
 const cache = new Map<string, THREE.MeshLambertMaterial>();
 export function M(color: string, opts?: THREE.MeshLambertMaterialParameters): THREE.MeshLambertMaterial {
   const k = color + (opts ? JSON.stringify(opts) : '');
-  let m = cache.get(k); if (!m) { m = new THREE.MeshLambertMaterial({ color, ...opts }); cache.set(k, m); }
+  let m = cache.get(k);
+  if (!m) {
+    // realistic: a matte physically based material (walls, cloth, wood); it reads the same options
+    m = GFX.realistic ? (new THREE.MeshStandardMaterial({ color, roughness: 0.88, metalness: 0, ...(opts as THREE.MeshStandardMaterialParameters) }) as unknown as THREE.MeshLambertMaterial) : new THREE.MeshLambertMaterial({ color, ...opts });
+    cache.set(k, m);
+  }
   return m;
 }
 type Mat = string | THREE.Material;

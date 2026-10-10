@@ -4,6 +4,7 @@ import { clamp, lerp, smooth } from '../shared/rng.js';
 import type { GameState } from '../shared/save.js';
 import { MAT } from './scene/kit.js';
 import type { Sky } from './scene/world.js';
+import type { RealSky } from './scene/realistic.js';
 
 const cNight = new THREE.Color('#0b1430'), cDawn = new THREE.Color('#ef9a5a'), cDay = new THREE.Color('#8ec5e6'), cRain = new THREE.Color('#7d8a94');
 
@@ -16,6 +17,8 @@ export class Lighting {
   nightFactor = 0;
   /** How far you can see by day (Settings); night and rain bring the fog closer. */
   viewFar = 1100;
+  /** Realistic graphics: the scattering sky, clouds and sky light (null for the classic look). */
+  real: RealSky | null = null;
 
   constructor(private scene: THREE.Scene, private skyFx: Sky, private palaceLights: THREE.Object3D, private pandal: THREE.Object3D) {
     scene.fog = new THREE.Fog(0x8ec5e6, 180, 1100);
@@ -29,13 +32,15 @@ export class Lighting {
     const df = smooth(-0.12, 0.3, sy), nf = 1 - df; this.nightFactor = nf;
     const warm = df * (1 - smooth(0.08, 0.5, sy)) + (1 - df) * smooth(-0.25, -0.05, sy) * 0.6;
     this.sky.copy(cNight).lerp(cDay, df).lerp(cDawn, clamp(warm, 0, 0.75)); if (S.rain) this.sky.lerp(cRain, 0.55 * df + 0.2);
-    this.scene.background = this.sky; const fog = this.scene.fog as THREE.Fog; fog.color.copy(this.sky);
+    if (this.real) { this.real.update(S.hour, nf, S.rain, p, performance.now() / 1000); this.scene.background = null; this.sky.lerp(this.tmp.set('#dfe9ef'), 0.3 * df * (S.rain ? 0.3 : 1)); }
+    else this.scene.background = this.sky;
+    const fog = this.scene.fog as THREE.Fog; fog.color.copy(this.sky);
     fog.far = lerp(this.viewFar * 0.5, this.viewFar, df) * (S.rain ? 0.6 : 1); fog.near = fog.far * 0.18;
     // the sun crosses the southern sky (Agartala is at 23.8° N)
     if (sy > -0.05) { this.sun.position.set(p.x + sx * 120, p.y + Math.max(sy, 0.12) * 160, p.z + 70); this.sun.color.set('#fff1dc').lerp(this.tmp.set('#ffb070'), clamp(warm, 0, 1)); this.sun.intensity = (0.25 + 0.75 * df) * (S.rain ? 0.45 : 1) * Math.PI; }
     else { this.sun.position.set(p.x - 70, p.y + 140, p.z + 60); this.sun.color.set('#8fa8e0'); this.sun.intensity = 0.3 * Math.PI; } // moonlight
     this.sun.target.position.copy(p);
-    this.hemi.intensity = (0.3 + 0.35 * df) * Math.PI; this.hemi.color.set('#cfe6ff').lerp(this.tmp.set('#3a4a80'), nf * 0.7);
+    this.hemi.intensity = (0.3 + 0.35 * df) * Math.PI * (this.real ? 0.45 : 1); this.hemi.color.set('#cfe6ff').lerp(this.tmp.set('#3a4a80'), nf * 0.7);
     MAT.win.emissiveIntensity = nf * 1.1; MAT.bulb.color.set(nf > 0.4 ? '#ffd27a' : '#8a8a80');
     this.palaceLights.visible = nf > 0.35;
     const st = this.skyFx.stars.material as THREE.PointsMaterial; st.opacity = nf * (S.rain ? 0.15 : 0.95); this.skyFx.stars.position.set(p.x, 0, p.z);

@@ -6,7 +6,8 @@ import { SPOTS } from '../../shared/spots.js';
 import { mulberry, rnd2, smooth } from '../../shared/rng.js';
 import { STANDS } from '../../shared/stands.js';
 import { type CityMap, type Poly, ROAD_W, X0, X1, Z0, Z1, getH } from '../map/data.js';
-import { M, MAT, canvasTexture } from './kit.js';
+import { GFX, M, MAT, canvasTexture } from './kit.js';
+import { macroVariation, realGround, realTrees } from './realistic.js';
 
 function groundTexture(): THREE.CanvasTexture {
   const cv = document.createElement('canvas'); cv.width = cv.height = 256; const c = cv.getContext('2d')!; const r = mulberry(11);
@@ -27,16 +28,33 @@ function flatPolys(list: Poly[], y: number, colorOf: (p: Poly) => string): THREE
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
   const n = new Float32Array(pos.length); for (let i = 1; i < n.length; i += 3) n[i] = 1; g.setAttribute('normal', new THREE.BufferAttribute(n, 3));
+  const uv = new Float32Array((pos.length / 3) * 2); for (let i = 0, j = 0; i < pos.length; i += 3, j += 2) { uv[j] = pos[i] / 9; uv[j + 1] = pos[i + 2] / 9; } g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
   return g;
 }
 
 export function buildGround(scene: THREE.Scene, map: CityMap): void {
+  if (GFX.realistic) return buildRealGround(scene, map);
   const g = new THREE.Mesh(new THREE.PlaneGeometry(12000, 12000), new THREE.MeshLambertMaterial({ map: groundTexture() }));
   g.rotation.x = -Math.PI / 2; g.position.set(0, 0, 200); g.receiveShadow = true; scene.add(g);
   const LC = ['#6a9444', '#9aae55', '#3f6b2e', '#6c9268', '#cdb987'];
   const lm = new THREE.Mesh(flatPolys(map.land, 0.02, (p) => LC[(p as { code: number } & Poly).code]), new THREE.MeshLambertMaterial({ vertexColors: true, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
   lm.receiveShadow = true; scene.add(lm);
   scene.add(new THREE.Mesh(flatPolys(map.water, 0.05, () => '#ffffff'), MAT.water));
+  const e = new THREE.Mesh(new THREE.BoxGeometry(POND.w * 2 + 2.4, 0.06, POND.d * 2 + 2.4), M('#7a6247')); e.position.set(POND.x, 0.02, POND.z); scene.add(e);
+}
+
+/** Realistic: a detailed grass-and-earth ground that never looks tiled, and parks with texture. */
+function buildRealGround(scene: THREE.Scene, map: CityMap): void {
+  const tex = realGround();
+  const gm = new THREE.MeshStandardMaterial({ map: tex.map, roughness: 0.95 }); macroVariation(gm, tex.macro, 1 / 1200 * 14);
+  const g = new THREE.Mesh(new THREE.PlaneGeometry(12000, 12000), gm);
+  g.rotation.x = -Math.PI / 2; g.position.set(0, 0, 200); g.receiveShadow = true; scene.add(g);
+  const LC = ['#7aa452', '#a8b862', '#4f7b3a', '#7ca276', '#d6c392'];
+  const lm = new THREE.Mesh(flatPolys(map.land, 0.02, (p) => LC[(p as { code: number } & Poly).code]), new THREE.MeshStandardMaterial({ map: tex.detail, vertexColors: true, roughness: 0.95, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1, polygonOffsetUnits: -1 }));
+  lm.receiveShadow = true; scene.add(lm);
+  // ponds and the Haora mirror the sky
+  const water = new THREE.MeshStandardMaterial({ color: '#3d6f73', roughness: 0.07, metalness: 0.25, envMapIntensity: 1.3, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+  scene.add(new THREE.Mesh(flatPolys(map.water, 0.05, () => '#ffffff'), water));
   const e = new THREE.Mesh(new THREE.BoxGeometry(POND.w * 2 + 2.4, 0.06, POND.d * 2 + 2.4), M('#7a6247')); e.position.set(POND.x, 0.02, POND.z); scene.add(e);
 }
 
@@ -93,6 +111,7 @@ export function buildTrees(scene: THREE.Scene, map: CityMap): void {
     else (k < 0.7 ? lists.broad : k < 0.9 ? lists.areca : lists.coco).push(t);
     map.treeGrid.add(x - 0.5, z - 0.5, x + 0.5, z + 0.5, t); count++;
   }
+  if (GFX.realistic) return realTrees(scene, lists);
   const d = new THREE.Object3D();
   const inst = (geo: THREE.BufferGeometry, mat: THREE.Material, list: T[]) => {
     const m = new THREE.InstancedMesh(geo, mat, list.length);

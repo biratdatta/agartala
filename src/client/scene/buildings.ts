@@ -10,15 +10,18 @@ import { rnd2 } from '../../shared/rng.js';
 import type { CityMap } from '../map/data.js';
 import { REAL_PLACES, inCampus } from '../../shared/places.js';
 import { pip } from '../map/data.js';
+import { GFX } from './kit.js';
 
 export interface Arch { name: string; geo: THREE.BufferGeometry; W: number; D: number; h: number; roof: string }
-export interface Kit { arch: Map<string, Arch>; material: THREE.MeshLambertMaterial }
+export interface Kit { arch: Map<string, Arch>; material: THREE.MeshLambertMaterial; /** The same atlas with glossy paint, for vehicles (realistic graphics). */ vehicleMaterial: THREE.MeshLambertMaterial }
 
 const ROOF: Record<string, string> = { hut_grey: '#8c969c', hut_rust: '#965234', hut_bamboo: '#965234', assam_blue: '#466e96', assam_green: '#487858', assam_rust: '#965234', godown: '#8c969c' };
 
 /** One shared material. Wall faces (vertex attribute _tint = 1) take the per-building paint colour. */
-function kitMaterial(src: THREE.MeshStandardMaterial): THREE.MeshLambertMaterial {
-  const m = new THREE.MeshLambertMaterial({ map: src.map, emissiveMap: src.emissiveMap, emissive: new THREE.Color(1, 0.95, 0.85), emissiveIntensity: 0 });
+function kitMaterial(src: THREE.MeshStandardMaterial, pbr: { roughness: number; metalness: number } = { roughness: 0.86, metalness: 0 }): THREE.MeshLambertMaterial {
+  const m = GFX.realistic
+    ? (new THREE.MeshStandardMaterial({ map: src.map, emissiveMap: src.emissiveMap, emissive: new THREE.Color(1, 0.95, 0.85), emissiveIntensity: 0, ...pbr }) as unknown as THREE.MeshLambertMaterial)
+    : new THREE.MeshLambertMaterial({ map: src.map, emissiveMap: src.emissiveMap, emissive: new THREE.Color(1, 0.95, 0.85), emissiveIntensity: 0 });
   if (m.map) { m.map.colorSpace = THREE.SRGBColorSpace; m.map.anisotropy = 4; }
   if (m.emissiveMap) m.emissiveMap.colorSpace = THREE.SRGBColorSpace;
   m.onBeforeCompile = (sh) => {
@@ -31,15 +34,15 @@ function kitMaterial(src: THREE.MeshStandardMaterial): THREE.MeshLambertMaterial
 
 export async function loadKit(url = '/models/kit.glb'): Promise<Kit> {
   const gltf = await new GLTFLoader().loadAsync(url);
-  const arch = new Map<string, Arch>(); let material: THREE.MeshLambertMaterial | null = null;
+  const arch = new Map<string, Arch>(); let material: THREE.MeshLambertMaterial | null = null; let vehicleMaterial: THREE.MeshLambertMaterial | null = null;
   gltf.scene.traverse((o) => {
     const mesh = o as THREE.Mesh; if (!mesh.isMesh) return;
-    if (!material) material = kitMaterial(mesh.material as THREE.MeshStandardMaterial);
+    if (!material) { material = kitMaterial(mesh.material as THREE.MeshStandardMaterial); vehicleMaterial = kitMaterial(mesh.material as THREE.MeshStandardMaterial, { roughness: 0.34, metalness: 0.35 }); }
     const ex = (o.userData || {}) as { W?: number; D?: number; h?: number };
     arch.set(o.name, { name: o.name, geo: mesh.geometry, W: ex.W || 10, D: ex.D || 10, h: ex.h || 6, roof: ROOF[o.name] || '#c9c4ba' });
   });
   if (!material) throw new Error('The asset kit has no meshes');
-  return { arch, material };
+  return { arch, material, vehicleMaterial: vehicleMaterial! };
 }
 
 /* ---------------- choosing a building for a footprint ---------------- */
@@ -149,7 +152,7 @@ export class KitFleet {
   private m4 = new THREE.Matrix4(); private q = new THREE.Quaternion(); private s = new THREE.Vector3(1, 1, 1); private t = new THREE.Vector3(); private up = new THREE.Vector3(0, 1, 0);
   constructor(scene: THREE.Scene, kit: Kit, name: string, count: number, colors: string[]) {
     const a = kit.arch.get(name); if (!a) throw new Error(`Kit has no ${name}`);
-    this.mesh = new THREE.InstancedMesh(a.geo, kit.material, count); const c = new THREE.Color();
+    this.mesh = new THREE.InstancedMesh(a.geo, kit.vehicleMaterial, count); const c = new THREE.Color(); // glossy paint when realistic
     for (let i = 0; i < count; i++) this.mesh.setColorAt(i, c.set(colors[i % colors.length]));
     this.mesh.castShadow = true; this.mesh.frustumCulled = false; scene.add(this.mesh);
   }

@@ -17,11 +17,13 @@ export interface Settings {
   /** No bobbing markers, pulsing rings or sliding pop-ups. */
   reduceMotion: boolean;
   graphics: Graphics;
+  /** Lifelike sky, grass, trees and vehicles. Auto: on for devices that run at High. */
+  realistic: 'auto' | 'on' | 'off';
 }
 
 const KEY = 'amar-agartala.settings';
 const prefersReduced = (): boolean => { try { return matchMedia('(prefers-reduced-motion: reduce)').matches; } catch { return false; } };
-export const DEFAULTS: Settings = { look: 1, view: 1100, volume: 80, music: 60, text: 'normal', reduceMotion: prefersReduced(), graphics: 'auto' };
+export const DEFAULTS: Settings = { look: 1, view: 1100, volume: 80, music: 60, text: 'normal', reduceMotion: prefersReduced(), graphics: 'auto', realistic: 'auto' };
 
 const clamp = (v: unknown, lo: number, hi: number, d: number): number => { const n = Number(v); return Number.isFinite(n) ? Math.min(hi, Math.max(lo, n)) : d; };
 function sanitize(o: Partial<Settings>): Settings {
@@ -33,6 +35,7 @@ function sanitize(o: Partial<Settings>): Settings {
     text: o.text === 'large' || o.text === 'largest' ? o.text : 'normal',
     reduceMotion: typeof o.reduceMotion === 'boolean' ? o.reduceMotion : DEFAULTS.reduceMotion,
     graphics: o.graphics === 'low' || o.graphics === 'medium' || o.graphics === 'high' ? o.graphics : 'auto',
+    realistic: o.realistic === 'on' || o.realistic === 'off' ? o.realistic : 'auto',
   };
 }
 
@@ -52,4 +55,9 @@ export function onSettings(f: (s: Settings) => void): void { listeners.push(f); 
 export function autoQuality(isTouch: boolean): Exclude<Graphics, 'auto'> {
   const cores = navigator.hardwareConcurrency || 4;
   return isTouch || cores <= 4 ? 'medium' : 'high';
+}
+
+/** Whether to build the realistic world this time (it is chosen at start-up). */
+export function realisticOn(isTouch: boolean): boolean {
+  const r = current.realistic; return r === 'on' || (r === 'auto' && autoQuality(isTouch) === 'high');
 }
