@@ -12,23 +12,23 @@ export const pujoSeason = (t: number): boolean => t >= PUJO_SEASON.from && t < P
 /** Names this year's Puja on the pandal-hopping board. */
 export const PUJO_SEASON_ID = '2026';
 
-export interface Pandal { id: string; name: string; bn: string; x: number; z: number; theme: [string, string]; about: string }
+export interface Pandal { id: string; name: string; bn: string; x: number; z: number; /** Which way it faces (radians, towards its road). */ rot: number; theme: [string, string]; about: string }
 export const PANDALS: Pandal[] = [
-  { id: 'durgabari', name: 'Durgabari', bn: 'দুর্গাবাড়ি', x: SPOTS.pdDurgabari[0], z: SPOTS.pdDurgabari[1], theme: ['#b5232f', '#f2c14a'],
+  { id: 'durgabari', name: 'Durgabari', bn: 'দুর্গাবাড়ি', x: SPOTS.pdDurgabari[0], z: SPOTS.pdDurgabari[1], rot: SPOTS.pdDurgabari[2], theme: ['#b5232f', '#f2c14a'],
     about: 'The old Durga temple by Ujjayanta Palace. The puja here began with the Maharajas of Tripura, and the state still keeps it.' },
-  { id: 'modern', name: 'Modern Club', bn: 'মডার্ন ক্লাব', x: SPOTS.pandal[0], z: SPOTS.pandal[1], theme: ['#7d1d3f', '#e9b23b'],
+  { id: 'modern', name: 'Modern Club', bn: 'মডার্ন ক্লাব', x: SPOTS.pandal[0], z: SPOTS.pandal[1], rot: SPOTS.pandal[2], theme: ['#7d1d3f', '#e9b23b'],
     about: 'The Modern Club pandal by College Lake, the one all of Agartala comes to see.' },
-  { id: 'shibnagar', name: 'Shibnagar Mahila Puja Committee', bn: 'শিবনগর মহিলা পূজা কমিটি', x: SPOTS.pdShibnagar[0], z: SPOTS.pdShibnagar[1], theme: ['#c2185b', '#f2c14a'],
+  { id: 'shibnagar', name: 'Shibnagar Mahila Puja Committee', bn: 'শিবনগর মহিলা পূজা কমিটি', x: SPOTS.pdShibnagar[0], z: SPOTS.pdShibnagar[1], rot: SPOTS.pdShibnagar[2], theme: ['#c2185b', '#f2c14a'],
     about: 'The puja the women of Shibnagar run themselves, from the pandal to the bhog.' },
-  { id: 'palace', name: 'Palace Compound Sarbojanin', bn: 'প্যালেস কম্পাউন্ড সার্বজনীন', x: SPOTS.pdPalace[0], z: SPOTS.pdPalace[1], theme: ['#f4f1ea', '#d9a43b'],
+  { id: 'palace', name: 'Palace Compound Sarbojanin', bn: 'প্যালেস কম্পাউন্ড সার্বজনীন', x: SPOTS.pdPalace[0], z: SPOTS.pdPalace[1], rot: SPOTS.pdPalace[2], theme: ['#f4f1ea', '#d9a43b'],
     about: 'A white-and-gold pandal built like a little Ujjayanta, right by the palace.' },
-  { id: 'kaman', name: 'Kaman Chowmuhani Sarbojanin', bn: 'কামান চৌমুহনী সার্বজনীন', x: SPOTS.pdKaman[0], z: SPOTS.pdKaman[1], theme: ['#1f6f5c', '#f2c14a'],
+  { id: 'kaman', name: 'Kaman Chowmuhani Sarbojanin', bn: 'কামান চৌমুহনী সার্বজনীন', x: SPOTS.pdKaman[0], z: SPOTS.pdKaman[1], rot: SPOTS.pdKaman[2], theme: ['#1f6f5c', '#f2c14a'],
     about: 'By Motor Stand, so half the city passes it on the way to anywhere.' },
-  { id: 'paradise', name: 'Paradise Chowmuhani Sarbojanin', bn: 'প্যারাডাইস চৌমুহনী সার্বজনীন', x: SPOTS.pdParadise[0], z: SPOTS.pdParadise[1], theme: ['#2f6fb0', '#f6efe0'],
+  { id: 'paradise', name: 'Paradise Chowmuhani Sarbojanin', bn: 'প্যারাডাইস চৌমুহনী সার্বজনীন', x: SPOTS.pdParadise[0], z: SPOTS.pdParadise[1], rot: SPOTS.pdParadise[2], theme: ['#2f6fb0', '#f6efe0'],
     about: 'Lit up across Hari Ganga Basak Road, with the City Centre crowd spilling in.' },
-  { id: 'joynagar', name: 'Joynagar Sarbojanin', bn: 'জয়নগর সার্বজনীন', x: SPOTS.pdJoynagar[0], z: SPOTS.pdJoynagar[1], theme: ['#c0532f', '#f2e6c8'],
+  { id: 'joynagar', name: 'Joynagar Sarbojanin', bn: 'জয়নগর সার্বজনীন', x: SPOTS.pdJoynagar[0], z: SPOTS.pdJoynagar[1], rot: SPOTS.pdJoynagar[2], theme: ['#c0532f', '#f2e6c8'],
     about: 'A bamboo-and-jute pandal made by the para itself, every knot tied by hand.' },
-  { id: 'ramnagar', name: 'Ramnagar Sarbojanin', bn: 'রামনগর সার্বজনীন', x: SPOTS.pdRamnagar[0], z: SPOTS.pdRamnagar[1], theme: ['#6b3fa0', '#e9b23b'],
+  { id: 'ramnagar', name: 'Ramnagar Sarbojanin', bn: 'রামনগর সার্বজনীন', x: SPOTS.pdRamnagar[0], z: SPOTS.pdRamnagar[1], rot: SPOTS.pdRamnagar[2], theme: ['#6b3fa0', '#e9b23b'],
     about: 'Famous for its lights: the lanes round it glow for a week.' },
 ];
 export const pandalById = (id: string): Pandal | undefined => PANDALS.find((p) => p.id === id);

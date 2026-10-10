@@ -10,7 +10,7 @@ import { placeById } from './places.js';
 const PARCELS = ['a tiffin box', 'a sack of rice', 'a sari parcel from the tailor', 'medicine from the chemist', 'a letter', 'puja flowers', 'a radio back from repair', 'a box of rasgulla', 'school books', 'a new gamcha'];
 export interface Delivery { id: string; from: string; to: string; parcel: string; reward: number; km: number }
 
-const spot = (id: string): readonly [number, number] => (SPOTS as Record<string, readonly [number, number]>)[id] || [0, 0];
+const spot = (id: string): readonly [number, number] => { const v = (SPOTS as Record<string, readonly number[]>)[id]; return v ? [v[0], v[1]] : [0, 0]; };
 
 /** Three parcels a day, each from one neighbour to another across town. */
 export function dailyDeliveries(day: number): Delivery[] {

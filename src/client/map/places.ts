@@ -5,7 +5,7 @@ import { type CityMap, ROAD_W, pip } from './data.js';
 
 /** Where a neighbour stands: a step off their baked spot, on open ground, clear of any tomtom stand. */
 export function neighbourSpot(map: CityMap, id: string): [number, number] {
-  const sp = (SPOTS as Record<string, readonly [number, number]>)[id] || [0, 0];
+  const sp = (SPOTS as Record<string, readonly number[]>)[id] || [0, 0];
   for (const [dx, dz] of [[2.5, 1.5], [-2.5, 1.5], [2.5, -1.5], [-2.5, -1.5], [0, 3], [3, 0], [-3, 0], [0, -3]]) {
     const x = sp[0] + dx, z = sp[1] + dz;
     if (!map.inBuilding(x, z) && !map.inWater(x, z)) return [x, z];

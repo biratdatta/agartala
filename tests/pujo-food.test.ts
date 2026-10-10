@@ -54,3 +54,14 @@ describe('pandal hoppers board', () => {
     expect((await st.pujoTop('2026', 10)).map((r) => r.name)).toEqual(['Mithu', 'Bikash', 'Tapan', 'Rina']);
   });
 });
+
+describe('pandal sites', () => {
+  it('every pandal and the crowd space in front of it are clear of buildings and water', () => {
+    const map = new CityMap(JSON.parse(readFileSync('public/agartala-map.json', 'utf8')));
+    for (const p of PANDALS) {
+      const fx = Math.sin(p.rot), fz = Math.cos(p.rot), ux = Math.cos(p.rot), uz = -Math.sin(p.rot); let hits = 0;
+      for (let u = -7.5; u <= 7.5; u += 1.5) for (let v = -6.5; v <= 13; v += 1.5) { const x = p.x + ux * u + fx * v, z = p.z + uz * u + fz * v; if (map.inBuilding(x, z) || map.inWaterPoly(x, z)) hits++; }
+      expect(hits, p.name).toBe(0);
+    }
+  });
+});
